@@ -88,9 +88,11 @@ LLM extraction and answering are **not** benchmarked here, because that needs a 
 ```bash
 cd backend && python -m pytest -q          # unit + PostgreSQL/RLS integration (needs the compose postgres + redis)
 cd frontend && npm test && npm run typecheck && npm run lint   # Vitest
-cd frontend && npx playwright test          # E2E against the running stack (4)
+cd frontend && npx playwright test          # workflows + 276 responsive/theme/language screen checks
 ```
 CI (`.github/workflows/ci.yml`) runs the backend tests against pgvector and Redis services, the frontend checks and build, then Docker Compose and Playwright.
+
+The risk-first workspace continuation and latest offline verification are recorded in [docs/REVIEW_WORKSPACE_CONTINUATION.md](docs/REVIEW_WORKSPACE_CONTINUATION.md). Run browser tests against disposable seeded data: they record human decisions. Set `SCREENSHOTS=1` to include both screenshot suites.
 
 **Reproduce the benchmarks:** `make eval`. On Windows, run the four commands from the Makefile.
 

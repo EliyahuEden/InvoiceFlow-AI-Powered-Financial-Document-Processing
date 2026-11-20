@@ -20,7 +20,7 @@ function Viewer() {
   const { data } = useApi<{ page_count: number; filename: string }>(`/api/documents/${id}/pages`);
   return (
     <div>
-      <PageHeader title={<span dir="auto">{title ?? data?.filename ?? "…"}</span>}
+      <PageHeader title={<span dir="auto" className="break-all">{title ?? data?.filename ?? "…"}</span>}
         sub={quote ? <span dir="auto" className="text-ai">“{quote}”</span> : undefined}
         actions={<button className="text-sm text-ink-3 hover:text-accent" onClick={() => router.back()}>{t.common.back}</button>} />
       {!data ? <Skeleton className="h-[70vh] w-full" /> : (

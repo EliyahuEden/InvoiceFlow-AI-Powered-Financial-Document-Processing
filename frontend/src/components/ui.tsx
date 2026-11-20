@@ -57,12 +57,12 @@ export function PanelHeader({ title, sub, actions, className }: {
   title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode; className?: string;
 }) {
   return (
-    <header className={cx("flex items-start justify-between gap-3 border-b border-line px-4 py-3", className)}>
+    <header className={cx("flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3", className)}>
       <div className="min-w-0">
         <h2 className="text-md font-semibold text-ink">{title}</h2>
         {sub && <p className="mt-0.5 text-sm text-ink-3">{sub}</p>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
 }

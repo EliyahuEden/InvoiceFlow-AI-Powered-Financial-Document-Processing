@@ -1,5 +1,24 @@
 export type Source = { page?: number | null; text?: string | null; bbox?: number[] | null; verified?: boolean; corrected_by?: string };
 
+export type PriorityReason = { code: string; params: Record<string, string | number | null> };
+export type ReviewQueueItem = {
+  exception_id: string; invoice_id: string; invoice_number: string | null;
+  supplier_id: string | null; supplier_name: string | null; supplier_name_en: string | null;
+  total: string | null; currency: string | null; amount_at_risk: string;
+  due_date: string | null; due_in_days: number | null; status: string; finding_types: string[];
+  priority: { level: string; reasons: PriorityReason[]; rank: number };
+  proposed_action: string | null; has_ai_summary: boolean; escalated_by: string | null; created_at: string;
+};
+export type ReviewSummary = {
+  needs_review: number; by_level: { critical: number; high: number; normal: number };
+  value_under_review: string; amount_at_risk: string; currency: string;
+  ready_for_approval: number; awaiting_info: number; escalated: number; processing: number;
+  due_soon: number; overdue: number; top: ReviewQueueItem[];
+  totals_by_currency?: { currency: string | null; value_under_review: string; amount_at_risk: string }[];
+};
+export type ReviewNext = { item: ReviewQueueItem | null; position: number; total: number };
+export type NextResp = ReviewNext;
+
 export type InvoiceLine = {
   id: string; line_no: number; sku: string | null; description: string; quantity: string | null; unit_price: string | null;
   discount: string | null; line_total: string | null; source: Source;

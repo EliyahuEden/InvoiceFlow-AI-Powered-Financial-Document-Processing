@@ -14,6 +14,12 @@ export function money(value: string | null | undefined, currency?: string | null
   return `${neg ? "−" : ""}${sym}${body}`;
 }
 
+/** Unit-price evidence may carry meaningful digits below one cent. */
+export function unitPrice(value: string | null | undefined, currency?: string | null): string {
+  const fraction = value?.split(".")[1]?.replace(/0+$/, "") ?? "";
+  return money(value, currency) + (fraction.length > 2 ? fraction.slice(2) : "");
+}
+
 export function num(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—";
   const s = String(value);

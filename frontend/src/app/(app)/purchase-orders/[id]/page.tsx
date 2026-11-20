@@ -3,22 +3,24 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { StatusPill } from "@/components/domain";
+import { PurchaseOrderLines } from "@/components/po-lines";
 import { PageHeader } from "@/components/shell";
-import { cx, KV, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
+import { ErrorState, KV, Panel, PanelHeader, Skeleton } from "@/components/ui";
 import { useApi } from "@/lib/api";
-import { date, money, num } from "@/lib/format";
+import { date, money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 
 type Detail = { id: string; po_number: string; supplier_id: string; supplier_name: string; supplier_name_en: string | null;
   order_date: string; currency: string; status: string; total: string; notes: string | null;
-  lines: { id: string; line_no: number; sku: string | null; description: string; quantity: string; unit_price: string; line_total: string; received: string }[];
+  lines: { id: string; line_no: number; sku: string | null; description: string; quantity: string; unit_price: string; line_total: string; received: string; invoiced: string }[];
   goods_receipts: { id: string; gr_number: string; received_date: string; received_by: string | null; lines: { po_line_id: string; quantity_received: string }[] }[];
   invoices: { id: string; invoice_number: string | null; status: string; total: string | null }[] };
 
 export default function PODetail() {
   const { t, locale } = useI18n();
   const { id } = useParams<{ id: string }>();
-  const { data: p } = useApi<Detail>(`/api/purchase-orders/${id}`);
+  const { data: p, error, mutate } = useApi<Detail>(`/api/purchase-orders/${id}`);
+  if (error) return <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
   if (!p) return <Skeleton className="h-96 w-full" />;
   return (
     <div className="space-y-5">
@@ -35,24 +37,7 @@ export default function PODetail() {
       </Panel>
       <Panel>
         <PanelHeader title={t.pos.lines} />
-        <Table>
-          <thead><tr><Th>#</Th><Th>{t.invoice.sku}</Th><Th>{t.invoice.description}</Th><Th className="text-end">{t.pos.ordered}</Th>
-            <Th className="text-end">{t.recon.received}</Th><Th className="text-end">{t.invoice.unitPrice}</Th><Th className="text-end">{t.invoice.lineTotal}</Th></tr></thead>
-          <tbody>{p.lines.map((l) => {
-            const short = Number(l.received) < Number(l.quantity);
-            return (
-              <tr key={l.id}>
-                <Td className="text-ink-3 num">{l.line_no}</Td>
-                <Td><span className="ltr font-mono text-xs">{l.sku ?? "—"}</span></Td>
-                <Td dir="auto">{l.description}</Td>
-                <Td className="text-end num">{num(l.quantity)}</Td>
-                <Td className={cx("text-end num", short && "font-medium text-warn")}>{num(l.received)}</Td>
-                <Td className="text-end"><span className="ltr">{money(l.unit_price)}</span></Td>
-                <Td className="text-end font-medium"><span className="ltr">{money(l.line_total)}</span></Td>
-              </tr>
-            );
-          })}</tbody>
-        </Table>
+        <PurchaseOrderLines lines={p.lines} currency={p.currency} />
       </Panel>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Panel>

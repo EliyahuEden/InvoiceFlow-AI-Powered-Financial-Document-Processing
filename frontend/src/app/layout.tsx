@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Assistant, JetBrains_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
-import { I18nProvider, LOCALE_COOKIE } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n";
+import { LOCALE_COOKIE } from "@/lib/i18n/constants";
 import type { Locale } from "@/lib/i18n/dictionaries";
 import "./globals.css";
 

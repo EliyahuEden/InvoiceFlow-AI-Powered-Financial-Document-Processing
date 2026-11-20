@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import Principal, dec, get_db, money, page_params, paginated, require
-from app.models import GoodsReceipt, GRLine, Invoice, POLine, PurchaseOrder, Supplier
+from app.models import GoodsReceipt, GRLine, Invoice, POLine, PurchaseOrder, ReconciliationRun, Supplier
 from app.services import audit
 from app.services.rbac import Perm
 
@@ -165,13 +165,34 @@ def get_po(po_id: uuid.UUID, p: Principal = Depends(require(Perm.MASTERDATA_READ
     for g in grs:
         for gl in g.lines:
             received[gl.po_line_id] = received.get(gl.po_line_id, Decimal(0)) + gl.quantity_received
-    invs = db.scalars(select(Invoice).where(Invoice.purchase_order_id == po.id)).all()
+    invs = db.scalars(select(Invoice).where(Invoice.purchase_order_id == po.id)
+                      .options(selectinload(Invoice.lines))).all()
+    billed: dict[uuid.UUID, Decimal] = {}
+    eligible = {inv.id: inv for inv in invs if inv.status not in ("rejected", "failed")}
+    po_lines = {line.id for line in po.lines}
+    if eligible:
+        runs = db.scalars(select(ReconciliationRun).where(ReconciliationRun.invoice_id.in_(eligible))
+                          .distinct(ReconciliationRun.invoice_id)
+                          .order_by(ReconciliationRun.invoice_id, ReconciliationRun.created_at.desc(),
+                                    ReconciliationRun.id.desc()))
+        for run in runs:
+            if any(f["type"] == "DUPLICATE_INVOICE" for f in run.result.get("findings", [])):
+                continue
+            quantities = {line.line_no: line.quantity for line in eligible[run.invoice_id].lines}
+            for match in run.result.get("line_matches", []):
+                if match.get("method") not in ("sku", "description") or not match.get("po_line_id"):
+                    continue
+                line_id = uuid.UUID(match["po_line_id"])
+                quantity = quantities.get(match["invoice_line_no"])
+                if line_id in po_lines and quantity is not None:
+                    billed[line_id] = billed.get(line_id, Decimal(0)) + quantity
     return {**po_summary(po), "supplier_name": po.supplier.name, "supplier_name_en": po.supplier.name_en,
             "notes": po.notes,
             "lines": [{"id": str(ln.id), "line_no": ln.line_no, "sku": ln.sku, "description": ln.description,
                        "quantity": dec(ln.quantity), "unit_price": money(ln.unit_price),
                        "line_total": money(ln.quantity * ln.unit_price),
-                       "received": dec(received.get(ln.id, Decimal(0)))} for ln in po.lines],
+                       "received": dec(received.get(ln.id, Decimal(0))),
+                       "invoiced": dec(billed.get(ln.id, Decimal(0)))} for ln in po.lines],
             "goods_receipts": [{"id": str(g.id), "gr_number": g.gr_number, "received_date": g.received_date.isoformat(),
                                 "received_by": g.received_by,
                                 "lines": [{"po_line_id": str(gl.po_line_id), "quantity_received": dec(gl.quantity_received)}

@@ -104,12 +104,13 @@ function AiModeBadge() {
     <span
       title={offline ? t.ai.offlineHint : undefined}
       className={cx(
-        "hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset sm:inline-flex",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset sm:px-2.5",
         offline ? "bg-warn-soft text-warn ring-warn/25" : "bg-ai-soft text-ai ring-ai-line",
       )}
     >
       <span className={cx("h-1.5 w-1.5 rounded-full", offline ? "bg-warn" : "bg-ai")} aria-hidden />
-      {offline ? t.ai.offlineMode : `${t.ai.liveMode}: ${me.ai_mode.replace("llm:", "")}`}
+      <span className="sm:hidden">{offline ? t.ai.offlineShort : t.ai.liveMode}</span>
+      <span className="hidden sm:inline">{offline ? t.ai.offlineMode : `${t.ai.liveMode}: ${me.ai_mode.replace("llm:", "")}`}</span>
     </span>
   );
 }
@@ -134,17 +135,17 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
     window.location.href = "/login";
   };
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-bg/90 px-4 backdrop-blur-sm lg:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-1.5 border-b border-line bg-bg/90 px-3 backdrop-blur-sm sm:gap-3 sm:px-4 lg:px-6">
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu} aria-label="Menu">
         <Menu className="h-5 w-5" />
       </Button>
-      <div className="min-w-0 flex-1 truncate text-sm text-ink-2">
+      <div className="hidden min-w-0 flex-1 truncate text-sm text-ink-2 sm:block">
         {me && <span className="font-medium text-ink">{locale === "en" && me.organization.name_en ? me.organization.name_en : me.organization.name}</span>}
       </div>
       <AiModeBadge />
       {me && me.permissions.includes("exception:decide") && <ReviewNextButton size="sm" className="hidden md:inline-flex" />}
       <Button variant="ghost" size="sm" onClick={() => setLocale(locale === "he" ? "en" : "he")} aria-label={t.common.language}>
-        <Languages className="h-4 w-4" aria-hidden /> {locale === "he" ? "EN" : "עב"}
+        <Languages className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">{locale === "he" ? "EN" : "עב"}</span>
       </Button>
       <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t.common.theme}>
         {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}

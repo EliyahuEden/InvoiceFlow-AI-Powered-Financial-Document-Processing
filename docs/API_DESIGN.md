@@ -23,6 +23,9 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 | GET | `/api/auth/me` | auth | User, organization, role, permissions, AI mode |
 | POST | `/api/auth/switch-organization` | member | Change the active tenant |
 | GET | `/api/dashboard` | invoice:read | KPIs, status mix, discrepancy types, activity |
+| GET | `/api/review/summary` | invoice:read | Risk-first counters, priority split, deadlines and top five; base-currency totals plus `totals_by_currency` |
+| GET | `/api/review/queue?level&type&supplier_id&due&status&q&page` | invoice:read | Backend-ranked review queue; `due=overdue\|soon\|later`, localized reason codes and parameters |
+| GET | `/api/review/next?after={exception_id}` | invoice:read | Highest-priority actionable case excluding `after`, or null; read-only/procurement users receive no actionable item |
 | GET | `/api/invoices?q&status&supplier_id&sort&page` | invoice:read | Inbox |
 | POST | `/api/invoices/upload` (multipart) | invoice:upload | 202 + job id; 409 if the file is a duplicate |
 | GET | `/api/invoices/{id}` | invoice:read | Detail: fields + provenance, lines, PO with received quantities, latest run, discrepancies, exception, approvals, agent runs, job |
@@ -34,7 +37,7 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 | GET | `/api/documents/{id}/file` · `/pages` · `/pages/{n}/image` | invoice:read | Original file (sandboxed CSP), page text and word boxes, rendered page PNG |
 | GET | `/api/exceptions?status&q&page` | invoice:read | Queue + pending payment approvals |
 | GET | `/api/exceptions/{id}` | invoice:read | Detail, AI summary, comments, allowed actions |
-| POST | `/api/exceptions/{id}/decision` | exception:decide (request_info: exception:comment) | `approve` / `reject` (reason required) / `request_info`, optional `action_override` |
+| POST | `/api/exceptions/{id}/decision` | exception:decide (request_info: exception:comment) | `approve`, `reject`, `request_info`, `escalate`; note required except approve; clarification also requires `target=procurement\|supplier`; optional `action_override` |
 | POST | `/api/exceptions/{id}/comments` | exception:comment | Reviewer notes |
 | GET/POST/PATCH | `/api/suppliers[/{id}]` | masterdata:read / write | Suppliers |
 | GET/POST | `/api/purchase-orders[/{id}]`, `/{id}/goods-receipts` | masterdata:read / write | POs and GRs |
@@ -51,3 +54,9 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 | POST | `/api/events/ticket` | auth | Single-use ticket (30 s) for opening the event stream |
 | GET | `/api/events?ticket=…` (SSE) | ticket (or cookie) | `job.progress`, `job.completed`, `job.failed`, `invoice.updated`, `exception.updated`, `agent.updated` |
 | GET | `/health/live` · `/health/ready` | – | Liveness; readiness checks DB (Redis is reported as degraded, not failing) |
+
+Exception decisions refresh the case under a transaction row lock; an already decided case returns 409. Every decision records before/after and note in the audit trail. Every action on an escalated case requires an administrator other than the person who escalated it.
+
+Review summary amounts are never added across currencies. `value_under_review` and `amount_at_risk` describe the configured base currency; `totals_by_currency` contains every currency separately, including `null` when extraction did not establish a currency. No FX conversion is performed. Priority monetary thresholds and risk ordering still use nominal amounts; an FX policy is required before treating them as comparable base-currency exposure.
+
+Purchase-order detail includes `lines[].invoiced`: quantities from confident SKU/description matches in each linked invoice's latest reconciliation. Rejected, failed and duplicate invoices and ambiguous matches are excluded. The UI distinguishes ordered, received, invoiced and open-delivery quantities.

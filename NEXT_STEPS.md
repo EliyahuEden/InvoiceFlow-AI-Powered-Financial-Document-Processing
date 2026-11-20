@@ -1,9 +1,10 @@
 # Where to continue
 
 ## Current state
-- All 8 phases are implemented, plus a follow-up round (see "Done in the follow-up round" below). Nothing is pushed yet.
-- Tests (last run, against the Docker stack): pytest **128/128**, Vitest **21/21**, Playwright **4/4**; typecheck and lint clean. Benchmarks are in `eval/results/*.json`, explained in `docs/EVALUATION_PLAN.md` and shown on the `/evaluation` page.
-- Screenshots are in `docs/screenshots/` (taken before the follow-up round).
+- All 8 original phases, the follow-up round and the risk-first review workspace are implemented. The continuation is on `codex/complete-review-workspace`, with changes left uncommitted and nothing pushed.
+- Latest verification (2026-11-20): pytest **176/176**, Vitest **39/39**, Playwright **15/15** including screenshot captures and **276** screen/language/theme/width combinations. Production build, typecheck and lint pass. Backend tests use `invoiceflow_test`; browser verification uses an isolated offline `invoiceflow_review_e2e` database. The original stack and `.env` remain separate.
+- The latest workflow, verification details, environment and remaining FX limitation are in [the continuation handoff](docs/REVIEW_WORKSPACE_CONTINUATION.md). The built visual system is in [DESIGN.md](DESIGN.md). Benchmarks remain in `eval/results/*.json`; no paid model benchmark was run.
+- Screenshots in `docs/screenshots/` were refreshed, including the new review screens in both languages/themes and on mobile. Capture provenance is in `docs/screenshots/README.md`.
 
 ## Set up on a new computer
 1. Install Git and Docker Desktop. Optional, for local development: Python 3.12 (3.13 also works for the venv) and Node 22 (Node 20 works for tests and lint).
@@ -48,7 +49,7 @@
    python eval/run_extraction_eval.py --llm
    ```
    Add LLM answers to `eval/run_rag_eval.py`; it currently notes "not run". Then update the README, `docs/EVALUATION_PLAN.md` and `docs/CV_BULLETS.md` with the **measured** numbers only.
-3. **Retake screenshots** (`frontend/tests/e2e/screenshots.spec.ts`): findings now render in Hebrew and the Evaluation page has a held-out RAG panel.
+3. **FX policy for prioritization:** dashboard totals are separated by currency, but priority thresholds and risk ordering still compare nominal amounts. Define a conversion policy before interpreting cross-currency ranks as comparable base-currency exposure.
 4. **RAG abstention:** on held-out questions the reranker threshold refuses 7/10 unanswerable questions (P 0.78 / R 0.70) versus 8/8 on the calibration set. The extractive answerer's other thresholds (no-reranker path) are still the original, uncalibrated ones. Options: calibrate per language, or combine the reranker logit with lexical coverage.
 5. **Extraction:** remaining errors are OCR label loss (tax ID, currency on scans), bidi-reversed `Due:` terms lines, and unfamiliar header labels on v2. Any further held-out claim needs a new frozen set: v1 was inspected, and v2 has been scored, so treat both as used.
 6. **Security follow-ups:** a UI to list and revoke individual sessions; the event stream notices revocation within 60 s rather than instantly; a bucket policy denying unencrypted uploads as a second layer.

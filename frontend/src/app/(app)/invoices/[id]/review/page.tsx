@@ -10,6 +10,7 @@ import { Button, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, 
 import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
+import { useUnsavedWork } from "@/lib/use-unsaved-work";
 
 type LineDraft = { line_no: number; sku: string; description: string; quantity: string; unit_price: string; discount: string; line_total: string };
 
@@ -49,7 +50,8 @@ export default function ReviewPage() {
     line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "", unit_price: l.unit_price ?? "",
     discount: l.discount ?? "", line_total: l.line_total ?? "" }))), [lines, inv]);
   const supplierChanged = !!inv && supplierId !== (inv.supplier_id ?? "");
-  const dirty = Object.keys(changed).length > 0 || linesChanged || supplierChanged;
+  const dirty = Object.keys(changed).length > 0 || linesChanged || supplierChanged || !!reason.trim();
+  useUnsavedWork(!!editable && dirty, t.review.unsavedChanges);
 
   if (!inv) return <Skeleton className="h-[600px] w-full" />;
 
@@ -65,7 +67,7 @@ export default function ReviewPage() {
       });
       toast.success(t.invoice.saveCorrections);
       setReason("");
-      mutate();
+      await mutate();
     } catch (e) {
       toast.error(e instanceof ApiError ? String(e.message) : t.common.error);
     } finally { setSaving(false); }

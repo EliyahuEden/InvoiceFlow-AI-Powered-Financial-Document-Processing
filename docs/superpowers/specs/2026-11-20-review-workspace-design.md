@@ -1,6 +1,6 @@
 # Review workspace redesign: design
 
-Status: approved approach (Option A, risk-first) on 2026-11-20. The visual world is chosen on the impeccable decision page; see "Design system".
+Status: approved approach (Option A, risk-first) on 2026-11-20. The recorded user choice is Ledger & Red Pen, interpreted as a modern, premium financial operations SaaS. The built system is documented in `DESIGN.md`.
 
 ## Intent
 A finance reviewer opening InvoiceFlow must answer in seconds: *which invoices need me today, why, and what first?* The product is exception-driven: routine invoices flow through; people handle exceptions, uncertain data and judgment calls, with reliable evidence for every decision. The goal is fewer invoices investigated by hand, not faster reading.

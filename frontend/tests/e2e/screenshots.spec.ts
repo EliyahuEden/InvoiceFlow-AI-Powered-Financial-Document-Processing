@@ -46,7 +46,7 @@ test("capture screenshots", async ({ page }) => {
   await page.getByRole("link", { name: /חקירת AI/ }).click();
   await expect(page.getByText("סיכום חקירה")).toBeVisible();
   await page.getByRole("link", { name: /פתיחה/ }).first().click();
-  await expect(page.getByRole("button", { name: "אישור הפתרון" })).toBeVisible();
+  await expect(page.getByTestId("discrepancy-table")).toBeVisible();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${OUT}/05-exception-ai-summary.png` });
 

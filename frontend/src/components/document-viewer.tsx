@@ -55,7 +55,7 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
 
   return (
     <div className={cx("flex flex-col overflow-hidden rounded-lg border border-line bg-sunken", className)}>
-      <div className="flex items-center gap-2 border-b border-line bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-ink-2" dir="ltr">{filename}</span>
         {pageInfo && (
           <span className="inline-flex items-center gap-1 text-xs text-ink-3">

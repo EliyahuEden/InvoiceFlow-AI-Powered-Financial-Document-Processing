@@ -3,6 +3,8 @@
 import { AlertTriangle, BadgeCheck, CircleDot, FileText, ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { pickLang, useI18n } from "@/lib/i18n";
+import { priorityReasonText } from "@/lib/review";
+import type { PriorityReason } from "@/lib/types";
 import { cx } from "./ui";
 
 type Tone = "neutral" | "ok" | "warn" | "danger" | "info" | "accent" | "ai";
@@ -18,10 +20,23 @@ const TONE: Record<Tone, string> = {
 
 const STATUS_TONE: Record<string, Tone> = {
   processing: "info", queued: "info", running: "info", needs_review: "warn", pending_info: "warn", pending: "warn",
-  awaiting_approval: "ai", reconciled: "accent", exception: "danger", failed: "danger", blocked: "danger",
+  awaiting_approval: "info", reconciled: "ok", exception: "warn", failed: "danger", blocked: "danger",
   rejected: "neutral", approved: "ok", resolved: "ok", completed: "ok", succeeded: "ok", indexed: "ok", matched: "ok",
-  received: "ok", on_hold: "warn", draft: "ai", open: "danger", discrepancies: "warn", partially_received: "warn",
+  received: "ok", on_hold: "warn", draft: "neutral", open: "neutral", discrepancies: "warn", partially_received: "warn",
+  escalated: "warn",
 };
+
+export function PriorityBadge({ level }: { level: string }) {
+  const { t } = useI18n();
+  return <Pill tone={level === "critical" ? "danger" : level === "high" ? "warn" : "info"}>
+    {(t.review as Record<string, unknown>)[level] as string ?? level}
+  </Pill>;
+}
+
+export function ReasonText({ reason, currency }: { reason: PriorityReason; currency?: string | null }) {
+  const { t } = useI18n();
+  return <span>{priorityReasonText(t, reason, currency)}</span>;
+}
 
 export function Pill({ tone = "neutral", children, className, icon }: {
   tone?: Tone; children: React.ReactNode; className?: string; icon?: React.ReactNode;

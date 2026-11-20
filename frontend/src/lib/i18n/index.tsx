@@ -2,11 +2,10 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { dictionaries, type Dictionary, type Locale } from "./dictionaries";
+import { LOCALE_COOKIE } from "./constants";
 
 type Ctx = { locale: Locale; dir: "rtl" | "ltr"; t: Dictionary; setLocale: (l: Locale) => void };
 const I18nContext = createContext<Ctx | null>(null);
-
-export const LOCALE_COOKIE = "if_locale";
 
 export function I18nProvider({ initial, children }: { initial: Locale; children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(initial);

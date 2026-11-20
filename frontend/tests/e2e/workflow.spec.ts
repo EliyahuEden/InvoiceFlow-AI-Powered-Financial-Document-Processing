@@ -10,6 +10,15 @@ async function login(page: Page, email: string) {
   await expect(page).toHaveURL(/\/$/);
 }
 
+test("remembered language is respected on the server and after reload", async ({ page, baseURL }) => {
+  await page.context().addCookies([{ name: "if_locale", value: "en", url: baseURL! }]);
+  await page.goto("/login");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 2000 });
+  await expect(page.getByLabel("Work email")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+});
+
 test("Hebrew-first RTL shell with offline-mode label and locale switch", async ({ page }) => {
   await login(page, "finance@kinneret.example");
   await expect(page.locator("html")).toHaveAttribute("dir", /rtl|ltr/);
@@ -55,9 +64,10 @@ test("upload a Hebrew invoice → discrepancy → cited AI explanation → decis
   await page.getByRole("link", { name: /פתיחה|Open/ }).first().click();
   const approve = page.getByRole("button", { name: "אישור הפתרון" });
   if (await approve.isVisible()) {
+    const exceptionUrl = page.url();
     await page.getByLabel("הערת סוקר").fill("E2E: credit note requested from supplier");
     await approve.click();
-    await expect(page.getByText("הוחלט").first()).toBeVisible();
+    await expect(page).not.toHaveURL(exceptionUrl);
   }
 
   // the citation opens the source document at the cited page, with the passage highlighted

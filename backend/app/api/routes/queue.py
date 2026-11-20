@@ -17,7 +17,7 @@ from app.api.deps import Principal, get_db, money, page_params, paginated, requi
 from app.core.money import D
 from app.models import Discrepancy, ExceptionCase, ExceptionComment, Invoice, Organization, Role, Supplier
 from app.services import priority as P
-from app.services.rbac import Perm
+from app.services.rbac import Perm, has_perm
 
 router = APIRouter(prefix="/api/review", tags=["review-queue"])
 NEEDS_REVIEW = ("open", "escalated")
@@ -79,6 +79,8 @@ def ranked_items(db: Session, org: Organization, statuses: tuple[str, ...] = NEE
 
 
 def can_decide(item: dict, p: Principal) -> bool:
+    if not has_perm(p.role, Perm.EXCEPTION_DECIDE):
+        return False
     if item["status"] == "open":
         return True
     return item["status"] == "escalated" and p.role == Role.ADMIN and item["escalated_by"] != str(p.user.id)
@@ -120,11 +122,20 @@ def summary(p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = De
                                                                      Invoice.status == "reconciled"))
     processing = db.scalar(select(func.count()).select_from(Invoice).where(Invoice.organization_id == p.org_id,
                                                                           Invoice.status == "processing"))
+    currency = (p.org.settings or {}).get("base_currency", "ILS")
+    totals: dict[str | None, dict[str, Decimal]] = {}
+    for item in items:
+        group = totals.setdefault(item["currency"], {"value_under_review": Decimal(0), "amount_at_risk": Decimal(0)})
+        group["value_under_review"] += D(item["total"]) if item["total"] is not None else Decimal(0)
+        group["amount_at_risk"] += D(item["amount_at_risk"])
+    base = totals.get(currency, {"value_under_review": Decimal(0), "amount_at_risk": Decimal(0)})
     return {
         "needs_review": len(items), "by_level": by_level,
-        "value_under_review": f"{sum((D(i['total']) for i in items if i['total']), Decimal(0)):.2f}",
-        "amount_at_risk": f"{sum((D(i['amount_at_risk']) for i in items), Decimal(0)):.2f}",
-        "currency": (p.org.settings or {}).get("base_currency", "ILS"),
+        "value_under_review": f"{base['value_under_review']:.2f}",
+        "amount_at_risk": f"{base['amount_at_risk']:.2f}",
+        "currency": currency,
+        "totals_by_currency": [{"currency": code, **{key: f"{value:.2f}" for key, value in group.items()}}
+                               for code, group in sorted(totals.items(), key=lambda row: row[0] or "")],
         "ready_for_approval": ready or 0, "awaiting_info": counts.get("pending_info", 0),
         "escalated": counts.get("escalated", 0), "processing": processing or 0,
         "due_soon": sum(1 for i in items if i["due_in_days"] is not None and 0 <= i["due_in_days"] <= P.URGENT_DAYS),

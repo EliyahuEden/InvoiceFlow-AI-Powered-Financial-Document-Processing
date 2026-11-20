@@ -20,7 +20,7 @@ const en = {
   },
   roles: { admin: "Administrator", procurement_manager: "Procurement manager", finance_reviewer: "Finance reviewer", read_only: "Read-only" },
   ai: {
-    offlineMode: "Offline demo mode", offlineHint: "No language model is configured. Extraction uses the rule-based baseline and explanations use templates. Nothing shown is presented as live AI output.",
+    offlineShort: "Offline demo", offlineMode: "Offline demo mode", offlineHint: "No language model is configured. Extraction uses the rule-based baseline and explanations use templates. Nothing shown is presented as live AI output.",
     liveMode: "AI model", generated: "AI-generated", advisory: "Advisory only — the decision belongs to an authorized reviewer.",
     template: "Template (offline)", verified: "Verified record", deterministic: "Deterministic engine",
     sources: "Sources", openSource: "Open source document", noCitation: "No supporting source was found.",
@@ -33,7 +33,7 @@ const en = {
     queued: "Queued", running: "Running", awaiting_approval: "Awaiting decision", completed: "Completed",
     succeeded: "Succeeded", pending: "Pending", indexed: "Indexed", active: "Active", blocked: "Blocked",
     inactive: "Inactive", partially_received: "Partially received", received: "Received", closed: "Closed",
-    cancelled: "Cancelled", matched: "Matched", discrepancies: "Discrepancies", superseded: "Superseded", info: "Info",
+    cancelled: "Cancelled", matched: "Matched", discrepancies: "Discrepancies", superseded: "Superseded", info: "Info", escalated: "Escalated",
   },
   finding: {
     UNRECOGNIZED_SUPPLIER: "Unknown supplier", AMBIGUOUS_SUPPLIER: "Ambiguous supplier", SUPPLIER_BLOCKED: "Supplier blocked",
@@ -83,6 +83,19 @@ const en = {
     demoTitle: "Demo accounts", demoHint: "Fictional organization “Kinneret Hospitality”. All demo accounts share the password shown in the README.",
     rateLimited: "Too many attempts. Wait a minute and try again.",
   },
+  review: {
+    title: "Review workspace", subtitle: "Exceptions first. Every decision backed by evidence.", queue: "Priority queue", reviewNext: "Review next priority",
+    needsReview: "Needs review", valueUnderReview: "Value under review", atRisk: "Money at risk", readyForApproval: "Ready for approval", awaitingInfo: "Awaiting information",
+    critical: "Critical", high: "High", normal: "Normal", priority: "Priority", rank: "Rank", reason: "Why this needs you", due: "Due date", overdue: "Overdue", dueSoon: "Due within 3 days", later: "Later or undated", undated: "Not stated",
+    clearTitle: "The review queue is clear", clearBody: "There are no actionable exceptions for you right now.", queueClear: "The review queue is clear", backToQueue: "Back to queue",
+    skip: "Skip", unsaved: "You have unsaved work. Leave this invoice?", unsavedChanges: "You have unsaved work. Leave this invoice?",
+    conflict: "Another reviewer already decided this item. Your draft was saved.", alreadyDecided: "Another reviewer already decided this item. Your draft was saved.",
+    decisionRecorded: "Decision recorded", escalate: "Escalate", target: "Send request to", procurement: "Procurement", supplier: "Supplier",
+    escalationRestricted: "Only another administrator can decide an escalated item.", document: "Source document", discrepancyTable: "Invoice against records", invoice: "Invoice", purchaseOrder: "Purchase order", received: "Received (qty)", difference: "Difference",
+    noDocument: "No source document is available.", noDiscrepancies: "No open discrepancies.", savedDraft: "Draft restored", position: "Position", of: "of", correctedFields: "Correct extraction", correction: "Correct extraction",
+    processing: "Invoices processing", openQueue: "Open full queue", reviewedThisSession: "Reviewed this session", current: "Current item", nextAction: "Next action", investigate: "Investigate", viewDecision: "View decision", allStatuses: "All statuses", filterFinding: "Finding type", filterSupplier: "Supplier", clearFilters: "Clear filters", escalated: "Escalated", pendingApprovals: "Awaiting payment approval", amountNote: "Totals are reported in each invoice currency; currencies are not converted.",
+    reasons: { blocking: "Blocked: {finding}", amount_at_risk: "{amount} could not be confirmed", unconfirmed_delivery: "Delivery has not been confirmed", suspicious_content: "Suspicious instructions in the document", overdue: "Overdue by {days} days", due_soon: "Due in {days} days", escalated: "An administrator must review", review_needed: "Reviewer judgment needed" },
+  },
   overview: {
     title: "Overview", invoices: "Invoices", openExceptions: "Open exceptions", atRisk: "Unconfirmed amount",
     autoMatch: "First-pass match rate", awaitingApproval: "Awaiting approval", medianProcessing: "Median processing time",
@@ -131,7 +144,7 @@ const en = {
     noAi: "No AI summary yet.", runAgent: "Run investigation",
   },
   suppliers: { title: "Suppliers", taxId: "Tax ID", terms: "Payment terms", invoices: "Invoices", openPos: "Open POs", aliases: "Also known as", new: "New supplier" },
-  pos: { title: "Purchase orders", number: "PO #", ordered: "Ordered", lines: "Lines", receipts: "Goods receipts", linkedInvoices: "Linked invoices", grNumber: "GR #" },
+  pos: { invoiced: "Invoiced", open: "Open delivery", notReceived: "not received", shortfall: "Delivery shortfall", title: "Purchase orders", number: "PO #", ordered: "Ordered", lines: "Lines", receipts: "Goods receipts", linkedInvoices: "Linked invoices", grNumber: "GR #" },
   knowledge: {
     title: "Agreements & knowledge", ask: "Ask the knowledge base", askPlaceholder: "למשל: מהי סטיית המחיר המותרת? / What are BlueWave's payment terms?",
     askCta: "Ask", documents: "Documents", type: { supplier_agreement: "Supplier agreement", purchasing_policy: "Purchasing policy", procedure: "Procedure", reference: "Reference" },
@@ -176,7 +189,7 @@ const he: Dict = {
   },
   roles: { admin: "מנהל/ת מערכת", procurement_manager: "מנהל/ת רכש", finance_reviewer: "סוקר/ת כספים", read_only: "צפייה בלבד" },
   ai: {
-    offlineMode: "מצב הדגמה לא מקוון", offlineHint: "לא הוגדר מודל שפה. החילוץ מתבצע בשיטה מבוססת חוקים וההסברים נוצרים מתבניות. דבר מהמוצג אינו מוצג כפלט AI חי.",
+    offlineShort: "הדגמה לא מקוונת", offlineMode: "מצב הדגמה לא מקוון", offlineHint: "לא הוגדר מודל שפה. החילוץ מתבצע בשיטה מבוססת חוקים וההסברים נוצרים מתבניות. דבר מהמוצג אינו מוצג כפלט AI חי.",
     liveMode: "מודל AI", generated: "נוצר ע\"י AI", advisory: "לייעוץ בלבד — ההחלטה בידי סוקר מורשה.",
     template: "תבנית (לא מקוון)", verified: "רשומה מאומתת", deterministic: "מנוע דטרמיניסטי", sources: "מקורות",
     openSource: "פתיחת מסמך המקור", noCitation: "לא נמצא מקור תומך.", confidence: "רמת ביטחון",
@@ -186,7 +199,7 @@ const he: Dict = {
     rejected: "נדחה", failed: "נכשל", on_hold: "בהמתנה", draft: "טיוטה", open: "פתוח", pending_info: "התבקש מידע",
     resolved: "נפתר", queued: "בתור", running: "רץ", awaiting_approval: "ממתין להחלטה", completed: "הושלם", succeeded: "הצליח",
     pending: "ממתין", indexed: "אונדקס", active: "פעיל", blocked: "חסום", inactive: "לא פעיל", partially_received: "התקבל חלקית",
-    received: "התקבל", closed: "סגור", cancelled: "בוטל", matched: "תואם", discrepancies: "פערים", superseded: "הוחלף", info: "מידע",
+    received: "התקבל", closed: "סגור", cancelled: "בוטל", matched: "תואם", discrepancies: "פערים", superseded: "הוחלף", info: "מידע", escalated: "הועבר למנהל",
   },
   finding: {
     UNRECOGNIZED_SUPPLIER: "ספק לא מוכר", AMBIGUOUS_SUPPLIER: "ספק לא חד-משמעי", SUPPLIER_BLOCKED: "ספק חסום",
@@ -236,6 +249,19 @@ const he: Dict = {
     demoTitle: "חשבונות הדגמה", demoHint: "ארגון בדיוני \"כנרת אירוח\". לכל חשבונות ההדגמה אותה סיסמה, המופיעה ב-README.",
     rateLimited: "יותר מדי ניסיונות. המתינו דקה ונסו שוב.",
   },
+  review: {
+    title: "סביבת בדיקת חשבוניות", subtitle: "החריגות תחילה. כל החלטה מגובה בראיות.", queue: "תור לפי עדיפות", reviewNext: "לבדיקת החשבונית הבאה",
+    needsReview: "ממתינות לבדיקה", valueUnderReview: "שווי חשבוניות בבדיקה", atRisk: "סכום בסיכון", readyForApproval: "מוכנות לאישור", awaitingInfo: "ממתינות למידע",
+    critical: "קריטית", high: "גבוהה", normal: "רגילה", priority: "עדיפות", rank: "דירוג", reason: "למה נדרשת בדיקה", due: "מועד תשלום", overdue: "באיחור", dueSoon: "לתשלום בתוך 3 ימים", later: "בהמשך או ללא תאריך", undated: "לא צוין",
+    clearTitle: "תור הבדיקות הסתיים", clearBody: "אין כרגע חריגות שבאפשרותך להכריע בהן.", queueClear: "תור הבדיקות הסתיים", backToQueue: "חזרה לתור",
+    skip: "דילוג", unsaved: "יש עבודה שלא נשמרה. לצאת מהחשבונית?", unsavedChanges: "יש עבודה שלא נשמרה. לצאת מהחשבונית?",
+    conflict: "סוקר אחר כבר הכריע בפריט. הטיוטה שלך נשמרה.", alreadyDecided: "סוקר אחר כבר הכריע בפריט. הטיוטה שלך נשמרה.",
+    decisionRecorded: "ההחלטה נרשמה", escalate: "העברה למנהל", target: "שליחת הבקשה אל", procurement: "רכש", supplier: "ספק",
+    escalationRestricted: "רק מנהל אחר יכול להכריע בחריגה שהועברה למנהל.", document: "מסמך מקור", discrepancyTable: "חשבונית מול הרשומות", invoice: "חשבונית", purchaseOrder: "הזמנת רכש", received: "התקבל (כמות)", difference: "הפרש",
+    noDocument: "אין מסמך מקור זמין.", noDiscrepancies: "אין פערים פתוחים.", savedDraft: "הטיוטה שוחזרה", position: "מיקום", of: "מתוך", correctedFields: "תיקון חילוץ", correction: "תיקון חילוץ",
+    processing: "חשבוניות בעיבוד", openQueue: "לכל התור", reviewedThisSession: "נבדקו בביקור הנוכחי", current: "הפריט הנוכחי", nextAction: "הפעולה הבאה", investigate: "בדיקה", viewDecision: "צפייה בהחלטה", allStatuses: "כל המצבים", filterFinding: "סוג ממצא", filterSupplier: "ספק", clearFilters: "ניקוי מסננים", escalated: "הועברו למנהל", pendingApprovals: "ממתינות לאישור תשלום", amountNote: "הסכומים מוצגים במטבע החשבונית; לא מתבצעת המרת מטבע.",
+    reasons: { blocking: "חסימה: {finding}", amount_at_risk: "לא אומת סכום של {amount}", unconfirmed_delivery: "האספקה טרם אושרה", suspicious_content: "הוראות חשודות במסמך", overdue: "באיחור של {days} ימים", due_soon: "לתשלום בעוד {days} ימים", escalated: "נדרשת בדיקת מנהל", review_needed: "נדרש שיקול דעת של סוקר" },
+  },
   overview: {
     title: "סקירה", invoices: "חשבוניות", openExceptions: "חריגות פתוחות", atRisk: "סכום לא מאושר", autoMatch: "התאמה במעבר ראשון",
     awaitingApproval: "ממתינות לאישור", medianProcessing: "זמן עיבוד חציוני", statusMix: "סטטוס חשבוניות",
@@ -284,7 +310,7 @@ const he: Dict = {
     changeAction: "בחירת פתרון אחר", noAi: "אין עדיין סיכום AI.", runAgent: "הפעלת חקירה",
   },
   suppliers: { title: "ספקים", taxId: "ח.פ.", terms: "תנאי תשלום", invoices: "חשבוניות", openPos: "הזמנות פתוחות", aliases: "שמות נוספים", new: "ספק חדש" },
-  pos: { title: "הזמנות רכש", number: "מס' הזמנה", ordered: "הוזמן", lines: "שורות", receipts: "תעודות קבלת טובין", linkedInvoices: "חשבוניות מקושרות", grNumber: "מס' תעודה" },
+  pos: { invoiced: "חויב", open: "טרם התקבל", notReceived: "לא התקבלו", shortfall: "פער אספקה", title: "הזמנות רכש", number: "מס' הזמנה", ordered: "הוזמן", lines: "שורות", receipts: "תעודות קבלת טובין", linkedInvoices: "חשבוניות מקושרות", grNumber: "מס' תעודה" },
   knowledge: {
     title: "הסכמים ומאגר ידע", ask: "שאלו את מאגר הידע", askPlaceholder: "למשל: מהי סטיית המחיר המותרת? / What are BlueWave's payment terms?",
     askCta: "שאלה", documents: "מסמכים", type: { supplier_agreement: "הסכם ספק", purchasing_policy: "נוהל רכש", procedure: "נוהל", reference: "עיון" },

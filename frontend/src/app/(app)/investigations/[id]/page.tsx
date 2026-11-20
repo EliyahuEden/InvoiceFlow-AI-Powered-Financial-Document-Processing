@@ -31,7 +31,7 @@ export default function RunDetail() {
   return (
     <div className="space-y-5">
       <PageHeader back={{ href: "/investigations", label: t.agent.title }}
-        title={<span className="flex items-center gap-3">{t.agent.title} <Link href={`/invoices/${r.invoice_id}`} className="ltr font-mono text-xl text-ink-2 hover:text-accent">{r.invoice_number}</Link><StatusPill status={r.status} /></span>}
+        title={<span className="flex flex-wrap items-center gap-3">{t.agent.title} <Link href={`/invoices/${r.invoice_id}`} className="ltr font-mono text-xl text-ink-2 hover:text-accent">{r.invoice_number}</Link><StatusPill status={r.status} /></span>}
         sub={<span className="font-mono text-xs">{r.mode} · {r.prompt_version} · thread {r.thread_id}</span>} />
       <Panel className="overflow-x-auto p-4">
         <p className="mb-3 text-sm font-semibold">{t.agent.path} <span className="font-normal text-ink-3">· LangGraph · PostgreSQL checkpoints</span></p>

@@ -123,13 +123,19 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
         raise HTTPException(403, "Your role cannot decide exceptions.")
     if decision == "request_info" and not has_perm(role, Perm.EXCEPTION_COMMENT):
         raise HTTPException(403, "Your role cannot request information.")
+    # Refresh under a row lock so a reviewer with a stale page cannot overwrite another decision.
+    exc = session.scalars(select(ExceptionCase).where(ExceptionCase.id == exc.id,
+                                                     ExceptionCase.organization_id == exc.organization_id)
+                          .with_for_update().execution_options(populate_existing=True)).first()
+    if exc is None:
+        raise HTTPException(404, "Exception not found")
     if exc.status in ("approved", "rejected", "resolved"):
         raise HTTPException(409, f"Exception is already {exc.status}.")
     if decision in ("reject", "escalate", "request_info") and not (note and note.strip()):
         raise HTTPException(422, "A note is required for this decision.")
     if decision == "request_info" and target not in REQUEST_TARGETS:
         raise HTTPException(422, "Say who must provide the information: procurement or supplier.")
-    if exc.status == "escalated" and decision in ("approve", "reject"):
+    if exc.status == "escalated":
         # an escalation goes to another authorized reviewer: an administrator who did not escalate it
         if role != "admin" or escalated_by(session, exc) == user.id:
             raise HTTPException(403, "An escalated case is decided by another administrator.")
