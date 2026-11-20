@@ -1,0 +1,342 @@
+{
+  "generated_at": "2026-11-20T11:30:43+00:00",
+  "git_rev": null,
+  "python": "3.12.16",
+  "engine_version": "recon-1.2",
+  "controlled": {
+    "cases": 348,
+    "per_type": [
+      {
+        "type": "AMBIGUOUS_DESCRIPTION",
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "AMBIGUOUS_SUPPLIER",
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "CURRENCY_MISMATCH",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "DUPLICATE_INVOICE",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "ITEM_NOT_ON_PO",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "MISSING_GOODS_RECEIPT",
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "MISSING_PURCHASE_ORDER",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "PRICE_MISMATCH",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "QUANTITY_EXCEEDS_ORDERED",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "QUANTITY_EXCEEDS_RECEIVED",
+        "tp": 33,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "TOTAL_MISMATCH",
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      {
+        "type": "UNRECOGNIZED_SUPPLIER",
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    ],
+    "unexpected_other_findings": {},
+    "clean_cases": 123,
+    "clean_case_false_alarm_rate": 0.0,
+    "exact_finding_set_match": 1.0,
+    "by_scenario": {
+      "ambiguous_description": {
+        "n": 3,
+        "exact_match": 1.0
+      },
+      "ambiguous_supplier": {
+        "n": 3,
+        "exact_match": 1.0
+      },
+      "clean": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "clean_partial_delivery": {
+        "n": 3,
+        "exact_match": 1.0
+      },
+      "currency_mismatch": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "duplicate": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "item_not_on_po": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "missing_goods_receipt": {
+        "n": 3,
+        "exact_match": 1.0
+      },
+      "missing_po_reference_unknown": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "no_sku_paraphrase": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "price_mismatch": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "price_within_tolerance": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "quantity_exceeds_received": {
+        "n": 3,
+        "exact_match": 1.0
+      },
+      "quantity_over": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "supplier_by_name": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "total_error": {
+        "n": 30,
+        "exact_match": 1.0
+      },
+      "unknown_supplier": {
+        "n": 3,
+        "exact_match": 1.0
+      }
+    },
+    "failures": []
+  },
+  "end_to_end": {
+    "documents": 13,
+    "skipped_ocr": [],
+    "tp": 9,
+    "fp": 1,
+    "fn": 0,
+    "precision": 0.9,
+    "recall": 1.0,
+    "f1": 0.947,
+    "exact_scenarios": "12/13",
+    "rows": [
+      {
+        "file": "invoices/01_correct_tavor_he.pdf",
+        "scenario": "correct_invoice",
+        "expected": [],
+        "got": [],
+        "exact": true
+      },
+      {
+        "file": "invoices/02_qty_mismatch_hermon_he.pdf",
+        "scenario": "quantity_mismatch",
+        "expected": [
+          "QUANTITY_EXCEEDS_RECEIVED"
+        ],
+        "got": [
+          "QUANTITY_EXCEEDS_RECEIVED"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/03_price_mismatch_bluewave_en.pdf",
+        "scenario": "price_mismatch",
+        "expected": [
+          "PRICE_MISMATCH"
+        ],
+        "got": [
+          "PRICE_MISMATCH"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/04_duplicate_tavor_he.pdf",
+        "scenario": "duplicate_invoice",
+        "expected": [
+          "DUPLICATE_INVOICE"
+        ],
+        "got": [
+          "DUPLICATE_INVOICE"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/05_missing_po_arava_mixed.pdf",
+        "scenario": "missing_purchase_order",
+        "expected": [
+          "MISSING_PURCHASE_ORDER"
+        ],
+        "got": [
+          "MISSING_PURCHASE_ORDER"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/06_ambiguous_desc_carmel_he.pdf",
+        "scenario": "ambiguous_description",
+        "expected": [
+          "AMBIGUOUS_DESCRIPTION"
+        ],
+        "got": [
+          "AMBIGUOUS_DESCRIPTION"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/07_ocr_scan_hermon_he.pdf",
+        "scenario": "ocr_scanned",
+        "expected": [],
+        "got": [
+          "MISSING_PURCHASE_ORDER"
+        ],
+        "exact": false
+      },
+      {
+        "file": "invoices/08_prompt_injection_bluewave_en.pdf",
+        "scenario": "prompt_injection",
+        "expected": [
+          "SUSPICIOUS_CONTENT"
+        ],
+        "got": [
+          "SUSPICIOUS_CONTENT"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/09_ambiguous_supplier_carmel_he.pdf",
+        "scenario": "ambiguous_supplier",
+        "expected": [
+          "AMBIGUOUS_SUPPLIER"
+        ],
+        "got": [
+          "AMBIGUOUS_SUPPLIER"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/10_missing_receipt_bluewave_en.pdf",
+        "scenario": "missing_goods_receipt",
+        "expected": [
+          "MISSING_GOODS_RECEIPT"
+        ],
+        "got": [
+          "MISSING_GOODS_RECEIPT"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/11_currency_mismatch_arava_mixed.pdf",
+        "scenario": "currency_mismatch",
+        "expected": [
+          "CURRENCY_MISMATCH"
+        ],
+        "got": [
+          "CURRENCY_MISMATCH"
+        ],
+        "exact": true
+      },
+      {
+        "file": "invoices/12_multipage_tavor_he.pdf",
+        "scenario": "correct_multipage",
+        "expected": [],
+        "got": [],
+        "exact": true
+      },
+      {
+        "file": "invoices/13_photo_bluewave_en.png",
+        "scenario": "image_upload",
+        "expected": [],
+        "got": [],
+        "exact": true
+      }
+    ]
+  },
+  "command": "backend/.venv/Scripts/python eval/run_reconciliation_eval.py",
+  "notes": [
+    "Controlled cases test the deterministic engine in isolation with exact inputs.",
+    "End-to-end runs the full document pipeline (rule-based extraction) on the 13 demo PDFs, so extraction and OCR errors propagate; OCR documents are skipped when Tesseract is unavailable.",
+    "Info-level findings (e.g. UNBILLED_PO_LINES) are excluded from scoring."
+  ]
+}

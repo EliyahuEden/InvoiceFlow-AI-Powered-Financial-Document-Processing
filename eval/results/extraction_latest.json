@@ -1,0 +1,414 @@
+{
+  "generated_at": "2026-11-20T11:10:32+00:00",
+  "git_rev": null,
+  "python": "3.12.16",
+  "dataset": {
+    "documents": 57,
+    "evaluated": 57,
+    "ocr": "all documents, Tesseract heb+eng",
+    "by_render": {
+      "native": 42,
+      "scanned": 11,
+      "photo": 4
+    },
+    "by_language": {
+      "he": 34,
+      "en": 13,
+      "mixed": 10
+    },
+    "held_out_layouts": 8,
+    "source": "eval/datasets/extraction (synthetic, labels exact by construction)"
+  },
+  "fields": [
+    "supplier_name",
+    "supplier_tax_id",
+    "invoice_number",
+    "invoice_date",
+    "currency",
+    "po_reference",
+    "payment_terms",
+    "subtotal",
+    "tax_rate",
+    "tax_amount",
+    "total"
+  ],
+  "systems": {
+    "rule_based": {
+      "documents_evaluated": 57,
+      "documents_skipped": [],
+      "overall_field_accuracy": 0.837,
+      "documents_fully_correct": 0.614,
+      "per_field": {
+        "supplier_name": {
+          "accuracy": 0.825,
+          "precision": 0.825,
+          "recall": 0.825,
+          "f1": 0.825
+        },
+        "supplier_tax_id": {
+          "accuracy": 0.649,
+          "precision": 0.97,
+          "recall": 0.615,
+          "f1": 0.753
+        },
+        "invoice_number": {
+          "accuracy": 0.842,
+          "precision": 1.0,
+          "recall": 0.842,
+          "f1": 0.914
+        },
+        "invoice_date": {
+          "accuracy": 0.789,
+          "precision": 1.0,
+          "recall": 0.789,
+          "f1": 0.882
+        },
+        "currency": {
+          "accuracy": 0.912,
+          "precision": 1.0,
+          "recall": 0.891,
+          "f1": 0.943
+        },
+        "po_reference": {
+          "accuracy": 0.825,
+          "precision": 0.787,
+          "recall": 0.787,
+          "f1": 0.787
+        },
+        "payment_terms": {
+          "accuracy": 0.965,
+          "precision": 1.0,
+          "recall": 0.95,
+          "f1": 0.974
+        },
+        "subtotal": {
+          "accuracy": 0.825,
+          "precision": 1.0,
+          "recall": 0.825,
+          "f1": 0.904
+        },
+        "tax_rate": {
+          "accuracy": 0.912,
+          "precision": 1.0,
+          "recall": 0.912,
+          "f1": 0.954
+        },
+        "tax_amount": {
+          "accuracy": 0.895,
+          "precision": 0.944,
+          "recall": 0.895,
+          "f1": 0.919
+        },
+        "total": {
+          "accuracy": 0.772,
+          "precision": 0.863,
+          "recall": 0.772,
+          "f1": 0.815
+        }
+      },
+      "groups": {
+        "language:en": {
+          "field_accuracy": 0.993,
+          "n": 13
+        },
+        "language:he": {
+          "field_accuracy": 0.885,
+          "n": 34
+        },
+        "language:mixed": {
+          "field_accuracy": 0.473,
+          "n": 10
+        },
+        "layout:held_out": {
+          "field_accuracy": 0.341,
+          "n": 8
+        },
+        "layout:seen": {
+          "field_accuracy": 0.918,
+          "n": 49
+        },
+        "render:native": {
+          "field_accuracy": 0.894,
+          "n": 42
+        },
+        "render:photo": {
+          "field_accuracy": 0.545,
+          "n": 4
+        },
+        "render:scanned": {
+          "field_accuracy": 0.727,
+          "n": 11
+        },
+        "template:en_classic": {
+          "field_accuracy": 1.0,
+          "n": 6
+        },
+        "template:en_minimal": {
+          "field_accuracy": 0.242,
+          "n": 3
+        },
+        "template:en_modern": {
+          "field_accuracy": 0.989,
+          "n": 8
+        },
+        "template:he_boxed": {
+          "field_accuracy": 0.932,
+          "n": 12
+        },
+        "template:he_classic": {
+          "field_accuracy": 0.811,
+          "n": 12
+        },
+        "template:he_compact": {
+          "field_accuracy": 0.926,
+          "n": 11
+        },
+        "template:he_receipt": {
+          "field_accuracy": 0.4,
+          "n": 5
+        }
+      },
+      "line_items": {
+        "precision": 0.893,
+        "recall": 0.848,
+        "f1": 0.87,
+        "truth_lines": 178
+      },
+      "missing_field_handling": {
+        "supplier_tax_id": {
+          "absent_in_document": 5,
+          "correctly_null": 5
+        },
+        "currency": {
+          "absent_in_document": 11,
+          "correctly_null": 11
+        },
+        "po_reference": {
+          "absent_in_document": 10,
+          "correctly_null": 10
+        },
+        "payment_terms": {
+          "absent_in_document": 17,
+          "correctly_null": 17
+        }
+      },
+      "numeric": {
+        "wrong_totals": 7,
+        "median_abs_error_of_wrong_totals": "3014.44"
+      },
+      "latency_ms_p50": 21.51,
+      "error_examples": [
+        {
+          "file": "docs/04_duplicate_tavor_he.pdf",
+          "field": "supplier_tax_id",
+          "expected": "514000127",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_compact"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "supplier_tax_id",
+          "expected": "515000238",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "po_reference",
+          "expected": "PO-2026-1009",
+          "predicted": "2026-1009",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "subtotal",
+          "expected": "3960.00",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "tax_amount",
+          "expected": "712.80",
+          "predicted": "3960.00",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/13_photo_bluewave_en.png",
+          "field": "supplier_tax_id",
+          "expected": "516000349",
+          "predicted": "916000349",
+          "render": "photo",
+          "template": "en_modern"
+        },
+        {
+          "file": "docs/gen_001_hermon_he_classic_scanned.pdf",
+          "field": "supplier_tax_id",
+          "expected": "515000238",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_001_hermon_he_classic_scanned.pdf",
+          "field": "po_reference",
+          "expected": "PO-2026-2507",
+          "predicted": "2026-2507",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_001_hermon_he_classic_scanned.pdf",
+          "field": "total",
+          "expected": "14712.24",
+          "predicted": "4",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "supplier_tax_id",
+          "expected": "513000451",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "invoice_date",
+          "expected": "2026-05-22",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "tax_amount",
+          "expected": "64386.00",
+          "predicted": "0",
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "total",
+          "expected": "422086.00",
+          "predicted": "0",
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_004_arava_he_receipt_native.pdf",
+          "field": "supplier_name",
+          "expected": "ערבה אריזות בע\"מ",
+          "predicted": "ערבה אריזות בע\"מ קבלה /",
+          "render": "native",
+          "template": "he_receipt"
+        },
+        {
+          "file": "docs/gen_004_arava_he_receipt_native.pdf",
+          "field": "supplier_tax_id",
+          "expected": "518000673",
+          "predicted": null,
+          "render": "native",
+          "template": "he_receipt"
+        },
+        {
+          "file": "docs/gen_004_arava_he_receipt_native.pdf",
+          "field": "invoice_number",
+          "expected": "AR-56706",
+          "predicted": null,
+          "render": "native",
+          "template": "he_receipt"
+        },
+        {
+          "file": "docs/gen_004_arava_he_receipt_native.pdf",
+          "field": "invoice_date",
+          "expected": "2026-10-10",
+          "predicted": null,
+          "render": "native",
+          "template": "he_receipt"
+        },
+        {
+          "file": "docs/gen_004_arava_he_receipt_native.pdf",
+          "field": "subtotal",
+          "expected": "360.00",
+          "predicted": null,
+          "render": "native",
+          "template": "he_receipt"
+        },
+        {
+          "file": "docs/gen_004_arava_he_receipt_native.pdf",
+          "field": "total",
+          "expected": "424.80",
+          "predicted": null,
+          "render": "native",
+          "template": "he_receipt"
+        },
+        {
+          "file": "docs/gen_006_hermon_he_compact_scanned.pdf",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_compact"
+        },
+        {
+          "file": "docs/gen_006_hermon_he_compact_scanned.pdf",
+          "field": "tax_amount",
+          "expected": "1016.64",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_compact"
+        },
+        {
+          "file": "docs/gen_009_arava_he_receipt_native.pdf",
+          "field": "supplier_name",
+          "expected": "ערבה אריזות בע\"מ",
+          "predicted": "ערבה אריזות בע\"מ קבלה /",
+          "render": "native",
+          "template": "he_receipt"
+        }
+      ]
+    },
+    "llm": {
+      "skipped": "not requested (requires --llm and an API key)"
+    }
+  },
+  "command": "docker compose run --rm --no-deps -v ./eval:/srv/eval worker python /srv/eval/run_extraction_eval.py",
+  "notes": [
+    "Labels are the structured specs the PDFs were rendered from (exact by construction).",
+    "The rule-based baseline was developed against the five 'seen' templates; 'held_out' layouts measure generalisation.",
+    "supplier_name is scored with fuzzy company-name similarity >= 0.9; all other fields require exact equality.",
+    "Values not printed in a document must be returned as null; 'missing_field_handling' counts that."
+  ]
+}

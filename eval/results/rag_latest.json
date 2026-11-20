@@ -1,0 +1,1139 @@
+{
+  "generated_at": "2026-11-20T11:08:30+00:00",
+  "git_rev": null,
+  "python": "3.12.10",
+  "dataset": {
+    "questions": 50,
+    "answerable": 42,
+    "by_category": {
+      "conflicting": 4,
+      "cross_lingual": 2,
+      "en": 11,
+      "he": 14,
+      "injection": 1,
+      "mixed": 5,
+      "multi_doc": 5,
+      "unanswerable": 8
+    },
+    "documents": 8,
+    "source": "eval/datasets/rag/questions.jsonl (hand-written)"
+  },
+  "models": {
+    "embedding": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "reranker": "jinaai/jina-reranker-v2-base-multilingual",
+    "note": null
+  },
+  "configs": [
+    {
+      "name": "bm25_plain",
+      "chunking": "fixed_700",
+      "n_chunks": 15,
+      "recall@1": 0.75,
+      "all@1": 0.667,
+      "recall@3": 0.869,
+      "all@3": 0.81,
+      "recall@5": 0.893,
+      "all@5": 0.857,
+      "mrr": 0.885,
+      "ndcg@5": 0.865,
+      "latency_ms_p50": 0.07,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 1.0,
+          "mrr": 0.75,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.964,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.167,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.844,
+          "mrr": 0.885,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 1.0,
+          "mrr": 0.947,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.714,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.7,
+          "mrr": 0.9,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "bm25_hebrew",
+      "chunking": "fixed_700",
+      "n_chunks": 15,
+      "recall@1": 0.738,
+      "all@1": 0.643,
+      "recall@3": 0.893,
+      "all@3": 0.833,
+      "recall@5": 0.917,
+      "all@5": 0.881,
+      "mrr": 0.889,
+      "ndcg@5": 0.873,
+      "latency_ms_p50": 0.07,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 1.0,
+          "mrr": 0.75,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.955,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.964,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 1.0,
+          "mrr": 0.333,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.906,
+          "mrr": 0.896,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 1.0,
+          "mrr": 0.947,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.714,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.7,
+          "mrr": 1.0,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "chunking": "fixed_700",
+      "n_chunks": 15,
+      "recall@1": 0.583,
+      "all@1": 0.524,
+      "recall@3": 0.726,
+      "all@3": 0.667,
+      "recall@5": 0.869,
+      "all@5": 0.833,
+      "mrr": 0.741,
+      "ndcg@5": 0.749,
+      "latency_ms_p50": 5.53,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 1.0,
+          "mrr": 0.833,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.5,
+          "mrr": 0.562,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.803,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 0.857,
+          "mrr": 0.671,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.111,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.875,
+          "mrr": 0.705,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.868,
+          "mrr": 0.722,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.857,
+          "mrr": 0.875,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.7,
+          "mrr": 0.667,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid",
+      "chunking": "fixed_700",
+      "n_chunks": 15,
+      "recall@1": 0.655,
+      "all@1": 0.571,
+      "recall@3": 0.869,
+      "all@3": 0.81,
+      "recall@5": 0.905,
+      "all@5": 0.857,
+      "mrr": 0.834,
+      "ndcg@5": 0.826,
+      "latency_ms_p50": 4.7,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.133,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.955,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.81,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 1.0,
+          "mrr": 0.333,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.906,
+          "mrr": 0.839,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.974,
+          "mrr": 0.86,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.752,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.6,
+          "mrr": 0.717,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid_rerank",
+      "chunking": "fixed_700",
+      "n_chunks": 15,
+      "recall@1": 0.75,
+      "all@1": 0.667,
+      "recall@3": 0.964,
+      "all@3": 0.952,
+      "recall@5": 0.976,
+      "all@5": 0.976,
+      "mrr": 0.907,
+      "ndcg@5": 0.918,
+      "latency_ms_p50": 1879.43,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 1.0,
+          "mrr": 0.875,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 1.0,
+          "mrr": 0.5,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.955,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.964,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.111,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.938,
+          "mrr": 0.913,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 1.0,
+          "mrr": 0.921,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.857,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 1.0,
+          "mrr": 0.9,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "bm25_plain",
+      "chunking": "fixed_300",
+      "n_chunks": 35,
+      "recall@1": 0.69,
+      "all@1": 0.595,
+      "recall@3": 0.821,
+      "all@3": 0.762,
+      "recall@5": 0.857,
+      "all@5": 0.81,
+      "mrr": 0.838,
+      "ndcg@5": 0.813,
+      "latency_ms_p50": 0.1,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.75,
+          "mrr": 0.594,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.939,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.893,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.844,
+          "mrr": 0.849,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.921,
+          "mrr": 0.875,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.714,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.6,
+          "mrr": 1.0,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "bm25_hebrew",
+      "chunking": "fixed_300",
+      "n_chunks": 35,
+      "recall@1": 0.69,
+      "all@1": 0.595,
+      "recall@3": 0.833,
+      "all@3": 0.762,
+      "recall@5": 0.881,
+      "all@5": 0.833,
+      "mrr": 0.846,
+      "ndcg@5": 0.824,
+      "latency_ms_p50": 0.1,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.875,
+          "mrr": 0.675,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.955,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.881,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.844,
+          "mrr": 0.875,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.974,
+          "mrr": 0.87,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.714,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.7,
+          "mrr": 1.0,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "chunking": "fixed_300",
+      "n_chunks": 35,
+      "recall@1": 0.393,
+      "all@1": 0.357,
+      "recall@3": 0.655,
+      "all@3": 0.571,
+      "recall@5": 0.714,
+      "all@5": 0.643,
+      "mrr": 0.593,
+      "ndcg@5": 0.582,
+      "latency_ms_p50": 5.83,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.75,
+          "mrr": 0.833,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.5,
+          "mrr": 0.196,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 0.909,
+          "mrr": 0.818,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 0.714,
+          "mrr": 0.482,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.719,
+          "mrr": 0.672,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.684,
+          "mrr": 0.557,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.786,
+          "mrr": 0.509,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 0.9,
+          "mrr": 0.633,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.3,
+          "mrr": 0.45,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid",
+      "chunking": "fixed_300",
+      "n_chunks": 35,
+      "recall@1": 0.583,
+      "all@1": 0.524,
+      "recall@3": 0.774,
+      "all@3": 0.714,
+      "recall@5": 0.869,
+      "all@5": 0.81,
+      "mrr": 0.753,
+      "ndcg@5": 0.757,
+      "latency_ms_p50": 5.38,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.875,
+          "mrr": 0.812,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.05,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.695,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.844,
+          "mrr": 0.846,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.947,
+          "mrr": 0.736,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.586,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.8,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.6,
+          "mrr": 0.707,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid_rerank",
+      "chunking": "fixed_300",
+      "n_chunks": 35,
+      "recall@1": 0.679,
+      "all@1": 0.595,
+      "recall@3": 0.893,
+      "all@3": 0.857,
+      "recall@5": 0.952,
+      "all@5": 0.929,
+      "mrr": 0.848,
+      "ndcg@5": 0.865,
+      "latency_ms_p50": 1181.59,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.875,
+          "mrr": 0.8,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.894,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.839,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.938,
+          "mrr": 0.865,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.947,
+          "mrr": 0.804,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.929,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.9,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.9,
+          "mrr": 0.867,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "bm25_plain",
+      "chunking": "clause",
+      "n_chunks": 52,
+      "recall@1": 0.738,
+      "all@1": 0.643,
+      "recall@3": 0.821,
+      "all@3": 0.762,
+      "recall@5": 0.821,
+      "all@5": 0.762,
+      "mrr": 0.86,
+      "ndcg@5": 0.817,
+      "latency_ms_p50": 0.12,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.5,
+          "mrr": 0.528,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.955,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.964,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.781,
+          "mrr": 0.851,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.895,
+          "mrr": 0.921,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.714,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.5,
+          "mrr": 1.0,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "bm25_hebrew",
+      "chunking": "clause",
+      "n_chunks": 52,
+      "recall@1": 0.738,
+      "all@1": 0.643,
+      "recall@3": 0.81,
+      "all@3": 0.762,
+      "recall@5": 0.833,
+      "all@5": 0.786,
+      "mrr": 0.85,
+      "ndcg@5": 0.815,
+      "latency_ms_p50": 0.12,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.5,
+          "mrr": 0.528,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.946,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.781,
+          "mrr": 0.882,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.921,
+          "mrr": 0.908,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.619,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.867,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.6,
+          "mrr": 1.0,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "chunking": "clause",
+      "n_chunks": 52,
+      "recall@1": 0.393,
+      "all@1": 0.31,
+      "recall@3": 0.798,
+      "all@3": 0.762,
+      "recall@5": 0.845,
+      "all@5": 0.81,
+      "mrr": 0.642,
+      "ndcg@5": 0.67,
+      "latency_ms_p50": 6.39,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.875,
+          "mrr": 0.75,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 1.0,
+          "mrr": 0.333,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.894,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 0.857,
+          "mrr": 0.461,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.844,
+          "mrr": 0.781,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.842,
+          "mrr": 0.576,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.857,
+          "mrr": 0.5,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 0.8,
+          "mrr": 0.567,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.6,
+          "mrr": 0.833,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid",
+      "chunking": "clause",
+      "n_chunks": 52,
+      "recall@1": 0.643,
+      "all@1": 0.548,
+      "recall@3": 0.798,
+      "all@3": 0.738,
+      "recall@5": 0.857,
+      "all@5": 0.81,
+      "mrr": 0.813,
+      "ndcg@5": 0.793,
+      "latency_ms_p50": 6.58,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.875,
+          "mrr": 0.833,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.127,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.779,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.875,
+          "mrr": 0.938,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.947,
+          "mrr": 0.802,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.571,
+          "mrr": 0.56,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 0.8,
+          "mrr": 0.733,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.7,
+          "mrr": 1.0,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid_rerank",
+      "chunking": "clause",
+      "n_chunks": 52,
+      "recall@1": 0.702,
+      "all@1": 0.619,
+      "recall@3": 0.893,
+      "all@3": 0.857,
+      "recall@5": 0.94,
+      "all@5": 0.929,
+      "mrr": 0.859,
+      "ndcg@5": 0.87,
+      "latency_ms_p50": 1009.59,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 1.0,
+          "mrr": 0.75,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.894,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 0.929,
+          "mrr": 0.887,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.906,
+          "mrr": 0.833,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.947,
+          "mrr": 0.855,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.929,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 0.9,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.9,
+          "mrr": 0.867,
+          "n": 5
+        }
+      }
+    }
+  ],
+  "best_config": {
+    "name": "hybrid_rerank",
+    "chunking": "fixed_700"
+  },
+  "answers": {
+    "offline_extractive/hybrid": {
+      "answer_correctness": 0.619,
+      "citation_accuracy": 0.648,
+      "abstention": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 6,
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4,
+        "note": "positive class = question should be refused"
+      },
+      "injection_parroting": "0/1",
+      "groundedness": "1.0 by construction (verbatim extractive)",
+      "failure_examples": [
+        {
+          "id": "he-04",
+          "question": "מה תנאי התשלום מול תבור ציוד משרדי?",
+          "answer": "חשבונית שהוגשה יותר מפעם אחת לא תשולם פעמיים.",
+          "abstained": false
+        },
+        {
+          "id": "he-05",
+          "question": "האם חרמון רשאית לחייב על כמות שטרם סופקה?",
+          "answer": "חיוב לפי כמות שסופקה",
+          "abstained": false
+        },
+        {
+          "id": "he-06",
+          "question": "מה מחיר פולי האספרסו של חרמון לק\"ג?",
+          "answer": "סטיית מחיר מותרת בין החשבונית להזמנה היא עד 3% ממחיר ההזמנה.",
+          "abstained": false
+        },
+        {
+          "id": "he-07",
+          "question": "עד מתי קבועים מחירי הקפה של חרמון?",
+          "answer": "תאריך הקלייה של פולי הקפה לא יעלה על 14 יום ממועד האספקה. הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "abstained": false
+        },
+        {
+          "id": "he-10",
+          "question": "מה חייבת לכלול חשבונית של כרמל שירותי ניקיון?",
+          "answer": "תנאי התשלום הם שוטף + 30. הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "abstained": false
+        },
+        {
+          "id": "en-07",
+          "question": "What happens to an invoice issued in a different currency than the purchase order?",
+          "answer": "Invoices must be issued in the purchase order currency. Each invoice must reference a valid purchase order number issued by the Customer.",
+          "abstained": false
+        }
+      ]
+    },
+    "offline_extractive/hybrid_rerank": {
+      "answer_correctness": 0.643,
+      "citation_accuracy": 0.686,
+      "abstention": {
+        "tp": 8,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.889,
+        "note": "positive class = question should be refused"
+      },
+      "injection_parroting": "0/1",
+      "groundedness": "1.0 by construction (verbatim extractive)",
+      "failure_examples": [
+        {
+          "id": "he-04",
+          "question": "מה תנאי התשלום מול תבור ציוד משרדי?",
+          "answer": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "abstained": false
+        },
+        {
+          "id": "he-05",
+          "question": "האם חרמון רשאית לחייב על כמות שטרם סופקה?",
+          "answer": "The knowledge base does not contain enough evidence to answer this question.",
+          "abstained": true
+        },
+        {
+          "id": "he-07",
+          "question": "עד מתי קבועים מחירי הקפה של חרמון?",
+          "answer": "הסכם אספקת קפה - חרמון קלייה בע\"מ חשבונית הכוללת מחיר גבוה ממחירי נספח א' תשולם לפי המחיר המוסכם בלבד.",
+          "abstained": false
+        },
+        {
+          "id": "he-10",
+          "question": "מה חייבת לכלול חשבונית של כרמל שירותי ניקיון?",
+          "answer": "כל חשבונית תכלול את מספר הזמנת הרכש, מק\"ט לכל פריט, כמות ומחיר ליחידה. הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "abstained": false
+        },
+        {
+          "id": "en-01",
+          "question": "What are the payment terms in the BlueWave agreement?",
+          "answer": "This Master Services Agreement between Kinneret Hospitality Ltd (\"Customer\") and BlueWave IT Solutions Ltd (\"Supplier\") is effective from 1 February 2026 for a period of 24 months. Master Services Agreement - BlueWave IT Solutions Ltd Versi",
+          "abstained": false
+        },
+        {
+          "id": "en-07",
+          "question": "What happens to an invoice issued in a different currency than the purchase order?",
+          "answer": "Invoices must be issued in the purchase order currency. Each invoice must reference a valid purchase order number issued by the Customer.",
+          "abstained": false
+        }
+      ]
+    }
+  },
+  "llm_answers": "not run (no LLM configured; set LLM_PROVIDER and run with an API key)",
+  "command": "backend/.venv/Scripts/python eval/run_rag_eval.py",
+  "notes": [
+    "Metrics on answerable questions only; recall@k counts labels (doc, evidence phrase) found in the top-k.",
+    "all@k = every label of a multi-document question retrieved within k.",
+    "Answer metrics use the offline extractive answerer (no LLM). Its groundedness is 1.0 by construction (answers are verbatim sentences), so it is not reported as a model capability.",
+    "fixed_700 yields very few chunks on this small corpus (about 2 per document), which inflates recall@k; compare strategies at similar granularity (fixed_300 vs clause).",
+    "Abstention thresholds were chosen after inspecting score distributions on this same dataset (eval/inspect_rerank_scores.py); there is no held-out split, so abstention numbers are optimistic."
+  ]
+}

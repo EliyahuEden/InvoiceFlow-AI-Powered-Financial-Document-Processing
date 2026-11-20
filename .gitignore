@@ -1,0 +1,18 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+# node
+node_modules/
+.next/
+frontend/test-results/
+frontend/playwright-report/
+# local data (documents, model cache, tmp)
+.data/
+# env
+.env
+.env.*
+!.env.example

@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  InvoiceFlow — "ledger paper" world.
+  Warm paper surfaces, ink text, one ledger-green accent for action/selection.
+  Violet is reserved exclusively for AI-generated content so it can never be
+  confused with verified business records.
+*/
+:root {
+  --bg: 246 245 241;
+  --surface: 255 255 255;
+  --sunken: 241 240 235;
+  --rail: 236 235 229;
+  --ink: 23 25 28;
+  --ink-2: 70 75 83;
+  --ink-3: 104 109 117;
+  --line: 226 224 216;
+  --line-strong: 205 202 192;
+  --accent: 14 107 88;
+  --accent-soft: 224 240 234;
+  --accent-ink: 9 82 67;
+  --ok: 6 118 71;
+  --ok-soft: 229 244 236;
+  --warn: 167 72 6;
+  --warn-soft: 253 240 222;
+  --danger: 180 35 24;
+  --danger-soft: 252 233 231;
+  --info: 41 84 164;
+  --info-soft: 233 239 250;
+  --ai: 105 65 198;
+  --ai-soft: 243 239 252;
+  --ai-line: 214 200 245;
+  --highlight: 250 204 21;
+  /* data-viz categorical slots (dataviz reference palette, validated, fixed order) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --chart-grid: #e7e5de;
+  --chart-axis: #686d75;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: 20 22 25;
+  --surface: 28 31 35;
+  --sunken: 24 26 30;
+  --rail: 24 26 30;
+  --ink: 236 236 232;
+  --ink-2: 190 192 196;
+  --ink-3: 150 154 160;
+  --line: 48 52 58;
+  --line-strong: 70 75 83;
+  --accent: 72 187 158;
+  --accent-soft: 22 52 45;
+  --accent-ink: 134 222 198;
+  --ok: 92 199 140;
+  --ok-soft: 22 50 36;
+  --warn: 240 160 80;
+  --warn-soft: 58 40 18;
+  --danger: 248 113 104;
+  --danger-soft: 64 26 24;
+  --info: 125 162 235;
+  --info-soft: 26 38 64;
+  --ai: 177 151 245;
+  --ai-soft: 40 32 66;
+  --ai-line: 76 62 120;
+  --highlight: 250 204 21;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --chart-grid: #30343a;
+  --chart-axis: #969aa0;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans text-base antialiased;
+    font-feature-settings: "kern", "liga", "calt";
+  }
+  ::selection {
+    background: rgb(var(--accent) / 0.18);
+    color: rgb(var(--ink));
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  input,
+  textarea,
+  select {
+    caret-color: rgb(var(--accent));
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  /* numerals in data align in columns */
+  .num,
+  table td,
+  table th {
+    font-variant-numeric: tabular-nums;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--line-strong)) transparent;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  /* An LTR island inside RTL text: amounts, SKUs, PO numbers, emails. */
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, rgb(var(--sunken)) 0, rgb(var(--line)) 50%, rgb(var(--sunken)) 100%);
+    background-size: 800px 100%;
+    @apply animate-shimmer rounded;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
