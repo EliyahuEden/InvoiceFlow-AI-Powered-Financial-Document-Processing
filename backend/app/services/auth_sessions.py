@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.db import new_session
-from app.models import AuthSession
+from app.models import DEFAULT_ORG_SETTINGS, AuthSession, Organization
 
 
 class RefreshError(Exception):
@@ -52,13 +52,22 @@ def _active(sess: AuthSession | None, now: datetime | None = None) -> bool:
     return bool(sess and sess.revoked_at is None and sess.expires_at > now and sess.absolute_expires_at > now)
 
 
-def create(db: Session, *, user_id: uuid.UUID, org_id: uuid.UUID, ip: str | None, user_agent: str | None) -> Issued:
+def lifetimes(db: Session, org_id: uuid.UUID) -> tuple[timedelta, timedelta]:
+    """(idle timeout, absolute maximum) from the organization's security settings."""
     s = get_settings()
+    org = db.get(Organization, org_id)
+    sec = {**DEFAULT_ORG_SETTINGS["security"], **((org.settings or {}).get("security", {}) if org else {})}
+    idle = int(sec.get("session_idle_hours") or s.session_idle_hours)
+    max_days = int(sec.get("session_max_days") or s.session_max_days)
+    return timedelta(hours=idle), timedelta(days=max_days)
+
+
+def create(db: Session, *, user_id: uuid.UUID, org_id: uuid.UUID, ip: str | None, user_agent: str | None) -> Issued:
     now = _now()
+    idle, maximum = lifetimes(db, org_id)
     secret = secrets.token_urlsafe(32)
     sess = AuthSession(id=uuid.uuid4(), user_id=user_id, organization_id=org_id, refresh_token_hash=_hash(secret),
-                       expires_at=now + timedelta(days=s.session_idle_days),
-                       absolute_expires_at=now + timedelta(days=s.session_max_days), last_used_at=now,
+                       expires_at=now + idle, absolute_expires_at=now + maximum, last_used_at=now,
                        ip=(ip or "")[:64] or None, user_agent=(user_agent or "")[:300] or None)
     db.add(sess)
     db.flush()
@@ -84,7 +93,7 @@ def rotate(db: Session, refresh_token: str) -> Issued:
     new_secret = secrets.token_urlsafe(32)
     sess.refresh_token_hash = _hash(new_secret)
     sess.last_used_at = now
-    sess.expires_at = min(now + timedelta(days=get_settings().session_idle_days), sess.absolute_expires_at)
+    sess.expires_at = min(now + lifetimes(db, sess.organization_id)[0], sess.absolute_expires_at)
     return Issued(sess, f"{sess.id}.{new_secret}")
 
 

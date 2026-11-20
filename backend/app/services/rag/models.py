@@ -23,7 +23,14 @@ class Embedder(Protocol):
     name: str
     dim: int
 
-    def embed(self, texts: list[str]) -> np.ndarray: ...
+    def embed(self, texts: list[str]) -> np.ndarray: ...  # passages (documents)
+
+    def embed_query(self, texts: list[str]) -> np.ndarray: ...
+
+
+def with_prefix(model: str, texts: list[str], kind: str) -> list[str]:
+    """E5-family models were trained with "query: " / "passage: " prefixes and lose accuracy without them."""
+    return [f"{kind}: {t}" for t in texts] if "e5" in model.lower() else texts
 
 
 class FastEmbedEmbedder:
@@ -36,6 +43,12 @@ class FastEmbedEmbedder:
         self._lock = threading.Lock()
 
     def embed(self, texts: list[str]) -> np.ndarray:
+        return self._embed(with_prefix(self.name, texts, "passage"))
+
+    def embed_query(self, texts: list[str]) -> np.ndarray:
+        return self._embed(with_prefix(self.name, texts, "query"))
+
+    def _embed(self, texts: list[str]) -> np.ndarray:
         with self._lock:
             vecs = np.array(list(self._model.embed(texts, batch_size=32)), dtype=np.float32)
         norms = np.linalg.norm(vecs, axis=1, keepdims=True)
@@ -57,6 +70,9 @@ class HashEmbedder:
                 out[i, h % self.dim] += 1.0
         norms = np.linalg.norm(out, axis=1, keepdims=True)
         return out / np.maximum(norms, 1e-12)
+
+    def embed_query(self, texts: list[str]) -> np.ndarray:
+        return self.embed(texts)
 
 
 class Reranker(Protocol):

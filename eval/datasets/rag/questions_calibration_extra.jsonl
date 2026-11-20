@@ -1,0 +1,16 @@
+{"id": "cx-u01", "lang": "he", "category": "unanswerable", "question": "מה תקופת האחריות על ציוד משרדי של תבור?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u02", "lang": "en", "category": "unanswerable", "question": "What interest is charged on late payments to Carmel Cleaning?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u03", "lang": "he", "category": "unanswerable", "question": "האם ערבה אריזות מעניקה הנחת כמות?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u04", "lang": "he", "category": "unanswerable", "question": "מה המחיר של מכונת קפה מחרמון?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u05", "lang": "en", "category": "unanswerable", "question": "How many days' notice does Carmel need before changing its prices?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u06", "lang": "en", "category": "unanswerable", "question": "What does BlueWave charge for Microsoft 365 licenses?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u07", "lang": "he", "category": "unanswerable", "question": "מי איש הקשר בכרמל שירותי ניקיון?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u08", "lang": "en", "category": "unanswerable", "question": "Does the purchasing policy set a limit for petty cash purchases?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u09", "lang": "en", "category": "unanswerable", "question": "What penalty applies if Tavor delivers late?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-u10", "lang": "he", "category": "unanswerable", "question": "באיזה יום בחודש כרמל מגישה את החשבונית?", "relevant": [], "facts": [], "answerable": false}
+{"id": "cx-a01", "lang": "en", "category": "cross_lingual", "question": "What weight deviation is acceptable on Hermon coffee bags?", "relevant": [["agreement_hermon", "סטייה של עד 2%"]], "facts": ["2%"], "answerable": true}
+{"id": "cx-a02", "lang": "he", "category": "cross_lingual", "question": "מה הריבית על תשלום מאוחר ל-BlueWave?", "relevant": [["agreement_bluewave", "bear interest of 0.5% per month"]], "facts": ["0.5%"], "answerable": true}
+{"id": "cx-a03", "lang": "en", "category": "cross_lingual", "question": "Until when is the Tavor supply agreement valid?", "relevant": [["agreement_tavor", "ועד 31 בדצמבר 2026"]], "facts": ["31"], "answerable": true}
+{"id": "cx-a04", "lang": "he", "category": "cross_lingual", "question": "כמה עולה התמיכה החודשית של BlueWave?", "relevant": [["agreement_bluewave", "fixed fee of ILS 4,200"]], "facts": ["4,200"], "answerable": true}
+{"id": "cx-a05", "lang": "en", "category": "cross_lingual", "question": "Who approves an invoice of up to 20,000 including VAT?", "relevant": [["policy_purchasing_2026", "מאושרת על ידי סוקר כספים"]], "facts": ["סוקר כספים"], "answerable": true}
+{"id": "cx-a06", "lang": "he", "category": "cross_lingual", "question": "תוך כמה ימי עסקים יש לטפל בחריגה?", "relevant": [["procedure_finance_exceptions", "Exceptions must be resolved within 10 business days"]], "facts": ["10"], "answerable": true}

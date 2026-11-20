@@ -190,7 +190,8 @@ def check_arithmetic(inv: NormalizedInvoice) -> list[ValidationIssue]:
     totals = [ln.line_total for ln in inv.lines if ln.line_total is not None]
     if inv.subtotal is not None and totals and len(totals) == len(inv.lines):
         s = sum(totals, Decimal(0))
-        if abs(s - inv.subtotal) > TOL:
+        vat_inclusive = inv.total is not None and abs(s - inv.total) <= TOL  # retail: line prices include VAT
+        if abs(s - inv.subtotal) > TOL and not vat_inclusive:
             issues.append(ValidationIssue(code="SUBTOTAL_MISMATCH", field="subtotal",
                                           message=f"Line totals sum to {s}, subtotal printed as {inv.subtotal}."))
     if inv.subtotal is not None and inv.tax_amount is not None and inv.total is not None:

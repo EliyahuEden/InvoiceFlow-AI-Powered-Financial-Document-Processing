@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, documents, insights, invoices, knowledge, masterdata, review, system
+from app.api.routes import auth, documents, insights, invoices, knowledge, masterdata, queue, review, system
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.services.documents.validation import UploadRejected
@@ -53,7 +53,7 @@ def create_app() -> FastAPI:
         return JSONResponse({"detail": "Validation error",
                              "errors": [{"loc": e["loc"], "msg": e["msg"]} for e in exc.errors()]}, status_code=422)
 
-    for r in (auth, masterdata, invoices, documents, review, knowledge, insights, system):
+    for r in (auth, masterdata, invoices, documents, review, queue, knowledge, insights, system):
         app.include_router(r.router)
     return app
 

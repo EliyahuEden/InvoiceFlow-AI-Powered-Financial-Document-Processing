@@ -94,7 +94,8 @@ def get_exception(exception_id: uuid.UUID, p: Principal = Depends(require(Perm.I
 
 
 class DecisionIn(BaseModel):
-    decision: str = Field(..., pattern="^(approve|reject|request_info)$")
+    decision: str = Field(..., pattern="^(approve|reject|request_info|escalate)$")
+    target: str | None = Field(None, pattern="^(procurement|supplier)$")
     note: str | None = Field(None, max_length=4000)
     action_override: str | None = None
 
@@ -106,7 +107,7 @@ def decide(exception_id: uuid.UUID, body: DecisionIn, p: Principal = Depends(req
                                                ExceptionCase.organization_id == p.org_id)).first()
     if not e:
         raise HTTPException(404, "Exception not found")
-    workflow.decide_exception(db, e, p.user, p.role.value, body.decision, body.note, body.action_override)
+    workflow.decide_exception(db, e, p.user, p.role.value, body.decision, body.note, body.action_override, body.target)
     inv = db.get(Invoice, e.invoice_id)
     return {"status": e.status, "invoice_status": inv.status}
 

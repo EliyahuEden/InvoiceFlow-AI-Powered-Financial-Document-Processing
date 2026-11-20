@@ -126,7 +126,8 @@ def main() -> None:
 
     # dataset integrity: every evidence phrase must exist in its document
     full = {k: normalize(" ".join(t for _, t in v)) for k, v in pages.items()}
-    missing = [(q["id"], d, p) for q in questions + held_out for d, p in q["relevant"] if normalize(p) not in full[d]]
+    extra = load_questions("questions_calibration_extra.jsonl")
+    missing = [(q["id"], d, p) for q in questions + held_out + extra for d, p in q["relevant"] if normalize(p) not in full[d]]
     if missing:
         raise SystemExit(f"dataset error, evidence not found in documents: {missing}")
 

@@ -159,7 +159,7 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
     session.flush()
 
     open_exc = session.scalars(select(ExceptionCase).where(
-        ExceptionCase.invoice_id == inv.id, ExceptionCase.status.in_(["draft", "open", "pending_info"]))).first()
+        ExceptionCase.invoice_id == inv.id, ExceptionCase.status.in_(["draft", "open", "pending_info", "escalated"]))).first()
     if actionable:
         types = sorted({f.type for f in actionable}, key=lambda t: PRIORITY_ORDER.index(t) if t in PRIORITY_ORDER else 99)
         main = primary_finding(types)
@@ -168,7 +168,7 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
             open_exc = ExceptionCase(
                 organization_id=org.id, invoice_id=inv.id,
                 title=f"{TITLE.get(main, main.replace('_', ' ').title())} — {inv.invoice_number or 'invoice'}",
-                status="open", priority="high" if any(f.severity == "critical" for f in actionable) else "medium",
+                status="open", priority=_priority_level(org, inv, actionable),
                 discrepancy_types=types, proposed_action=action, proposed_action_detail=detail,
             )
             session.add(open_exc)
@@ -180,6 +180,7 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
         else:
             open_exc.discrepancy_types = types
             open_exc.proposed_action = open_exc.proposed_action or action
+            open_exc.priority = _priority_level(org, inv, actionable)
     elif open_exc is not None:
         open_exc.status = "resolved"
         open_exc.decision_note = "Resolved automatically: re-reconciliation found no discrepancies."
@@ -208,3 +209,17 @@ def ensure_approval_steps(session: Session, org: Organization, inv: Invoice) -> 
     if inv.total is not None and inv.total > threshold:
         session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=2, required_role="admin"))
     session.flush()
+
+
+def _priority_level(org, inv, findings) -> str:  # noqa: ANN001
+    """Stored copy of the risk-first level (the queue recomputes it daily for due-date urgency)."""
+    from datetime import UTC, date, datetime
+    from decimal import Decimal
+
+    from app.api.routes.queue import critical_amount
+    from app.services import priority as P
+
+    risk = sum((Decimal(f.amount_at_risk) for f in findings if f.amount_at_risk), Decimal(0))
+    inp = P.PriorityInput(exception_id=inv.id, finding_types=[f.type for f in findings], amount_at_risk=risk,
+                          due_date=inv.due_date, created_at=datetime.now(UTC), invoice_total=inv.total)
+    return P.compute(inp, date.today(), critical_amount(org)).level

@@ -35,8 +35,10 @@ class Settings(BaseSettings):
     # Short-lived access JWTs bound to a server-side session (revocable); the session is
     # kept alive by a rotating refresh token (idle timeout) up to an absolute maximum.
     access_token_minutes: int = 15
-    session_idle_days: int = 7
-    session_max_days: int = 30
+    # Fallbacks; each organization can tune these (Settings → security). Small and medium
+    # businesses: sign in again after a workday of inactivity, and at least weekly.
+    session_idle_hours: int = 8
+    session_max_days: int = 7
     sse_ticket_seconds: int = 30
     rate_limit_refresh_per_minute: int = 60
     cookie_secure: bool = False
@@ -59,6 +61,8 @@ class Settings(BaseSettings):
     # --- LLM ---
     llm_provider: Literal["offline", "anthropic", "openai"] = "offline"
     llm_model: str = ""
+    # Reasoning models (gpt-5 family, o-series): minimal | low | medium | high. Default low keeps cost down.
+    llm_reasoning_effort: str | None = None
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     openai_base_url: str | None = None  # e.g. http://localhost:11434/v1 for Ollama
@@ -118,7 +122,7 @@ class Settings(BaseSettings):
     def effective_llm_model(self) -> str:
         if self.llm_model:
             return self.llm_model
-        return {"anthropic": "claude-opus-5-5", "openai": "gpt-4o-mini", "offline": "offline-deterministic"}[
+        return {"anthropic": "claude-opus-5-5", "openai": "gpt-5.4-nano", "offline": "offline-deterministic"}[
             self.llm_provider
         ]
 

@@ -386,6 +386,18 @@ def match_lines(inv: InvoiceData, po: POData, tol: Tolerances) -> tuple[list[Lin
     return matches, findings
 
 
+def tax_inclusive_factor(inv: InvoiceData, tol: Tolerances) -> Decimal | None:
+    """Net/gross factor when line prices include VAT (retail invoices): the lines then sum to the
+    total rather than the subtotal. Purchase orders are net, so prices are compared net."""
+    totals = [il.line_total for il in inv.lines]
+    if not totals or any(t is None for t in totals) or not inv.total or inv.tax_amount is None:
+        return None
+    s = sum(totals, ZERO)
+    if abs(s - inv.total) <= tol.total_abs and (inv.subtotal is None or abs(s - inv.subtotal) > tol.total_abs):
+        return (inv.total - inv.tax_amount) / inv.total
+    return None
+
+
 def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Context, mode: str,
                 currency_ok: bool) -> list[Finding]:
     tol = ctx.tolerances
@@ -393,6 +405,7 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
     po_lines = {str(pl.id): pl for pl in po.lines}
     by_no = {il.line_no: il for il in inv.lines}
     no_receipts = ctx.receipt_count.get(po.id, 0) == 0
+    gross = tax_inclusive_factor(inv, tol)
     if mode == "three_way" and no_receipts:
         out.append(Finding("MISSING_GOODS_RECEIPT",
                            f"No goods receipt has been recorded for {po.number}; nothing can be confirmed as delivered.",
@@ -403,18 +416,21 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
             continue
         il, pl = by_no[m.invoice_line_no], po_lines[m.po_line_id]
         ref = dict(invoice_line_id=m.invoice_line_id, invoice_line_no=il.line_no, po_line_id=m.po_line_id)
-        if currency_ok and il.unit_price is not None and not within_tolerance(pl.unit_price, il.unit_price, tol.price_abs, tol.price_pct):
-            diff = il.unit_price - pl.unit_price
+        price = None if il.unit_price is None else (
+            (il.unit_price * gross).quantize(Decimal("0.0001")) if gross else il.unit_price)
+        if currency_ok and price is not None and not within_tolerance(pl.unit_price, price, tol.price_abs, tol.price_pct):
+            diff = price - pl.unit_price
             pct = (diff / pl.unit_price * 100).quantize(Decimal("0.01")) if pl.unit_price else None
             qty = il.quantity or ZERO
             out.append(Finding(
                 "PRICE_MISMATCH",
-                f"Line {il.line_no}: unit price {amt(il.unit_price)} vs {amt(pl.unit_price)} on {po.number} "
+                f"Line {il.line_no}: unit price {amt(price)} vs {amt(pl.unit_price)} on {po.number} "
                 f"({'+' if diff > 0 else ''}{pct}%), tolerance {tol.price_pct}% / {tol.price_abs}.",
-                expected=amt(pl.unit_price), actual=amt(il.unit_price), difference=amt(diff),
+                expected=amt(pl.unit_price), actual=amt(price), difference=amt(diff),
                 amount_at_risk=str(round_money(max(diff, ZERO) * qty)),
-                evidence={"pct": str(pct), "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs)},
-                params={"line": il.line_no, "invoice_price": amt(il.unit_price), "po_price": amt(pl.unit_price),
+                evidence={"pct": str(pct), "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs),
+                          "compared_net_of_vat": gross is not None},
+                params={"line": il.line_no, "invoice_price": amt(price), "po_price": amt(pl.unit_price),
                         "po": po.number, "pct": None if pct is None else f"{'+' if diff > 0 else ''}{pct}",
                         "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs)}, **ref))
         if il.quantity is not None:
@@ -462,7 +478,7 @@ def check_arithmetic(inv: InvoiceData, tol: Tolerances) -> list[Finding]:
                                params={"line": il.line_no, "quantity": q(il.quantity), "unit_price": amt(il.unit_price),
                                        "expected": amt(expected), "actual": amt(il.line_total)}))
     line_totals = [il.line_total for il in inv.lines]
-    if inv.subtotal is not None and line_totals and all(t is not None for t in line_totals):
+    if inv.subtotal is not None and line_totals and all(t is not None for t in line_totals)             and tax_inclusive_factor(inv, tol) is None:  # VAT-inclusive lines legitimately sum to the total
         s = sum(line_totals, ZERO)
         if abs(s - inv.subtotal) > tol.total_abs:
             out.append(Finding("SUBTOTAL_MISMATCH", f"Lines sum to {amt(s)}; subtotal shows {amt(inv.subtotal)}.",

@@ -16,7 +16,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.api.deps import Principal, get_db, get_principal, principal_from_claims, require
 from app.core.db import new_session
 from app.core.security import hash_password
-from app.models import Job, Membership, Organization, Role, User
+from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, Job, Membership, Organization, Role, User
 from app.services import audit, auth_sessions, sse_tickets
 from app.services.events import channel, get_redis
 from app.services.llm.provider import mode_label
@@ -35,6 +35,8 @@ def get_org(p: Principal = Depends(require(Perm.INVOICE_READ))) -> dict:
 class SettingsIn(BaseModel):
     tolerances: dict | None = None
     approval: dict | None = None
+    priority: dict | None = None
+    security: dict | None = None
     auto_investigate: bool | None = None
     default_locale: str | None = Field(None, pattern="^(he|en)$")
 
@@ -44,10 +46,14 @@ def update_settings(body: SettingsIn, p: Principal = Depends(require(Perm.ORG_MA
     org = db.get(Organization, p.org_id)
     before = json.loads(json.dumps(org.settings))
     new = json.loads(json.dumps(org.settings))
-    for section in ("tolerances", "approval"):
+    for section in ("tolerances", "approval", "priority", "security"):
+        new[section] = {**DEFAULT_ORG_SETTINGS.get(section, {}), **new.get(section, {})}
         values = getattr(body, section)
         if values:
             for k, v in values.items():
+                lo_hi = SETTING_BOUNDS.get(f"{section}.{k}")
+                if lo_hi and not (isinstance(v, int) and lo_hi[0] <= v <= lo_hi[1]):
+                    raise HTTPException(422, f"{section}.{k} must be a whole number from {lo_hi[0]} to {lo_hi[1]}")
                 if k not in new.get(section, {}):
                     raise HTTPException(422, f"Unknown setting {section}.{k}")
                 try:
@@ -55,7 +61,7 @@ def update_settings(body: SettingsIn, p: Principal = Depends(require(Perm.ORG_MA
                         raise HTTPException(422, f"{section}.{k} must be non-negative")
                 except InvalidOperation as exc:
                     raise HTTPException(422, f"{section}.{k} must be a number") from exc
-                new[section][k] = int(v) if k.endswith("_days") else str(v)
+                new[section][k] = int(v) if k.endswith(("_days", "_hours")) else str(v)
     if body.auto_investigate is not None:
         new["auto_investigate"] = body.auto_investigate
     if body.default_locale:

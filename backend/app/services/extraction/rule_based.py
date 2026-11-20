@@ -20,7 +20,9 @@ Known limitation: free-form documents without a tabular line layout need the LLM
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from decimal import Decimal
 from itertools import permutations
 
@@ -53,11 +55,11 @@ LABELS: dict[str, list[str]] = {
 CUSTOMER_MARKERS = ["לכבוד", "לקוח", "עבור", "Bill to", "Customer", "Sold to", "Ship to"]
 TITLE_WORDS = ["חשבונית מס / קבלה", "חשבונית מס", "TAX INVOICE", "Invoice", "INVOICE"]
 
-TOTAL_LABELS = ["סה\"כ לתשלום", "סה\"כ כולל מע\"מ", "לתשלום", "Total Due", "Amount due", "Grand Total",
+TOTAL_LABELS = ["סה\"כ לחיוב", "סה\"כ לתשלום", "סה\"כ כולל מע\"מ", "לתשלום", "Total Due", "Amount due", "Grand Total",
                 "Balance due", "Total"]
-SUBTOTAL_LABELS = ["סה\"כ לפני מע\"מ", "סכום ביניים", "סה\"כ ללא מע\"מ", "Subtotal", "Sub-total", "Net amount", "סה\"כ"]
+SUBTOTAL_LABELS = ["סה\"כ לפני מע\"מ", "סה\"כ חייב מע\"מ", "סכום ביניים", "סה\"כ ללא מע\"מ", "Subtotal", "Sub-total", "Net amount", "סה\"כ"]
 TAX_LABELS = ["מע\"מ", "VAT", "Tax"]
-DISCOUNT_LABELS = ["הנחה כללית", "Discount total", "Total discount"]
+DISCOUNT_LABELS = ["הנחה כללית", "סה\"כ הנחה", "Discount total", "Total discount"]
 HEADER_WORDS = ["מק\"ט", "תיאור", "פריט", "כמות", "מחיר", "סכום", "סה\"כ", "SKU", "Item", "Description", "Qty",
                 "Quantity", "Price", "Unit Price", "Amount", "Discount", "הנחה"]
 
@@ -97,10 +99,20 @@ def _after_label(text: str, label: str) -> str | None:
     return rest.lstrip(" :#.-\t")
 
 
+def _segment_at(text: str, idx: int) -> str:
+    """The column segment (text between runs of 2+ spaces) that contains position idx."""
+    start = max((m.end() for m in re.finditer(r"\s{2,}", text[:idx])), default=0)
+    m = re.search(r"\s{2,}", text[idx:])
+    return text[start: idx + m.start() if m else len(text)]
+
+
 def _find_labeled(lines: list[_Line], key: str, pattern: str, skip_customer: bool = True) -> ExtractedField:
     for label in LABELS[key]:
         for ln in lines:
-            if skip_customer and _is_customer_line(ln.text):
+            # Header lines often share a row with the customer block ("עבור: …  תאריך חשבונית: …"),
+            # so only the label's own column decides whether it belongs to the customer.
+            idx = ln.text.lower().find(label.lower())
+            if skip_customer and idx >= 0 and _is_customer_line(_segment_at(ln.text, idx)):
                 continue
             rest = _after_label(ln.text, label)
             if rest is None:
@@ -130,7 +142,7 @@ def _numbers_at_end(text: str) -> tuple[list[str], str]:
     return nums, " ".join(tokens)
 
 
-_NOT_TAX_LINE = ["לפני מע\"מ", "ללא מע\"מ", "כולל מע\"מ", "עוסק מורשה"]
+_NOT_TAX_LINE = ["לפני מע\"מ", "ללא מע\"מ", "כולל מע\"מ", "חייב מע\"מ", "לצורכי מע\"מ", "עוסק מורשה"]
 
 
 def _amount_for_labels(lines: list[_Line], labels: list[str], exclude: set[int]) -> tuple[ExtractedField, int | None]:
@@ -152,7 +164,7 @@ def _amount_for_labels(lines: list[_Line], labels: list[str], exclude: set[int])
                     continue
             nums, _ = _numbers_at_end(rest.replace("%", "% "))
             nums = [n for n in nums if "%" not in n]
-            if nums:
+            if nums and not _is_identifier(nums[-1]):
                 return _field(nums[-1], ln), i
     return ExtractedField(), None
 
@@ -162,6 +174,25 @@ def _is_header(text: str) -> bool:
 
 
 # ------------------------------------------------------------------ line items
+def _is_identifier(tok: str) -> bool:
+    """A long bare digit run (tax / company / phone number) is an identifier, never an amount."""
+    return bool(re.fullmatch(r"\d{7,}", tok))
+
+
+_LEAD_ID = re.compile(r"\d{4,}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}")
+
+
+def _clean_description(tokens: list[str], sku_column: bool) -> tuple[str, str | None]:
+    """Drop leading identifier / date columns (delivery-note number, date, numeric SKU) that some
+    layouts print before the description; a 4-10 digit code right before it is the SKU when the
+    table has a SKU column. Numbers inside the description stay."""
+    lead: list[str] = []
+    while tokens and _LEAD_ID.fullmatch(tokens[0]):
+        lead.append(tokens.pop(0))
+    sku = lead[-1] if sku_column and lead and re.fullmatch(r"\d{4,10}", lead[-1]) else None
+    return " ".join(tokens).strip(" |"), sku
+
+
 def _is_money(tok: str) -> bool:
     return bool(re.search(r"\.\d{2}\)?$", tok))
 
@@ -195,7 +226,7 @@ def _description(tokens: list[str], skip: set[int]) -> str:
     return " ".join(best).strip(" |")
 
 
-def _row_by_arithmetic(text: str) -> tuple[str, str | None, str, str, str] | None:
+def _row_by_arithmetic(text: str, sku_column: bool = False) -> tuple[str, str | None, str, str, str] | None:
     """(description, sku, qty, price, total) for a row in any column order, or None.
 
     Prefers the right-most consistent triple (description numbers usually sit to its left)."""
@@ -215,11 +246,12 @@ def _row_by_arithmetic(text: str) -> tuple[str, str | None, str, str, str] | Non
     if best is None:
         return None
     i, a, j, b, k, c = best[1]
-    desc = _description(tokens, {i, j, k} | ({sku_i} if sku_i is not None else set()))
+    desc, num_sku = _clean_description(
+        _description(tokens, {i, j, k} | ({sku_i} if sku_i is not None else set())).split(), sku_column)
     if not desc:
         return None
     q, p = _qty_price(a, b) or (a, b)
-    return desc, tokens[sku_i].strip(",;") if sku_i is not None else None, q, p, c
+    return desc, tokens[sku_i].strip(",;") if sku_i is not None else num_sku, q, p, c
 
 
 def _parse_lines(lines: list[_Line], used: set[int]) -> list[ExtractedLine]:
@@ -227,20 +259,22 @@ def _parse_lines(lines: list[_Line], used: set[int]) -> list[ExtractedLine]:
     has_header = any(_is_header(ln.text) for ln in lines)
     in_table = not has_header  # without a recognisable header every row is a candidate
     n_cols = 3
+    sku_column = False
     stop_labels = SUBTOTAL_LABELS + TOTAL_LABELS + TAX_LABELS
     for i, ln in enumerate(lines):
         if _is_header(ln.text):
             in_table = True
             n_cols = 4 if ("discount" in ln.text.lower() or "הנחה" in ln.text) else 3
+            sku_column = any(w in ln.text for w in ("מק\"ט", "SKU", "Code", "Item code"))
             continue
         if not in_table:
             continue
         if i in used or any(ln.text.startswith(lbl) for lbl in stop_labels):
             in_table = not has_header
             continue
-        row = _row_from_columns(ln.text, n_cols) if has_header else None
+        row = _row_from_columns(ln.text, n_cols, sku_column) if has_header else None
         if row is None or not _arith_ok(row[2], row[3], row[5], row[4]):
-            alt = _row_by_arithmetic(ln.text)
+            alt = _row_by_arithmetic(ln.text, sku_column)
             if alt is not None:
                 desc, sku, q, p, t = alt
                 row = (desc, sku, q, p, None, t)
@@ -252,7 +286,7 @@ def _parse_lines(lines: list[_Line], used: set[int]) -> list[ExtractedLine]:
     return out
 
 
-def _row_from_columns(text: str, n_cols: int) -> tuple[str, str | None, str, str, str | None, str] | None:
+def _row_from_columns(text: str, n_cols: int, sku_column: bool = False) -> tuple[str, str | None, str, str, str | None, str] | None:
     """Legacy layout: description first, then quantity, price, [discount,] total at the end."""
     nums, rest = _numbers_at_end(text)
     if len(nums) < n_cols or not rest:
@@ -260,7 +294,8 @@ def _row_from_columns(text: str, n_cols: int) -> tuple[str, str | None, str, str
     nums = nums[-n_cols:]
     sku_m = SKU_RE.search(rest)
     sku = sku_m.group(0) if sku_m else None
-    desc = re.sub(r"\s{2,}", " ", rest.replace(sku, " ") if sku else rest).strip()
+    desc, num_sku = _clean_description((rest.replace(sku, " ") if sku else rest).split(), sku_column)
+    sku = sku or num_sku
     if not desc:
         return None
     qty_s, price_s, *more = nums
@@ -297,8 +332,8 @@ def _resolve_totals(out: InvoiceExtraction, lines: list[_Line], item_lines: set[
     for (si, ss, sv), (ti, ts, tv), (gi, gs, gv) in permutations(cands, 3):
         if not (si < ti < gi) or tv >= sv or abs(sv - disc + tv - gv) > CENT:
             continue
-        if item_sum is not None and abs(item_sum - sv) > CENT:
-            continue
+        if item_sum is not None and abs(item_sum - sv) > CENT and abs(item_sum - gv) > CENT:
+            continue  # lines are net (sum = subtotal) or VAT-inclusive (sum = total)
         found = ((si, ss), (ti, ts), (gi, gs))
         break
     if found is None:
@@ -316,12 +351,26 @@ def _header(lines: list[_Line]) -> list[_Line]:
     return [ln for ln in lines if ln.page == lines[0].page][:HEADER_BLOCK]
 
 
+def _broken(text: str) -> bool:
+    """Unmapped glyphs: a PDF font without a Unicode mapping yields private-use or control chars."""
+    return any(unicodedata.category(c) in ("Co", "Cn", "Cs", "Cc") or c == "\ufffd" for c in text)
+
+
 def _supplier_name(lines: list[_Line]) -> ExtractedField:
     first = _header(lines)[:3]
     for ln in first:  # a segment with a company suffix is the name, whatever else shares the line
         for seg in re.split(r"\s{2,}", ln.text):
             if COMPANY_SUFFIX.search(seg) and not _is_customer_line(seg):
-                return ExtractedField(value=seg.strip(" -|"), source_text=ln.text, page=ln.page)
+                name = seg.strip(" -|")
+                if _broken(name):
+                    # the same name usually appears again (signature, footer) in a complete font
+                    target = re.sub(r"\s+", " ", "".join(c for c in name if not _broken(c)))
+                    for other in lines:
+                        for cand in re.split(r"\s{2,}", other.text):
+                            cand = cand.strip(" -|")
+                            if cand != name and COMPANY_SUFFIX.search(cand) and not _broken(cand)                                     and SequenceMatcher(None, target, cand).ratio() >= 0.85:
+                                return ExtractedField(value=cand, source_text=other.text, page=other.page)
+                return ExtractedField(value=name, source_text=ln.text, page=ln.page)
     for ln in first:
         name = ln.text
         for tw in TITLE_WORDS:

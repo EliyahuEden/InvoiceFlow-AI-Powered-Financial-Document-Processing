@@ -16,8 +16,21 @@ from common import write_result
 from run_rag_eval import build_chunks, load_corpus, load_questions
 
 from app.core.config import get_settings
+from app.services.rag.answer import evidence_strength
 from app.services.rag.models import FastEmbedEmbedder, FastEmbedReranker
 from app.services.rag.retriever import ChunkIndex
+
+
+def sweep2d(rows: list[dict]) -> dict:
+    """Abstain when logit < t OR lexical coverage < c. Best balanced accuracy; ties prefer the
+    lowest coverage floor (simplest rule), then the middle threshold."""
+    best = None
+    for c in [x / 20 for x in range(0, 13)]:  # 0.00 .. 0.60
+        kept = [(r["top1_rerank_logit"] if r["coverage"] >= c else -99.0, r["answerable"]) for r in rows]
+        res = sweep(kept)
+        if best is None or res["balanced_accuracy"] > best["balanced_accuracy"]:
+            best = {**res, "coverage_floor": c}
+    return best
 
 
 def sweep(scores: list[tuple[float, bool]]) -> dict:
@@ -47,14 +60,16 @@ def main() -> None:
     idx = ChunkIndex(build_chunks(docs, pages, "clause"), FastEmbedEmbedder(s.embedding_model, str(s.model_cache_dir)))
     rr = FastEmbedReranker(s.reranker_model, str(s.model_cache_dir))
     rows = []
-    for q in load_questions("questions.jsonl"):
+    for q in load_questions("questions.jsonl") + load_questions("questions_calibration_extra.jsonl"):
         top = idx.search(q["question"], mode="hybrid_rerank", k=3, reranker=rr)[0]
-        rows.append({"id": q["id"], "answerable": q["answerable"], "top1_rerank_logit": round(top.scores["rerank"], 3)})
-    res = sweep([(r["top1_rerank_logit"], r["answerable"]) for r in rows])
+        rows.append({"id": q["id"], "answerable": q["answerable"], "top1_rerank_logit": round(top.scores["rerank"], 3),
+                     "coverage": round(evidence_strength(q["question"], top), 3)})
+    res = {"logit_only": sweep([(r["top1_rerank_logit"], r["answerable"]) for r in rows]), "combined": sweep2d(rows)}
     print(res)
     write_result("abstention_calibration", {
-        "set": "eval/datasets/rag/questions.jsonl (calibration; the held-out set is not used)",
-        "method": "maximize balanced accuracy of abstain-if-logit-below-threshold; middle of the best interval",
+        "set": "questions.jsonl + questions_calibration_extra.jsonl (calibration; the held-out set is not used)",
+        "method": "maximize balanced accuracy of abstain-if (logit < threshold) or (lexical coverage < floor); "
+                  "middle of the best threshold interval, lowest floor on ties",
         "models": {"embedding": s.embedding_model, "reranker": s.reranker_model}, **res, "per_question": rows,
     })
 

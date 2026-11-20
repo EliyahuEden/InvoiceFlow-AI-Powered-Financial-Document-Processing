@@ -37,7 +37,7 @@ def _set_cookies(resp: Response, access: str, refresh: str | None = None) -> Non
                     max_age=s.access_token_minutes * 60, path="/")
     if refresh is not None:
         resp.set_cookie(REFRESH_COOKIE, refresh, httponly=True, secure=s.cookie_secure, samesite="lax",
-                        max_age=s.session_idle_days * 86400, path="/")
+                        max_age=s.session_max_days * 86400, path="/")  # the server enforces the real limits
 
 
 def _clear_cookies(resp: Response) -> None:

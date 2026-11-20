@@ -73,7 +73,7 @@ class ChunkIndex:
     def dense_scores(self, query: str) -> np.ndarray:
         if self.emb is None or self.embedder is None:
             raise RuntimeError("dense retrieval requires an embedder")
-        q = self.embedder.embed([query])[0]
+        q = (self.embedder.embed_query if hasattr(self.embedder, "embed_query") else self.embedder.embed)([query])[0]
         return self.emb @ q
 
     def search(self, query: str, mode: str = "hybrid", k: int = 5, supplier_id: str | None = None,

@@ -17,7 +17,7 @@ const buttonStyles = cva(
   {
     variants: {
       variant: {
-        primary: "bg-accent text-white hover:bg-accent-ink shadow-raise",
+        primary: "bg-accent text-white hover:bg-accent-ink shadow-raise dark:text-[rgb(var(--bg))]",
         secondary: "bg-surface text-ink border border-line-strong hover:bg-sunken",
         ghost: "text-ink-2 hover:bg-sunken hover:text-ink",
         danger: "bg-surface text-danger border border-danger/40 hover:bg-danger-soft",
@@ -159,7 +159,7 @@ export function Table({ className, children }: { className?: string; children: R
 }
 export function Th({ className, children, ...p }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th className={cx("sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-sunken px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-ink-3", className)} {...p}>
+    <th className={cx("sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-sunken px-3 py-2 text-start text-xs font-semibold text-ink-3", className)} {...p}>
       {children}
     </th>
   );

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Hebrew } from "next/font/google";
+import { Assistant, JetBrains_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { I18nProvider, LOCALE_COOKIE } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/dictionaries";
 import "./globals.css";
 
-const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-sans", display: "swap" });
-const hebrew = IBM_Plex_Sans_Hebrew({ subsets: ["hebrew"], weight: ["400", "500", "600"], variable: "--font-hebrew", display: "swap" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
+// One workhorse family for Hebrew and Latin (precise humanist forms, tabular figures);
+// a mono only for codes and hashes, never as decoration.
+const sans = Assistant({ subsets: ["latin", "hebrew"], weight: ["400", "500", "600", "700"], variable: "--font-sans", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "InvoiceFlow", template: "%s · InvoiceFlow" },
@@ -27,10 +28,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${sans.variable} ${hebrew.variable} ${mono.variable}`}>
+      <body className={`${sans.variable} ${mono.variable}`}>
         <I18nProvider initial={locale}>
           {children}
-          <Toaster position="bottom-center" richColors closeButton />
+          <Toaster position="bottom-center" closeButton toastOptions={{ className: "if-toast" }} />
         </I18nProvider>
       </body>
     </html>

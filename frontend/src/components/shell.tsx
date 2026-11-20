@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useLiveEvents } from "@/lib/events";
 import { SessionProvider, useSession } from "./session";
+import { ReviewNextButton } from "./review-next";
 import { Button, cx } from "./ui";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; perm?: string };
@@ -52,19 +53,19 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   return (
     <nav aria-label="Main" className="flex h-full flex-col">
-      <Link href="/" className="flex items-center gap-2.5 px-4 pb-4 pt-5" onClick={onNavigate}>
-        <span className="grid h-8 w-8 place-items-center rounded-md bg-accent text-white">
-          <FileStack className="h-4.5 w-4.5" aria-hidden />
+      <Link href="/" className="flex items-center gap-2.5 px-4 pb-5 pt-5" onClick={onNavigate}>
+        <span className="grid h-8 w-8 place-items-center rounded-md bg-rail-ink text-rail">
+          <FileStack className="h-[18px] w-[18px]" aria-hidden />
         </span>
         <span className="leading-tight">
-          <span className="block text-md font-semibold text-ink">{t.app.name}</span>
-          <span className="block text-2xs text-ink-3">{t.app.tagline}</span>
+          <span className="block text-md font-semibold text-rail-ink">{t.app.name}</span>
+          <span className="block text-2xs text-rail-ink-2">{t.app.tagline}</span>
         </span>
       </Link>
       <div className="flex-1 space-y-5 overflow-y-auto px-2.5 pb-4">
         {nav.map((g) => (
           <div key={g.group}>
-            <p className="px-2 pb-1 text-2xs font-semibold uppercase tracking-wider text-ink-3">{g.group}</p>
+            <p className="px-2 pb-1.5 text-xs font-medium text-rail-ink-2">{g.group}</p>
             <ul className="space-y-0.5">
               {g.items.filter((i) => !i.perm || can(i.perm)).map((item) => {
                 const active = isActive(path, item.href);
@@ -76,11 +77,11 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       className={cx(
-                        "flex h-8 items-center gap-2.5 rounded-md px-2 text-base transition-colors",
-                        active ? "bg-surface font-medium text-ink shadow-raise" : "text-ink-2 hover:bg-surface/60 hover:text-ink",
+                        "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-base transition-colors duration-150",
+                        active ? "bg-rail-active font-semibold text-rail-ink" : "text-rail-ink-2 hover:bg-rail-active/60 hover:text-rail-ink",
                       )}
                     >
-                      <Icon className={cx("h-4 w-4 shrink-0", active ? "text-accent" : "text-ink-3")} aria-hidden />
+                      <Icon className={cx("h-4 w-4 shrink-0", active ? "text-rail-ink" : "text-rail-ink-2")} aria-hidden />
                       {item.label}
                     </Link>
                   </li>
@@ -141,6 +142,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         {me && <span className="font-medium text-ink">{locale === "en" && me.organization.name_en ? me.organization.name_en : me.organization.name}</span>}
       </div>
       <AiModeBadge />
+      {me && me.permissions.includes("exception:decide") && <ReviewNextButton size="sm" className="hidden md:inline-flex" />}
       <Button variant="ghost" size="sm" onClick={() => setLocale(locale === "he" ? "en" : "he")} aria-label={t.common.language}>
         <Languages className="h-4 w-4" aria-hidden /> {locale === "he" ? "EN" : "עב"}
       </Button>
@@ -178,14 +180,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <LiveEvents />
       <div className="flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-e border-line bg-rail lg:block">
+        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 bg-rail lg:block">
           <Sidebar />
         </aside>
         {open && (
           <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
             <div className="absolute inset-0 bg-ink/30" onClick={() => setOpen(false)} />
             <aside className="absolute inset-y-0 start-0 w-64 bg-rail shadow-pop">
-              <Button variant="ghost" size="icon" className="absolute end-2 top-4" onClick={() => setOpen(false)} aria-label="Close">
+              <Button variant="ghost" size="icon" className="absolute end-2 top-4 text-rail-ink-2 hover:bg-rail-active hover:text-rail-ink" onClick={() => setOpen(false)} aria-label="Close">
                 <X className="h-5 w-5" />
               </Button>
               <Sidebar onNavigate={() => setOpen(false)} />
@@ -212,7 +214,7 @@ export function PageHeader({ title, sub, actions, back }: {
             <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden /> {back.label}
           </Link>
         )}
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {sub && <p className="mt-1 text-base text-ink-2">{sub}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

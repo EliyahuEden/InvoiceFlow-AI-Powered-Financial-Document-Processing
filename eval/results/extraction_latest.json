@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20T16:03:38+00:00",
+  "generated_at": "2026-11-20T18:26:13+00:00",
   "git_rev": null,
   "python": "3.12.16",
   "dataset": {
@@ -212,7 +212,7 @@
         "wrong_totals": 6,
         "median_abs_error_of_wrong_totals": "13262.28"
       },
-      "latency_ms_p50": 61.66,
+      "latency_ms_p50": 48.42,
       "error_examples": [
         {
           "file": "docs/04_duplicate_tavor_he.pdf",

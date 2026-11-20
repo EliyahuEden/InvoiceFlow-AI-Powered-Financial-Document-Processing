@@ -68,3 +68,27 @@ def test_index_supplier_scoping_and_modes():
         ids = [h.chunk.id for h in idx.search("payment terms", mode=mode, k=3, supplier_id="sup-a")]
         assert "b" not in ids  # another supplier's agreement is never retrieved
     assert idx.search("Net 45", mode="bm25", k=1)[0].chunk.id == "b"
+
+
+def test_e5_models_get_query_and_passage_prefixes_others_do_not():
+    from app.services.rag.models import with_prefix
+
+    assert with_prefix("intfloat/multilingual-e5-large", ["מחיר"], "query") == ["query: מחיר"]
+    assert with_prefix("intfloat/multilingual-e5-large", ["סעיף 3"], "passage") == ["passage: סעיף 3"]
+    assert with_prefix("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", ["x"], "query") == ["x"]
+
+
+def test_retriever_embeds_queries_as_queries():
+    from app.services.rag.retriever import ChunkIndex, IndexedChunk
+
+    class Spy:
+        name, dim = "spy", 3
+        def __init__(self): self.calls = []
+        def embed(self, texts): self.calls.append(("passage", texts)); import numpy as np; return np.ones((len(texts), 3), dtype="float32")
+        def embed_query(self, texts): self.calls.append(("query", texts)); import numpy as np; return np.ones((len(texts), 3), dtype="float32")
+
+    spy = Spy()
+    idx = ChunkIndex([IndexedChunk(id="a#0", document_id="a", document_title="A", doc_type="policy", supplier_id=None,
+                                   page=1, section=None, text="תנאי תשלום שוטף 30", effective_date=None)], spy)
+    idx.search("מה תנאי התשלום", mode="dense", k=1)
+    assert spy.calls[-1] == ("query", ["מה תנאי התשלום"])

@@ -12,6 +12,7 @@ from app.core.logging import get_logger
 from app.models import Document, DocumentPage, Invoice, InvoiceLine, Job, Organization, User
 from app.services import audit, events, jobs
 from app.services.documents.hebrew import detect_language
+from app.services.documents.pages import drop_duplicate_pages
 from app.services.documents.text_extraction import OCRUnavailable, PageText, Word, extract_pages
 from app.services.documents.validation import ValidatedFile, validate_upload
 from app.services.extraction import rule_based
@@ -97,6 +98,8 @@ def run_extraction(session: Session, org: Organization, inv: Invoice, doc: Docum
     """Extract fields with the LLM when configured, else the rule-based baseline; always verify."""
     llm = get_llm()
     exclude = {org.settings.get("tax_id")} - {None}
+    all_pages = pages
+    pages, duplicate_pages = drop_duplicate_pages(pages)  # a printed copy must not be billed twice
     t0 = time.perf_counter()
     extraction, method = None, "rule_based"
     if llm is not None:
@@ -122,6 +125,12 @@ def run_extraction(session: Session, org: Organization, inv: Invoice, doc: Docum
                     meta={"pages": len(pages), "fallback": llm is not None})
     norm = normalize(extraction, pages, method, language=doc.language)
     apply_normalized(session, inv, norm, extraction.model_dump())
+    if duplicate_pages:
+        inv.validation_warnings = [*inv.validation_warnings, {
+            "code": "DUPLICATE_PAGES", "severity": "info", "pages": duplicate_pages,
+            "message": f"Page(s) {', '.join(map(str, duplicate_pages))} repeat an earlier page (a copy of the same "
+                       f"invoice) and were ignored, so nothing is counted twice."}]
+    pages = all_pages
     injections = detect_injection("\n".join(p.text for p in pages))
     if injections:
         inv.validation_warnings = [*inv.validation_warnings, {

@@ -103,18 +103,36 @@ def add_comment(session: Session, exc: ExceptionCase, user: User, body: str, kin
     return c
 
 
+REQUEST_TARGETS = ("procurement", "supplier")
+
+
+def escalated_by(session: Session, exc: ExceptionCase) -> uuid.UUID | None:
+    rows = session.scalars(select(ExceptionComment.author_id).where(
+        ExceptionComment.exception_id == exc.id, ExceptionComment.kind == "escalation")
+        .order_by(ExceptionComment.created_at)).all()
+    return rows[-1] if rows else None
+
+
 def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str, decision: str, note: str | None,
-                     action_override: str | None = None) -> ExceptionCase:
-    if decision not in ("approve", "reject", "request_info"):
-        raise HTTPException(422, "decision must be approve, reject or request_info")
-    if decision in ("approve", "reject") and not has_perm(role, Perm.EXCEPTION_DECIDE):
+                     action_override: str | None = None, target: str | None = None) -> ExceptionCase:
+    """Record a reviewer decision. approve / reject close the case; request_info parks it waiting for
+    procurement or the supplier; escalate hands it to an administrator. Nothing here pays anything."""
+    if decision not in ("approve", "reject", "request_info", "escalate"):
+        raise HTTPException(422, "decision must be approve, reject, request_info or escalate")
+    if decision in ("approve", "reject", "escalate") and not has_perm(role, Perm.EXCEPTION_DECIDE):
         raise HTTPException(403, "Your role cannot decide exceptions.")
     if decision == "request_info" and not has_perm(role, Perm.EXCEPTION_COMMENT):
         raise HTTPException(403, "Your role cannot request information.")
     if exc.status in ("approved", "rejected", "resolved"):
         raise HTTPException(409, f"Exception is already {exc.status}.")
-    if decision in ("reject",) and not (note and note.strip()):
-        raise HTTPException(422, "A reason is required when rejecting the proposed resolution.")
+    if decision in ("reject", "escalate", "request_info") and not (note and note.strip()):
+        raise HTTPException(422, "A note is required for this decision.")
+    if decision == "request_info" and target not in REQUEST_TARGETS:
+        raise HTTPException(422, "Say who must provide the information: procurement or supplier.")
+    if exc.status == "escalated" and decision in ("approve", "reject"):
+        # an escalation goes to another authorized reviewer: an administrator who did not escalate it
+        if role != "admin" or escalated_by(session, exc) == user.id:
+            raise HTTPException(403, "An escalated case is decided by another administrator.")
     inv = session.get(Invoice, exc.invoice_id)
     before = {"status": exc.status, "invoice_status": inv.status}
     if action_override:
@@ -123,7 +141,10 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
         exc.proposed_action = action_override
     if decision == "request_info":
         exc.status = "pending_info"
-        add_comment(session, exc, user, note or "Additional information requested.", kind="info_request")
+        add_comment(session, exc, user, note or "", kind="info_request")
+    elif decision == "escalate":
+        exc.status = "escalated"
+        add_comment(session, exc, user, note or "", kind="escalation")
     else:
         exc.status = "approved" if decision == "approve" else "rejected"
         exc.decision, exc.decision_note = decision, note
@@ -137,10 +158,10 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
     audit.record(session, org_id=exc.organization_id, action=f"exception.{decision}", entity_type="exception",
                  entity_id=exc.id, actor_id=user.id, actor_label=user.email, before=before,
                  after={"status": exc.status, "invoice_status": inv.status, "proposed_action": exc.proposed_action},
-                 meta={"note": note, "ai_summary_present": exc.ai_summary is not None,
+                 meta={"note": note, "target": target, "ai_summary_present": exc.ai_summary is not None,
                        "ai_recommended": (exc.ai_summary or {}).get("deterministic_action")})
     # Resume the paused agent workflow so its run records the human decision.
-    if exc.agent_run_id and decision != "request_info":
+    if exc.agent_run_id and decision in ("approve", "reject"):
         run = session.get(AgentRun, exc.agent_run_id)
         if run and run.status == "awaiting_approval":
             jobs.enqueue(session, org_id=exc.organization_id, job_type="agent.resume",

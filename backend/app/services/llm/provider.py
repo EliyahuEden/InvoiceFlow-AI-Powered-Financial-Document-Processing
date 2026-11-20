@@ -137,12 +137,28 @@ class OpenAICompatibleProvider:
 
         s = get_settings()
         self.model = model
+        self.base_url = s.openai_base_url or None
+        self.reasoning_effort_setting = s.llm_reasoning_effort
         self.client = OpenAI(
             api_key=s.openai_api_key.get_secret_value() if s.openai_api_key else "not-needed",
             base_url=s.openai_base_url or None,
             timeout=s.llm_timeout_seconds,
             max_retries=s.llm_max_retries,
         )
+
+    REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+    REASONING_HEADROOM = 4000  # tokens a reasoning model may spend thinking before it answers
+
+    def _limits(self, max_tokens: int) -> dict:
+        """Token-limit arguments for this endpoint. The official API takes max_completion_tokens
+        (and reasoning models count their thinking against it); local OpenAI-compatible servers
+        such as Ollama or vLLM still take max_tokens."""
+        if self.base_url:
+            return {"max_tokens": max_tokens}
+        if self.model.startswith(self.REASONING_PREFIXES):
+            return {"max_completion_tokens": max_tokens + self.REASONING_HEADROOM,
+                    "reasoning_effort": self.reasoning_effort_setting or "low"}
+        return {"max_completion_tokens": max_tokens}
 
     @staticmethod
     def _to_openai_content(content: list[dict] | str) -> Any:
@@ -163,7 +179,7 @@ class OpenAICompatibleProvider:
         t0 = time.perf_counter()
         resp = self.client.chat.completions.create(
             model=self.model,
-            max_tokens=max_tokens,
+            **self._limits(max_tokens),
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": self._to_openai_content(content)}],
             response_format={"type": "json_schema",
@@ -182,7 +198,7 @@ class OpenAICompatibleProvider:
     def chat_tools(self, *, system: str, messages: list[dict], tools: list[dict], max_tokens: int = 4000) -> LLMResult:
         t0 = time.perf_counter()
         resp = self.client.chat.completions.create(
-            model=self.model, max_tokens=max_tokens,
+            model=self.model, **self._limits(max_tokens),
             messages=[{"role": "system", "content": system}, *messages],
             tools=[{"type": "function", "function": {"name": t["name"], "description": t["description"],
                                                       "parameters": inline_refs(t["schema"])}} for t in tools],

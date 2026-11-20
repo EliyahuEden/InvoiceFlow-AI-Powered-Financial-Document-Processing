@@ -122,3 +122,38 @@ def test_open_event_streams_notice_revocation(client):
     assert auth_sessions.is_active(sid)
     client.post("/api/auth/logout", headers={**_bearer(tok), **CSRF})
     assert not auth_sessions.is_active(sid)
+
+
+def _session_row(tok: str):
+    import uuid
+
+    from app.core.db import session_scope
+    from app.models import AuthSession
+
+    with session_scope() as s:
+        row = s.get(AuthSession, uuid.UUID(_claims(tok)["sid"]))
+        return row.created_at, row.expires_at, row.absolute_expires_at
+
+
+def test_default_session_suits_a_small_business_workday(client):
+    created, idle, absolute = _session_row(_login(client)["access_token"])
+    assert abs((idle - created).total_seconds() - 8 * 3600) < 120       # sign in again each morning
+    assert abs((absolute - created).total_seconds() - 7 * 86400) < 120  # and at least weekly
+
+
+def test_admin_can_tune_session_length_within_bounds(client, as_user):
+    admin = as_user("admin@kinneret.example")
+    url = "/api/org/settings"
+    assert client.patch(url, headers={**admin, **CSRF}, json={"security": {"session_idle_hours": 0}}).status_code == 422
+    assert client.patch(url, headers={**admin, **CSRF}, json={"security": {"session_max_days": 90}}).status_code == 422
+    assert client.patch(url, headers={**admin, **CSRF}, json={"security": {"session_idle_hours": 2}}).status_code == 200
+    created, idle, _ = _session_row(_login(client)["access_token"])
+    assert abs((idle - created).total_seconds() - 2 * 3600) < 120
+    fin = as_user(EMAIL)
+    assert client.patch(url, headers={**fin, **CSRF}, json={"security": {"session_idle_hours": 72}}).status_code == 403
+
+
+def test_priority_threshold_is_an_org_setting(client, as_user):
+    admin = as_user("admin@kinneret.example")
+    r = client.patch("/api/org/settings", headers={**admin, **CSRF}, json={"priority": {"critical_amount": "2500"}})
+    assert r.status_code == 200 and r.json()["settings"]["priority"]["critical_amount"] == "2500"
