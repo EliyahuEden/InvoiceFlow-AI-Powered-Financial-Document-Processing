@@ -26,7 +26,7 @@ export default function PODetail() {
         sub={<Link href={`/suppliers/${p.supplier_id}`} className="hover:text-accent" dir="auto">{locale === "en" && p.supplier_name_en ? p.supplier_name_en : p.supplier_name}</Link>}
         actions={<StatusPill status={p.status} />} />
       <Panel className="p-4">
-        <dl className="grid gap-4 sm:grid-cols-4">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <KV label={t.common.date}>{date(p.order_date, locale)}</KV>
           <KV label={t.invoice.currency}>{p.currency}</KV>
           <KV label={t.common.total}><span className="ltr font-semibold">{money(p.total, p.currency)}</span></KV>
@@ -54,7 +54,7 @@ export default function PODetail() {
           })}</tbody>
         </Table>
       </Panel>
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Panel>
           <PanelHeader title={t.pos.receipts} />
           <ul className="divide-y divide-line">

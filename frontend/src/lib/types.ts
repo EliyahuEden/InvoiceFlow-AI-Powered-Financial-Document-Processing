@@ -8,7 +8,8 @@ export type InvoiceLine = {
 export type Discrepancy = {
   id: string; type: string; severity: string; message: string; expected: string | null; actual: string | null;
   difference: string | null; status: string; invoice_line_id: string | null; po_line_id: string | null;
-  evidence: Record<string, unknown> & { amount_at_risk?: string | null; invoice_line_no?: number | null };
+  evidence: Record<string, unknown> & { amount_at_risk?: string | null; invoice_line_no?: number | null;
+    message_key?: string; params?: Record<string, string | number | null> };
 };
 
 export type LineMatch = {
@@ -47,6 +48,7 @@ export type AiSummary = {
   headline: Record<string, string>; summary: Record<string, string>; recommendation: Record<string, string>;
   confidence: string; mode: string; deterministic_action: string; ai_recommended_action?: string;
   findings: { type: string; severity: string; message: string; amount_at_risk?: string | null;
+    message_key?: string | null; params?: Record<string, string | number | null> | null;
     explanation: Record<string, string>; citations: import("@/components/domain").CitationT[] }[];
   security_notes: { code: string; message: string; snippets?: string[] }[];
   open_questions?: string[]; disclaimer: string; generated_at: string; evidence_count: number; prompt_version: string;

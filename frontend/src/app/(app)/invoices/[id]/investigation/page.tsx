@@ -19,7 +19,7 @@ export default function InvestigationPage() {
   );
   if (!inv) return <Skeleton className="h-[400px] w-full" />;
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <div>
         {exc?.ai_summary ? <AiSummaryView s={exc.ai_summary} currency={inv.currency} /> : (
           <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}
@@ -30,7 +30,9 @@ export default function InvestigationPage() {
         {inv.exception && (
           <Panel className="p-4">
             <p className="text-sm text-ink-2">{t.exceptions.decide}</p>
-            <p className="mt-1 font-medium" dir="auto">{inv.exception.title}</p>
+            <p className="mt-1 font-medium" dir="auto">
+              {(t.finding as Record<string, string>)[inv.discrepancies.find((d) => d.severity !== "info")?.type ?? ""] ?? inv.exception.title}
+            </p>
             <div className="mt-3 flex items-center justify-between">
               <StatusPill status={inv.exception.status} />
               <Button asChild variant="primary" size="sm"><Link href={`/exceptions/${inv.exception.id}`}>{t.common.open}</Link></Button>

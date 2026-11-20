@@ -23,7 +23,7 @@ export default function KnowledgeDoc() {
     <div>
       <PageHeader back={{ href: "/knowledge", label: t.knowledge.title }} title={<span dir="auto">{d.title}</span>}
         sub={`${(t.knowledge.type as Record<string, string>)[d.doc_type]} · ${t.knowledge.version} ${d.version ?? "—"} · ${t.knowledge.effective} ${d.effective_date ?? "—"}`} />
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <DocumentViewer className="h-[calc(100vh-12rem)] min-h-[520px]" documentId={d.document_id} pageCount={pages?.page_count ?? 1}
           filename={d.title} quote={chunk?.text.split("\n").slice(1).join(" ") || chunk?.text} quotePage={chunk?.page}
           page={chunk?.page} />

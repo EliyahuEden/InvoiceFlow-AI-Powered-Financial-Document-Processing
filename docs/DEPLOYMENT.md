@@ -17,7 +17,7 @@ docker compose exec api python -m app.cli seed --reset
 
 ## Production checklist (single region)
 1. **Database:** managed PostgreSQL 16 with `pgvector`. Create two roles: an owner for migrations and an app role (non-owner, non-superuser) for runtime. Set `MIGRATION_DATABASE_URL` and `DATABASE_URL`. Run `python -m app.cli migrate` as a release step.
-2. **Object storage:** S3, R2 or GCS with S3 interop. Use a private bucket, SSE-KMS and a lifecycle policy. Set `STORAGE_BACKEND=s3`, `S3_*` and leave `S3_ENDPOINT_URL` empty for AWS.
+2. **Object storage:** S3, R2 or GCS with S3 interop. Use a private bucket, SSE-KMS and a lifecycle policy. Set `STORAGE_BACKEND=s3`, `S3_*` and leave `S3_ENDPOINT_URL` empty for AWS. Set `S3_SSE=aws:kms` and `S3_KMS_KEY_ID` (startup refuses `ENVIRONMENT=production` without encryption).
 3. **Secrets:** inject from a secret manager. Use a random `JWT_SECRET` of at least 32 characters. Provide LLM keys only when that mode is wanted.
 4. **TLS and cookies:** terminate TLS at the load balancer and set `COOKIE_SECURE=true`. Serve web and API under one origin, or keep the Next.js proxy.
 5. **Workers:** at least 2 replicas. Set `JOB_LOCK_TIMEOUT_SECONDS` above your longest OCR job. Workers must have Tesseract with `heb` data (the Dockerfile installs it).

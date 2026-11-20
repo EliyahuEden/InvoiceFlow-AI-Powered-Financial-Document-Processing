@@ -15,9 +15,11 @@ from sqlalchemy.orm import Session
 from app.core.db import new_session
 from app.core.security import decode_access_token
 from app.models import Membership, Organization, Role, User
+from app.services import auth_sessions
 from app.services.rbac import Perm, has_perm
 
 COOKIE_NAME = "invoiceflow_session"
+REFRESH_COOKIE = "invoiceflow_refresh"
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 
 
@@ -26,6 +28,7 @@ class Principal:
     user: User
     org: Organization
     role: Role
+    session_id: uuid.UUID | None = None
 
     @property
     def org_id(self) -> uuid.UUID:
@@ -51,8 +54,17 @@ def get_principal(request: Request) -> Principal:
         claims = decode_access_token(token)
     except jwt.PyJWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired session") from exc
+    return principal_from_claims(claims)
+
+
+def principal_from_claims(claims: dict) -> Principal:
     s = new_session()
     try:
+        # The server-side session must still be active: logout, "sign out everywhere"
+        # and expiry revoke tokens immediately, not when the JWT expires.
+        sess = auth_sessions.get_active(s, claims.get("sid") or "")
+        if sess is None or str(sess.user_id) != claims.get("sub"):
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired or revoked")
         user = s.get(User, uuid.UUID(claims["sub"]))
         m = s.scalars(select(Membership).where(Membership.user_id == uuid.UUID(claims["sub"]),
                                                Membership.organization_id == uuid.UUID(claims["org"]))).first()
@@ -61,7 +73,7 @@ def get_principal(request: Request) -> Principal:
         org = s.get(Organization, m.organization_id)
         # Role is read from the database on every request (not trusted from the token),
         # so revoking or downgrading a membership takes effect immediately.
-        return Principal(user=user, org=org, role=m.role)
+        return Principal(user=user, org=org, role=m.role, session_id=sess.id)
     finally:
         s.close()
 

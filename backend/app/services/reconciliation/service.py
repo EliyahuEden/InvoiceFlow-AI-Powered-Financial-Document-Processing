@@ -145,7 +145,8 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
             invoice_line_id=uuid.UUID(f.invoice_line_id) if f.invoice_line_id else None,
             po_line_id=uuid.UUID(f.po_line_id) if f.po_line_id else None,
             expected=f.expected, actual=f.actual, difference=f.difference, message=f.message,
-            evidence={**f.evidence, "amount_at_risk": f.amount_at_risk, "invoice_line_no": f.invoice_line_no},
+            evidence={**f.evidence, "amount_at_risk": f.amount_at_risk, "invoice_line_no": f.invoice_line_no,
+                      "message_key": f.message_key, "params": f.params},
             status="open" if f.severity != "info" else "info",
         ))
 

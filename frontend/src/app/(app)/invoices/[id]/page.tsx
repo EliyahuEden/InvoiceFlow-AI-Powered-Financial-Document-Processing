@@ -21,7 +21,7 @@ export default function InvoiceOverview() {
   const [hover, setHover] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
-  if (!inv) return <div className="grid gap-5 xl:grid-cols-2"><Skeleton className="h-[640px] w-full" /><Skeleton className="h-[640px] w-full" /></div>;
+  if (!inv) return <div className="grid grid-cols-1 gap-5 xl:grid-cols-2"><Skeleton className="h-[640px] w-full" /><Skeleton className="h-[640px] w-full" /></div>;
 
   const security = inv.validation_warnings.filter((w) => w.code === "SUSPICIOUS_INSTRUCTIONS");
   const otherWarnings = inv.validation_warnings.filter((w) => w.code !== "SUSPICIOUS_INSTRUCTIONS");
@@ -40,7 +40,7 @@ export default function InvoiceOverview() {
   };
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {inv.document && (
         <DocumentViewer className="h-[calc(100vh-14rem)] min-h-[560px] xl:sticky xl:top-20" documentId={inv.document.id}
           pageCount={inv.document.page_count ?? 1} filename={inv.document.filename} highlights={fieldHighlights(inv)} activeId={hover} />

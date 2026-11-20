@@ -70,7 +70,7 @@ export default function ExceptionDetail() {
           <StatusPill status={e.status} /></span>}
         sub={<span className="flex flex-wrap gap-1.5">{e.discrepancy_types.map((ty) => <FindingTag key={ty} type={ty} />)}</span>}
         actions={<Button asChild><Link href={`/invoices/${e.invoice_id}/reconciliation`}>{t.invoice.tabs.reconciliation}</Link></Button>} />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div>
           {e.ai_summary ? <AiSummaryView s={e.ai_summary} /> : (
             <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}

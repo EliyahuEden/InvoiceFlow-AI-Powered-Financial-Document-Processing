@@ -36,7 +36,9 @@ def screen_hits(hits: list[Hit]) -> tuple[list[Hit], list[dict]]:
     return safe, excluded
 
 PROMPT_VERSION = "rag-answer-v2"
-RERANK_ABSTAIN_LOGIT = -1.0
+# Calibrated on the calibration question set only (eval/calibrate_abstention.py ->
+# eval/results/abstention_calibration_latest.json); scored on a separate held-out set.
+RERANK_ABSTAIN_LOGIT = -0.92
 
 SYSTEM = """You answer questions about a company's supplier agreements and purchasing policies.
 Use ONLY the numbered evidence passages provided. Do not use outside knowledge.
@@ -144,8 +146,7 @@ def answer_extractive(question: str, hits: list[Hit], min_strength: float = 0.34
     strength = evidence_strength(question, top)
     dense = top.scores.get("dense")
     if "rerank" in top.scores:
-        # Cross-encoder relevance logit. Threshold chosen after inspecting the RAG eval set
-        # (no held-out split; see docs/EVALUATION_PLAN.md) - it is configurable, not universal.
+        # Cross-encoder relevance logit; threshold calibrated per reranker model (see above).
         weak = top.scores["rerank"] < RERANK_ABSTAIN_LOGIT
     else:
         weak = strength < min_strength and (dense is None or dense < min_dense)

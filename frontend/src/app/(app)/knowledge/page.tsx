@@ -43,7 +43,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
     catch (err) { toast.error(err instanceof ApiError ? String(err.message) : t.common.error); } finally { setBusy(false); }
   };
   return (
-    <form onSubmit={submit} className="grid gap-3 border-b border-line bg-sunken/50 p-4 md:grid-cols-6">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-3 border-b border-line bg-sunken/50 p-4 md:grid-cols-6">
       <div className="md:col-span-2"><Field label="PDF"><Input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} required /></Field></div>
       <div className="md:col-span-2"><Field label="Title"><Input dir="auto" required value={title} onChange={(e) => setTitle(e.target.value)} /></Field></div>
       <Field label="Type"><Select className="w-full" value={docType} onChange={(e) => setDocType(e.target.value)}>
@@ -96,7 +96,7 @@ export default function KnowledgePage() {
           </div>
         )}
         {answer && (
-          <div className="grid gap-5 border-t border-line p-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-5 border-t border-line p-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
             <AiBlock mode={answer.mode}>
               {answer.abstained ? <p className="font-medium text-warn">{t.knowledge.abstained}</p> : null}
               <p className="text-base leading-relaxed text-ink" dir="auto">{answer.answer}</p>

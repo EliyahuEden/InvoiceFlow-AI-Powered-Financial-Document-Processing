@@ -40,6 +40,7 @@ erDiagram
 | Group | Tables | Notes |
 |---|---|---|
 | Tenancy | `organizations` (settings JSON: tolerances, approval threshold, locale), `users`, `memberships(role)` | Not under RLS (needed for login). Roles are re-read from the DB on every request. |
+| Sessions | `auth_sessions` (user, active organization, SHA-256 of the current refresh secret, idle and absolute expiry, revocation) | Not under RLS (a user can belong to several tenants). Checked on every request through the access token's `sid`. Migration 0003. |
 | Master data | `suppliers` (aliases, unique `(org, tax_id)`), `purchase_orders`, `po_lines`, `goods_receipts`, `gr_lines` | |
 | Documents | `documents` (sha256, storage key, text method, language), `document_pages` (text, words+bbox, OCR confidence) | Unique `(org, sha256, purpose)` blocks duplicate files. |
 | Invoices | `invoices` (status machine, raw printed supplier name and tax ID, typed fields, provenance, warnings), `invoice_lines` | |

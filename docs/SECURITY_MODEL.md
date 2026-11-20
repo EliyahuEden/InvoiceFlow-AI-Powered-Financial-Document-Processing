@@ -11,10 +11,13 @@
 
 ## Controls
 **Authentication**
-- Argon2id password hashes and HS256 JWTs (8 h).
-- An `httpOnly`, `SameSite=Lax` cookie through a same-origin proxy, so there is no token in JS storage.
-- `X-Requested-With` is required on unsafe cookie requests (CSRF guard).
-- Login is rate-limited per IP and per email (Redis, fail-open).
+- Argon2id password hashes and HS256 access JWTs that live **15 minutes** and carry a session id (`sid`).
+- **Server-side sessions** (`auth_sessions`): every request checks that the token's session is still active, so logout, "sign out everywhere" (`POST /api/auth/logout-all`), deactivation and expiry revoke access immediately. Postgres is already read on every request, so this adds no new failure mode.
+- **Rotating refresh tokens** (`<sid>.<secret>`, only SHA-256 of the secret is stored): each `POST /api/auth/refresh` issues a new one. Replaying an already-rotated token is treated as theft: the session is revoked and an `auth.refresh_reuse` audit row is written. Sessions expire after 7 idle days and 30 days at most.
+- Both tokens are `httpOnly`, `SameSite=Lax` cookies through a same-origin proxy, so there is no token in JS storage. The frontend refreshes once on a 401 (shared between concurrent requests) and retries.
+- `X-Requested-With` is required on unsafe cookie requests, refresh and logout (CSRF guard).
+- **Event stream tickets**: `EventSource` cannot send headers, so the client gets a random, single-use ticket valid for 30 s (`POST /api/events/ticket`, stored in Redis) and opens `/api/events?ticket=…`. No token appears in a URL, and the open stream re-checks its session every 60 s and closes when it is revoked.
+- Login and refresh are rate-limited per IP (and login per email) in Redis, fail-open.
 
 **Authorization (RBAC)**
 - A single permission matrix (`rbac.py`) enforced on every route **and** every agent tool.
@@ -41,6 +44,7 @@
 - Validation by magic bytes, with size, page and pixel limits; encrypted and damaged PDFs are rejected.
 - Opaque, tenant-prefixed storage keys; the original filename is never used as a path; local storage blocks path traversal.
 - Originals are served with `Content-Security-Policy: default-src 'none'; sandbox` and `nosniff`.
+- Encryption at rest: `S3_SSE=AES256|aws:kms` (+ `S3_KMS_KEY_ID`) is sent on every upload. Startup fails in `ENVIRONMENT=production` with S3 storage and no encryption configured.
 - Files are never executed.
 
 **Audit**
@@ -59,7 +63,8 @@
 - Health and readiness probes; structured JSON logs with request ids; security headers.
 
 ## Residual risks and next steps
-- JWTs are not revocable before expiry. Add a token denylist or short-lived tokens plus refresh tokens.
-- SeaweedFS in dev has no server-side encryption. Enable SSE-KMS on the production bucket.
+- SeaweedFS in dev does not implement server-side encryption, so `S3_SSE=none` locally. Production must set it (enforced at startup); a bucket policy that denies unencrypted `PutObject` is recommended as a second layer.
+- The event stream notices revocation within 60 s, not instantly.
+- There is no UI yet to list and revoke individual sessions (the API revokes the current one or all of them).
 - The rate limiter fails open if Redis is down. That is acceptable for login throttling; use a WAF in production.
 - Pattern-based injection detection can be evaded. It is a visibility layer, not the control: the architectural controls above are the real protection.

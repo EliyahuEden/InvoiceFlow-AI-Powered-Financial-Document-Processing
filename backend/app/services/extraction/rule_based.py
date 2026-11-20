@@ -3,13 +3,26 @@
 A transparent, deterministic baseline built from a bilingual label lexicon and table
 heuristics. It runs with no external model, powers the clearly-labelled offline demo
 mode, and is the baseline the LLM extractor is benchmarked against. It is *not*
-presented as AI. Known limitation: it depends on recognisable labels and on rows that
-end with numeric columns; free-form layouts need the LLM extractor.
+presented as AI.
+
+Labels are tried first. Where they are missing or contradict each other, layout-agnostic
+rules take over, so an unfamiliar template degrades gracefully instead of failing:
+
+- line items: any row whose numbers satisfy quantity x unit price = line total, wherever
+  those columns are; the money-formatted factor is the price;
+- totals: three amounts with subtotal + tax = total (subtotal = sum of the lines when known);
+- PO numbers that identify themselves (``PO-…``), 9-digit tax IDs, and the first document
+  number and date in the header block;
+- supplier name: the header segment that carries a company suffix (Ltd, בע"מ, …).
+
+Known limitation: free-form documents without a tabular line layout need the LLM extractor.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from decimal import Decimal
+from itertools import permutations
 
 from app.core.money import parse_amount
 from app.services.extraction.schema import ExtractedField, ExtractedLine, InvoiceExtraction
@@ -17,6 +30,14 @@ from app.services.extraction.schema import ExtractedField, ExtractedLine, Invoic
 NUM_TOKEN = re.compile(r"^[-(]?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-(]?\d+(?:\.\d+)?\)?$")
 SKU_RE = re.compile(r"\b[A-Z]{2,5}-[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
 DOCNUM = r"([A-Z]{0,5}[-/]?[A-Z0-9]*\d[A-Z0-9\-/]*)"
+DATE_RE = (r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{4}"
+           r"|[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})")
+PO_TOKEN = re.compile(r"\bPO[-\s]?\d[\w\-/]*")
+HEADER_DOCNUM = re.compile(r"^[A-Z]{1,5}-?\d{3,}[A-Z0-9\-/]*$")
+TAX_ID_TOKEN = re.compile(r"(?<![\d\-])\d{9}(?![\d\-])")
+COMPANY_SUFFIX = re.compile(r"בע\"מ|בע״מ|\b(?:Ltd|Limited|Inc|LLC|GmbH|Corp|Co)\b\.?", re.IGNORECASE)
+CENT = Decimal("0.01")
+HEADER_BLOCK = 10  # lines at the top of page 1 searched by the label-free header fallbacks
 
 LABELS: dict[str, list[str]] = {
     "invoice_number": ["חשבונית מס מספר", "מספר חשבונית", "חשבונית מס / קבלה מספר", "חשבונית מס", "חשבונית",
@@ -71,6 +92,8 @@ def _after_label(text: str, label: str) -> str | None:
     rest = text[idx + len(label):]
     if rest and rest[0].isalnum() and label[-1].isalnum():
         return None
+    if rest[:1] == "-" and rest[1:2].isdigit():
+        return None  # "PO-2026-…": the label word is part of the value itself
     return rest.lstrip(" :#.-\t")
 
 
@@ -88,11 +111,15 @@ def _find_labeled(lines: list[_Line], key: str, pattern: str, skip_customer: boo
     return ExtractedField()
 
 
+def _clean_num(tok: str) -> str:
+    return tok.replace("₪", "").replace("$", "").replace("€", "").strip()
+
+
 def _numbers_at_end(text: str) -> tuple[list[str], str]:
     tokens = text.split()
     nums: list[str] = []
     while tokens:
-        tok = tokens[-1].replace("₪", "").replace("$", "").strip()
+        tok = _clean_num(tokens[-1])
         if tok and NUM_TOKEN.match(tok):
             nums.insert(0, tok)
             tokens.pop()
@@ -134,19 +161,229 @@ def _is_header(text: str) -> bool:
     return sum(1 for w in HEADER_WORDS if w.lower() in text.lower()) >= 3
 
 
+# ------------------------------------------------------------------ line items
+def _is_money(tok: str) -> bool:
+    return bool(re.search(r"\.\d{2}\)?$", tok))
+
+
+def _qty_price(a: str, b: str) -> tuple[str, str] | None:
+    """Order two factors as (quantity, price) when their formatting says so; None if ambiguous."""
+    if _is_money(a) != _is_money(b):
+        return (b, a) if _is_money(a) else (a, b)
+    return None
+
+
+def _arith_ok(q: str, p: str, t: str, d: str | None = None) -> bool:
+    qv, pv, tv = parse_amount(q), parse_amount(p), parse_amount(t)
+    dv = parse_amount(d) if d else Decimal(0)
+    if qv is None or pv is None or tv is None or dv is None:
+        return False
+    return abs(qv * pv - dv - tv) <= CENT
+
+
+def _description(tokens: list[str], skip: set[int]) -> str:
+    """Longest run of remaining tokens that contains a word: numbers inside a description stay."""
+    best: list[str] = []
+    run: list[str] = []
+    for i, tok in enumerate([*tokens, None]):
+        if tok is None or i in skip:
+            if any(re.search(r"[^\W\d_]", w) for w in run) and len(run) > len(best):
+                best = run
+            run = []
+        else:
+            run.append(tok)
+    return " ".join(best).strip(" |")
+
+
+def _row_by_arithmetic(text: str) -> tuple[str, str | None, str, str, str] | None:
+    """(description, sku, qty, price, total) for a row in any column order, or None.
+
+    Prefers the right-most consistent triple (description numbers usually sit to its left)."""
+    tokens = text.split()
+    sku_i = next((i for i, t in enumerate(tokens) if SKU_RE.fullmatch(t.strip(",;"))), None)
+    nums = [(i, _clean_num(t)) for i, t in enumerate(tokens) if i != sku_i and NUM_TOKEN.match(_clean_num(t) or "x")]
+    best: tuple[int, tuple] | None = None
+    for (i, a), (j, b), (k, c) in permutations(nums, 3):
+        if i > j or not _arith_ok(a, b, c):
+            continue
+        tv = parse_amount(c)
+        if tv is None or tv <= 0 or parse_amount(a) == 0 or parse_amount(b) == 0:
+            continue
+        score = i + j + k
+        if best is None or score > best[0]:
+            best = (score, (i, a, j, b, k, c))
+    if best is None:
+        return None
+    i, a, j, b, k, c = best[1]
+    desc = _description(tokens, {i, j, k} | ({sku_i} if sku_i is not None else set()))
+    if not desc:
+        return None
+    q, p = _qty_price(a, b) or (a, b)
+    return desc, tokens[sku_i].strip(",;") if sku_i is not None else None, q, p, c
+
+
+def _parse_lines(lines: list[_Line], used: set[int]) -> list[ExtractedLine]:
+    out: list[ExtractedLine] = []
+    has_header = any(_is_header(ln.text) for ln in lines)
+    in_table = not has_header  # without a recognisable header every row is a candidate
+    n_cols = 3
+    stop_labels = SUBTOTAL_LABELS + TOTAL_LABELS + TAX_LABELS
+    for i, ln in enumerate(lines):
+        if _is_header(ln.text):
+            in_table = True
+            n_cols = 4 if ("discount" in ln.text.lower() or "הנחה" in ln.text) else 3
+            continue
+        if not in_table:
+            continue
+        if i in used or any(ln.text.startswith(lbl) for lbl in stop_labels):
+            in_table = not has_header
+            continue
+        row = _row_from_columns(ln.text, n_cols) if has_header else None
+        if row is None or not _arith_ok(row[2], row[3], row[5], row[4]):
+            alt = _row_by_arithmetic(ln.text)
+            if alt is not None:
+                desc, sku, q, p, t = alt
+                row = (desc, sku, q, p, None, t)
+        if row is None:
+            continue
+        desc, sku, q, p, d, t = row
+        out.append(ExtractedLine(description=desc, sku=sku, quantity=q, unit_price=p, discount=d,
+                                 line_total=t, source_text=ln.text, page=ln.page))
+    return out
+
+
+def _row_from_columns(text: str, n_cols: int) -> tuple[str, str | None, str, str, str | None, str] | None:
+    """Legacy layout: description first, then quantity, price, [discount,] total at the end."""
+    nums, rest = _numbers_at_end(text)
+    if len(nums) < n_cols or not rest:
+        return None
+    nums = nums[-n_cols:]
+    sku_m = SKU_RE.search(rest)
+    sku = sku_m.group(0) if sku_m else None
+    desc = re.sub(r"\s{2,}", " ", rest.replace(sku, " ") if sku else rest).strip()
+    if not desc:
+        return None
+    qty_s, price_s, *more = nums
+    disc_s = more[0] if n_cols == 4 else None
+    total_s = more[-1]
+    if any(parse_amount(x) is None for x in (qty_s, price_s, total_s)):
+        return None
+    qty_s, price_s = _qty_price(qty_s, price_s) or (qty_s, price_s)
+    return desc, sku, qty_s, price_s, disc_s, total_s
+
+
+# ------------------------------------------------------------------ totals
+def _resolve_totals(out: InvoiceExtraction, lines: list[_Line], item_lines: set[int]) -> None:
+    """If the labelled subtotal / tax / total are missing or inconsistent, find three amounts
+    below the line items with subtotal + tax = total (subtotal = sum of lines when known)."""
+    vals = {k: parse_amount(getattr(out, k).value) if getattr(out, k).value else None
+            for k in ("subtotal", "tax_amount", "total", "discount_total")}
+    disc = vals["discount_total"] or Decimal(0)
+    if None not in (vals["subtotal"], vals["tax_amount"], vals["total"]) and \
+            abs(vals["subtotal"] - disc + vals["tax_amount"] - vals["total"]) <= CENT:
+        return
+    start = max(item_lines) + 1 if item_lines else 0
+    cands: list[tuple[int, str, Decimal]] = []
+    for i in range(start, len(lines)):
+        if i in item_lines or _is_customer_line(lines[i].text):
+            continue
+        nums, _ = _numbers_at_end(lines[i].text.replace("%", "% "))
+        nums = [n for n in nums if "%" not in n and _is_money(n)]
+        if nums and (v := parse_amount(nums[-1])) is not None:
+            cands.append((i, nums[-1], v))
+    item_sum = sum((parse_amount(ln.line_total) or Decimal(0) for ln in out.line_items), Decimal(0)) \
+        if out.line_items else None
+    found = None
+    for (si, ss, sv), (ti, ts, tv), (gi, gs, gv) in permutations(cands, 3):
+        if not (si < ti < gi) or tv >= sv or abs(sv - disc + tv - gv) > CENT:
+            continue
+        if item_sum is not None and abs(item_sum - sv) > CENT:
+            continue
+        found = ((si, ss), (ti, ts), (gi, gs))
+        break
+    if found is None:
+        return
+    (si, ss), (ti, ts), (gi, gs) = found
+    out.subtotal, out.tax_amount, out.total = _field(ss, lines[si]), _field(ts, lines[ti]), _field(gs, lines[gi])
+    m = re.search(r"(\d+(?:\.\d+)?)\s*%", lines[ti].text)
+    out.tax_rate = _field(f"{m.group(1)}%", lines[ti]) if m else ExtractedField()
+
+
+# ------------------------------------------------------------------ header fallbacks
+def _header(lines: list[_Line]) -> list[_Line]:
+    if not lines:
+        return []
+    return [ln for ln in lines if ln.page == lines[0].page][:HEADER_BLOCK]
+
+
+def _supplier_name(lines: list[_Line]) -> ExtractedField:
+    first = _header(lines)[:3]
+    for ln in first:  # a segment with a company suffix is the name, whatever else shares the line
+        for seg in re.split(r"\s{2,}", ln.text):
+            if COMPANY_SUFFIX.search(seg) and not _is_customer_line(seg):
+                return ExtractedField(value=seg.strip(" -|"), source_text=ln.text, page=ln.page)
+    for ln in first:
+        name = ln.text
+        for tw in TITLE_WORDS:
+            name = name.replace(tw, " ")
+        name = re.sub(r"\s{2,}", " ", name).strip(" -|")
+        if len(name) >= 3 and not re.search(r"\d{4}", name):
+            return ExtractedField(value=name, source_text=ln.text, page=ln.page)
+    return ExtractedField()
+
+
+def _po_reference(lines: list[_Line]) -> ExtractedField:
+    for ln in lines:
+        if not _is_customer_line(ln.text) and (m := PO_TOKEN.search(ln.text)):
+            return _field(m.group(0).rstrip(".,;"), ln)
+    return _find_labeled(lines, "po_reference", r"(PO[-\s]?[A-Z0-9][A-Z0-9\-]*|\d[\d\-]{3,})")
+
+
+def _header_docnum(lines: list[_Line], exclude: set[str]) -> ExtractedField:
+    for ln in _header(lines):
+        if _is_customer_line(ln.text):
+            continue
+        for tok in ln.text.split():
+            tok = tok.strip(",;:")
+            if HEADER_DOCNUM.match(tok) and not tok.startswith("PO") and tok not in exclude:
+                return _field(tok, ln)
+    return ExtractedField()
+
+
+def _header_date(lines: list[_Line]) -> ExtractedField:
+    due = [lbl.lower() for lbl in LABELS["due_date"]]
+    for ln in _header(lines):
+        if _is_customer_line(ln.text) or any(d in ln.text.lower() for d in due):
+            continue
+        if m := re.search(DATE_RE, ln.text):
+            return _field(m.group(1), ln)
+    return ExtractedField()
+
+
+def _header_tax_id(lines: list[_Line], exclude: set[str]) -> ExtractedField:
+    for ln in _header(lines):
+        if _is_customer_line(ln.text):
+            continue
+        for m in TAX_ID_TOKEN.finditer(ln.text):
+            if m.group(0) not in exclude:
+                return _field(m.group(0), ln)
+    return ExtractedField()
+
+
 def extract(pages: list[tuple[int, str]], exclude_tax_ids: set[str] | None = None) -> InvoiceExtraction:
     lines = _lines(pages)
     out = InvoiceExtraction()
     exclude_tax_ids = exclude_tax_ids or set()
 
-    # --- header fields
+    # --- header fields: labels first, then label-free fallbacks in the header block
+    out.po_reference = _po_reference(lines)
     out.invoice_number = _find_labeled(lines, "invoice_number", DOCNUM)
-    out.invoice_date = _find_labeled(
-        lines, "invoice_date",
-        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{4}|[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})",
-    )
+    if not out.invoice_number.value:
+        out.invoice_number = _header_docnum(lines, {out.po_reference.value or ""})
+    out.invoice_date = _find_labeled(lines, "invoice_date", DATE_RE)
+    if not out.invoice_date.value:
+        out.invoice_date = _header_date(lines)
     out.due_date = _find_labeled(lines, "due_date", r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2})")
-    out.po_reference = _find_labeled(lines, "po_reference", r"(PO[-\s]?[A-Z0-9][A-Z0-9\-]*|\d[\d\-]{3,})")
     terms = _find_labeled(lines, "payment_terms", r"(.+)$")
     if terms.value:
         terms.value = re.split(r"\s{2,}", terms.value)[0].strip()
@@ -169,19 +406,12 @@ def extract(pages: list[tuple[int, str]], exclude_tax_ids: set[str] | None = Non
                     break
         if found:
             break
+    if not out.supplier_tax_id.value:
+        out.supplier_tax_id = _header_tax_id(lines, exclude_tax_ids)
 
-    # --- supplier name: first line of page 1, minus document-title words
-    first_page = [ln for ln in lines if ln.page == lines[0].page] if lines else []
-    for ln in first_page[:3]:
-        name = ln.text
-        for tw in TITLE_WORDS:
-            name = name.replace(tw, " ")
-        name = re.sub(r"\s{2,}", " ", name).strip(" -|")
-        if len(name) >= 3 and not re.search(r"\d{4}", name):
-            out.supplier_name = ExtractedField(value=name, source_text=ln.text, page=ln.page)
-            break
+    out.supplier_name = _supplier_name(lines)
 
-    # --- totals
+    # --- totals (labels)
     used: set[int] = set()
     out.total, ti = _amount_for_labels(lines, TOTAL_LABELS, used)
     if ti is not None:
@@ -193,48 +423,20 @@ def extract(pages: list[tuple[int, str]], exclude_tax_ids: set[str] | None = Non
         if m:
             out.tax_rate = ExtractedField(value=f"{m.group(1)}%", source_text=lines[xi].text, page=lines[xi].page)
     out.subtotal, si = _amount_for_labels(lines, SUBTOTAL_LABELS, used)
-    out.discount_total, _ = _amount_for_labels(lines, DISCOUNT_LABELS, used | ({si} if si is not None else set()))
+    if si is not None:
+        used.add(si)
+    out.discount_total, _ = _amount_for_labels(lines, DISCOUNT_LABELS, used)
+
+    # --- line items, then totals checked against them
+    out.line_items = _parse_lines(lines, used)
+    item_idx = {i for i, ln in enumerate(lines) for it in out.line_items if it.source_text == ln.text}
+    _resolve_totals(out, lines, item_idx)
 
     # --- currency
-    cur_line = lines[ti] if ti is not None else None
-    for ln in ([cur_line] if cur_line else []) + lines:
+    total_line = next((ln for ln in lines if out.total.source_text and ln.text == out.total.source_text), None)
+    for ln in ([total_line] if total_line else []) + lines:
         m = re.search(r"₪|\bILS\b|\bNIS\b|ש\"ח|\$|\bUSD\b|€|\bEUR\b", ln.text)
         if m:
             out.currency = ExtractedField(value=m.group(0), source_text=ln.text, page=ln.page)
             break
-
-    # --- line items: rows between a table header and the totals block
-    in_table = False
-    n_cols = 3
-    stop_labels = SUBTOTAL_LABELS + TOTAL_LABELS + TAX_LABELS
-    for i, ln in enumerate(lines):
-        if _is_header(ln.text):
-            in_table = True
-            n_cols = 4 if ("discount" in ln.text.lower() or "הנחה" in ln.text) else 3
-            continue
-        if not in_table:
-            continue
-        if i in used or any(ln.text.startswith(lbl) for lbl in stop_labels):
-            in_table = False
-            continue
-        nums, rest = _numbers_at_end(ln.text)
-        if len(nums) < n_cols or not rest:
-            continue
-        nums = nums[-n_cols:]
-        sku_m = SKU_RE.search(rest)
-        sku = sku_m.group(0) if sku_m else None
-        desc = (rest.replace(sku, " ") if sku else rest)
-        desc = re.sub(r"\s{2,}", " ", desc).strip()
-        if not desc:
-            continue
-        qty_s, price_s, *more = nums
-        disc_s = more[0] if n_cols == 4 else None
-        total_s = more[-1]
-        q, p, t = parse_amount(qty_s), parse_amount(price_s), parse_amount(total_s)
-        if q is None or p is None or t is None:
-            continue
-        out.line_items.append(ExtractedLine(
-            description=desc, sku=sku, quantity=qty_s, unit_price=price_s, discount=disc_s,
-            line_total=total_s, source_text=ln.text, page=ln.page,
-        ))
     return out

@@ -8,15 +8,36 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+function send(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("X-Requested-With", "invoiceflow"); // CSRF guard for cookie sessions
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
-  const res = await fetch(path, { ...init, headers, credentials: "include" });
-  if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/api/auth/login")) {
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = `/login?next=${next}`;
-    throw new ApiError(401, "Not authenticated");
+  return fetch(path, { ...init, headers, credentials: "include" });
+}
+
+// Access tokens live 15 minutes; the httpOnly refresh cookie renews them. Concurrent 401s
+// share a single refresh so the rotating refresh token is only used once.
+let refreshing: Promise<boolean> | null = null;
+export function refreshSession(): Promise<boolean> {
+  refreshing ??= send("/api/auth/refresh", { method: "POST" })
+    .then((r) => r.ok, () => false)
+    .finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+const NO_REFRESH = ["/api/auth/login", "/api/auth/refresh", "/api/auth/logout"];
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  let res = await send(path, init);
+  if (res.status === 401 && !NO_REFRESH.some((p) => path.startsWith(p))) {
+    if (await refreshSession()) res = await send(path, init);
+    if (res.status === 401) {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/login?next=${next}`;
+      }
+      throw new ApiError(401, "Not authenticated");
+    }
   }
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;

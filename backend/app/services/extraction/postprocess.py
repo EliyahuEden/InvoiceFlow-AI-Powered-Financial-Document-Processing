@@ -60,9 +60,57 @@ def _locate(value: str, pages: list[PageText], prefer_page: int | None) -> Field
             line_text = " ".join(w.t for w in sorted(words, key=lambda w: -w.b[0]))
             src_line = next((ln for ln in p.text.splitlines() if nv in _norm(ln)), line_text)
             return FieldSource(page=p.page_no, text=src_line, bbox=bbox, verified=True)
-        # value spans words across a line boundary or words missing: page-level provenance
         src_line = next((ln for ln in p.text.splitlines() if nv in _norm(ln)), None)
+        # OCR words in visual (right-to-left) order, or one value split over two OCR line groups
+        candidates = [list(reversed(ws)) for _, ws in sorted(lines.items())] + [p.words]
+        for seq in candidates:
+            hits = _cover(seq, nv)
+            if hits:
+                bbox = [min(w.b[0] for w in hits), min(w.b[1] for w in hits),
+                        max(w.b[2] for w in hits), max(w.b[3] for w in hits)]
+                return FieldSource(page=p.page_no, text=src_line, bbox=bbox, verified=True)
+        # mixed-direction runs reordered visually, or a token garbled by OCR: most of the
+        # value's tokens on one OCR line are enough for a highlight (the value itself was
+        # already verified against the page text above)
+        hits = _token_line_hits(lines, value)
+        if hits:
+            bbox = [min(w.b[0] for w in hits), min(w.b[1] for w in hits),
+                    max(w.b[2] for w in hits), max(w.b[3] for w in hits)]
+            return FieldSource(page=p.page_no, text=src_line, bbox=bbox, verified=True)
+        # words missing or garbled by OCR: page-level provenance only
         return FieldSource(page=p.page_no, text=src_line, bbox=None, verified=True)
+    return None
+
+
+def _token_line_hits(lines: dict[int, list], value: str, min_share: float = 0.75) -> list | None:
+    tokens = [t for t in (_norm(x) for x in value.split()) if t]
+    if len(tokens) < 2:
+        return None
+    best: list = []
+    for _, words in sorted(lines.items()):
+        free = list(words)
+        hits = []
+        for t in tokens:
+            w = next((w for w in free if _norm(w.t) == t), None)
+            if w is not None:
+                free.remove(w)
+                hits.append(w)
+        if len(hits) > len(best):
+            best = hits
+    return best if len(best) >= max(2, min_share * len(tokens)) else None
+
+
+def _cover(words: list, nv: str) -> list | None:
+    """Consecutive words whose normalized texts concatenate exactly to ``nv``."""
+    norms = [_norm(w.t) for w in words]
+    for i in range(len(words)):
+        acc = ""
+        for j in range(i, len(words)):
+            acc += norms[j]
+            if acc == nv:
+                return words[i:j + 1]
+            if not nv.startswith(acc):
+                break
     return None
 
 
@@ -101,7 +149,11 @@ def normalize(extraction: InvoiceExtraction, pages: list[PageText], method: str,
         setattr(out, name, val)
 
     for i, ln in enumerate(extraction.line_items, start=1):
-        src = _locate(ln.source_text or ln.description, pages, ln.page) or _locate(ln.description, pages, ln.page)
+        src = _locate(ln.source_text or ln.description, pages, ln.page)
+        if src is None or src.bbox is None:  # the whole row cannot be boxed: box its description
+            desc_src = _locate(ln.description, pages, ln.page)
+            if desc_src is not None and (src is None or desc_src.bbox is not None):
+                src = desc_src if src is None else src.model_copy(update={"bbox": desc_src.bbox, "page": desc_src.page})
         if src is None:
             out.issues.append(ValidationIssue(code="UNVERIFIED_LINE", field=f"line_{i}",
                                               message=f"Line '{ln.description[:50]}' not found in document; discarded."))

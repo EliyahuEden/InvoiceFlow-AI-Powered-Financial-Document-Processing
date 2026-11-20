@@ -270,9 +270,12 @@ def _template_report(state: AgentState, findings: list[dict], evidence: list[dic
         ev = [e for e in evidence if e["finding_type"] == f["type"]]
         out["findings"].append({
             "type": f["type"], "severity": f["severity"], "message": f["message"],
+            "message_key": f.get("message_key"), "params": f.get("params"),
             "amount_at_risk": f.get("amount_at_risk"),
+            # The deterministic message is rendered above this text in the reader's language
+            # (message_key + params), so the Hebrew template does not repeat the English message.
             "explanation": {"en": f["message"] + ("" if ev else " " + TEMPLATES["en"]["no_evidence"]),
-                            "he": LABELS.get(f["type"], (f["type"], f["type"]))[1] + ". " + f["message"]
+                            "he": LABELS.get(f["type"], (f["type"], f["type"]))[1] + "."
                             + ("" if ev else " " + TEMPLATES["he"]["no_evidence"])},
             "citations": [_citation(e) for e in ev[:3]],
         })
@@ -311,6 +314,7 @@ def explain(state: AgentState, config: dict) -> dict:
                 "open_questions": rep.open_questions, "mode": f"llm:{llm.model}", "ai_recommended_action": rep.recommended_action,
                 "findings": [{
                     "type": f["type"], "severity": f["severity"], "message": f["message"],
+                    "message_key": f.get("message_key"), "params": f.get("params"),
                     "amount_at_risk": f.get("amount_at_risk"),
                     "explanation": {lang_key: explained[f["type"]].explanation} if f["type"] in explained else {},
                     # only evidence ids that exist are kept: the model cannot cite what was not retrieved

@@ -98,7 +98,7 @@ export default function UploadPage() {
   return (
     <div className="space-y-5">
       <PageHeader title={t.upload.title} back={{ href: "/invoices", label: t.nav.inbox }} />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-5">
           <label
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}

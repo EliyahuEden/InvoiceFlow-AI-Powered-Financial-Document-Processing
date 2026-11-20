@@ -67,7 +67,7 @@ export default function OverviewPage() {
         )}
       </Panel>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Panel>
           <PanelHeader title={t.overview.discrepancyTypes} />
           <div className="p-4">
@@ -101,7 +101,7 @@ export default function OverviewPage() {
         </Panel>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Panel>
           <PanelHeader title={t.overview.volume} />
           <div className="p-4">

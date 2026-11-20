@@ -92,23 +92,49 @@ def facts_ok(text: str, facts: list[str]) -> bool:
     return all(any(normalize(alt) in nt for alt in f.split("|")) for f in facts)
 
 
+def load_questions(name: str) -> list[dict]:
+    path = ROOT / "eval" / "datasets" / "rag" / name
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def retrieval_metrics(questions: list, idx: ChunkIndex, mode: str, reranker, chunks) -> dict:  # noqa: ANN001
+    per_q, lat, by_cat = [], [], defaultdict(list)
+    for q in questions:
+        t0 = time.perf_counter()
+        hits = idx.search(q["question"], mode=mode, k=10, reranker=reranker if mode == "hybrid_rerank" else None)
+        lat.append((time.perf_counter() - t0) * 1000)
+        m = score_ranking([h.chunk.id for h in hits], relevant_ids(chunks, q["relevant"]))
+        per_q.append(m)
+        by_cat[q["category"]].append(m)
+        by_cat[f"lang:{q['lang']}"].append(m)
+    agg = {key: round(sum(m[key] for m in per_q) / len(per_q), 3) for key in per_q[0]}
+    return {**agg, "latency_ms_p50": p50(lat),
+            "by_category": {c: {"recall@5": round(sum(m["recall@5"] for m in ms) / len(ms), 3),
+                                "mrr": round(sum(m["mrr"] for m in ms) / len(ms), 3), "n": len(ms)}
+                            for c, ms in sorted(by_cat.items())}}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-rerank", action="store_true")
+    ap.add_argument("--embedding-model", help="override the dense model (e.g. to compare a larger multilingual one)")
+    ap.add_argument("--out", default="rag", help="result name: eval/results/<out>_latest.json")
     args = ap.parse_args()
-    questions = [json.loads(line) for line in (ROOT / "eval/datasets/rag/questions.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    questions = load_questions("questions.jsonl")
+    held_out = load_questions("questions_heldout.jsonl")
     docs, pages = load_corpus()
 
     # dataset integrity: every evidence phrase must exist in its document
     full = {k: normalize(" ".join(t for _, t in v)) for k, v in pages.items()}
-    missing = [(q["id"], d, p) for q in questions for d, p in q["relevant"] if normalize(p) not in full[d]]
+    missing = [(q["id"], d, p) for q in questions + held_out for d, p in q["relevant"] if normalize(p) not in full[d]]
     if missing:
         raise SystemExit(f"dataset error, evidence not found in documents: {missing}")
 
     from app.core.config import get_settings
 
     s = get_settings()
-    embedder = FastEmbedEmbedder(s.embedding_model, str(s.model_cache_dir))
+    embedding_model = args.embedding_model or s.embedding_model
+    embedder = FastEmbedEmbedder(embedding_model, str(s.model_cache_dir))
     reranker, rerank_note = None, None
     if not args.no_rerank:
         try:
@@ -116,7 +142,7 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001
             rerank_note = f"reranker unavailable: {exc}"
     answerable = [q for q in questions if q["answerable"]]
-    configs, answer_results = [], {}
+    configs, answer_results, held = [], {}, {"retrieval": [], "answers": {}}
     for strategy in ("fixed_700", "fixed_300", "clause"):
         chunks = build_chunks(docs, pages, strategy)
         idx_heb = ChunkIndex(chunks, embedder, hebrew_tokenizer=True)
@@ -126,34 +152,34 @@ def main() -> None:
         if reranker:
             modes.append(("hybrid_rerank", idx_heb, "hybrid_rerank"))
         for name, idx, mode in modes:
-            per_q, lat, by_cat = [], [], defaultdict(list)
-            for q in answerable:
-                t0 = time.perf_counter()
-                hits = idx.search(q["question"], mode=mode, k=10, reranker=reranker if mode == "hybrid_rerank" else None)
-                lat.append((time.perf_counter() - t0) * 1000)
-                m = score_ranking([h.chunk.id for h in hits], relevant_ids(chunks, q["relevant"]))
-                per_q.append(m)
-                by_cat[q["category"]].append(m)
-                by_cat[f"lang:{q['lang']}"].append(m)
-            agg = {key: round(sum(m[key] for m in per_q) / len(per_q), 3) for key in per_q[0]}
-            configs.append({
-                "name": name, "chunking": strategy, "n_chunks": len(chunks), **agg, "latency_ms_p50": p50(lat),
-                "by_category": {c: {"recall@5": round(sum(m["recall@5"] for m in ms) / len(ms), 3),
-                                    "mrr": round(sum(m["mrr"] for m in ms) / len(ms), 3), "n": len(ms)}
-                                for c, ms in sorted(by_cat.items())},
-            })
+            agg = retrieval_metrics(answerable, idx, mode, reranker, chunks)
+            configs.append({"name": name, "chunking": strategy, "n_chunks": len(chunks), **agg})
             print(f"{strategy:6s} {name:14s} R@1={agg['recall@1']:.3f} R@5={agg['recall@5']:.3f} MRR={agg['mrr']:.3f} nDCG@5={agg['ndcg@5']:.3f}")
 
-            if strategy == "clause" and name in ("hybrid", "hybrid_rerank"):
-                answer_results[f"offline_extractive/{name}"] = evaluate_answers(questions, idx, mode, reranker, chunks)
+            if strategy == "clause":
+                ho = retrieval_metrics([q for q in held_out if q["answerable"]], idx, mode, reranker, chunks)
+                held["retrieval"].append({"name": name, "chunking": strategy, **ho})
+                print(f"  held-out {name:14s} R@5={ho['recall@5']:.3f} MRR={ho['mrr']:.3f}")
+                if name in ("hybrid", "hybrid_rerank"):
+                    answer_results[f"offline_extractive/{name}"] = evaluate_answers(questions, idx, mode, reranker, chunks)
+                    held["answers"][f"offline_extractive/{name}"] = evaluate_answers(held_out, idx, mode, reranker, chunks)
+                    print(f"  answers {name}: calibration {answer_results[f'offline_extractive/{name}']['abstention']} "
+                          f"held-out {held['answers'][f'offline_extractive/{name}']['abstention']}")
 
     best = max(configs, key=lambda c: (c["mrr"], c["recall@5"]))
-    write_result("rag", {
-        "dataset": {"questions": len(questions), "answerable": len(answerable),
-                    "by_category": dict(sorted(defaultdict(int, {c: sum(1 for q in questions if q["category"] == c)
-                                                                 for c in {q["category"] for q in questions}}).items())),
-                    "documents": len(docs), "source": "eval/datasets/rag/questions.jsonl (hand-written)"},
-        "models": {"embedding": s.embedding_model, "reranker": s.reranker_model if reranker else None, "note": rerank_note},
+
+    def counts(qs: list) -> dict:
+        return dict(sorted({c: sum(1 for q in qs if q["category"] == c) for c in {q["category"] for q in qs}}.items()))
+
+    write_result(args.out, {
+        "dataset": {"questions": len(questions), "answerable": len(answerable), "by_category": counts(questions),
+                    "documents": len(docs), "source": "eval/datasets/rag/questions.jsonl (hand-written; calibration set)"},
+        "held_out": {"dataset": {"questions": len(held_out), "answerable": sum(1 for q in held_out if q["answerable"]),
+                                 "by_category": counts(held_out),
+                                 "source": "eval/datasets/rag/questions_heldout.jsonl (hand-written before any "
+                                           "held-out scoring; never used for tuning)"},
+                     "abstain_logit": A.RERANK_ABSTAIN_LOGIT, **held},
+        "models": {"embedding": embedding_model, "reranker": s.reranker_model if reranker else None, "note": rerank_note},
         "configs": configs, "best_config": {"name": best["name"], "chunking": best["chunking"]},
         "answers": answer_results,
         "llm_answers": "not run (no LLM configured; set LLM_PROVIDER and run with an API key)",
@@ -165,8 +191,11 @@ def main() -> None:
             "(answers are verbatim sentences), so it is not reported as a model capability.",
             "fixed_700 yields very few chunks on this small corpus (about 2 per document), which inflates recall@k; "
             "compare strategies at similar granularity (fixed_300 vs clause).",
-            "Abstention thresholds were chosen after inspecting score distributions on this same dataset "
-            "(eval/inspect_rerank_scores.py); there is no held-out split, so abstention numbers are optimistic.",
+            "The reranker abstention threshold is calibrated on questions.jsonl only (eval/calibrate_abstention.py, "
+            "eval/results/abstention_calibration_latest.json). 'held_out' reports questions_heldout.jsonl, which was "
+            "written before any held-out scoring and not used for tuning.",
+            "The thresholds of the no-reranker path (lexical coverage / dense similarity) were set on questions.jsonl "
+            "in the first version and are not recalibrated.",
         ],
     })
 

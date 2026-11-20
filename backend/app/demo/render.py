@@ -121,8 +121,25 @@ TEMPLATES = {
         cols=["Qty", "Code", "Item", "Rate", "Total"], order=["qty", "sku", "description", "price", "total"],
         sub="Sub Total", vat="VAT @ {r}%", total="TOTAL PAYABLE", cur_prefix="",
     ),
+    # --- held-out set v2: written before the layout-tolerant extractor changes and scored once
+    # afterwards. The v1 templates above were inspected while making those changes, so their
+    # score is reported as development data from then on (docs/EVALUATION_PLAN.md).
+    "he_service": dict(
+        rtl=True, title="חשבון עסקה / חשבונית מס", number="מס' חשבונית: {n}", date="נוצר בתאריך {d}", datefmt="%d-%m-%Y",
+        po="מספר רכש: {po}", terms="תנאים: {t}", taxid="ח\"פ {id}", billto="מזמין: {org}",
+        cols=["פריט", "כמות", "תיאור", "מחיר ליחידה", "סה\"כ שורה"], order=["sku", "qty", "description", "price", "total"],
+        sub="סה\"כ חייב במע\"מ", vat="מס ערך מוסף {r}%", total="סה\"כ לתשלום כולל מע\"מ", cur_prefix="₪",
+    ),
+    "en_statement": dict(
+        rtl=False, title="Commercial Invoice", number="Document No. {n}", date="Dated {d}", datefmt="%d/%m/%Y",
+        po="P.O. {po}", terms="Payment: {t}", taxid="Tax Reg. No. {id}", billto="Invoice to: {org_en}",
+        cols=["Description", "Unit Cost", "Units", "Line Total", "Ref"], order=["description", "price", "qty", "total", "sku"],
+        sub="Total before tax", vat="V.A.T. {r}%", total="Amount Payable", cur_prefix="",
+    ),
 }
-HELD_OUT_TEMPLATES = {"he_receipt", "en_minimal"}
+HELD_OUT_V1 = {"he_receipt", "en_minimal"}
+HELD_OUT_V2 = {"he_service", "en_statement"}
+HELD_OUT_TEMPLATES = HELD_OUT_V1 | HELD_OUT_V2
 ROWS_PER_PAGE = 16
 
 

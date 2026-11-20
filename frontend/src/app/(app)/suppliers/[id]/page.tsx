@@ -24,7 +24,7 @@ export default function SupplierDetail() {
       <PageHeader back={{ href: "/suppliers", label: t.suppliers.title }} title={<span dir="auto">{s.name}</span>} sub={s.name_en}
         actions={<StatusPill status={s.status} />} />
       <Panel className="p-4">
-        <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <KV label={t.suppliers.taxId}><span className="ltr font-mono">{s.tax_id ?? "—"}</span></KV>
           <KV label={t.suppliers.terms}><span dir="auto">{s.payment_terms ?? "—"}</span></KV>
           <KV label={t.invoice.currency}>{s.default_currency}</KV>
@@ -33,7 +33,7 @@ export default function SupplierDetail() {
           <KV label={t.suppliers.aliases}><span dir="auto">{s.aliases.join(", ") || "—"}</span></KV>
         </dl>
       </Panel>
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Panel>
           <PanelHeader title={t.pos.title} />
           <Table>

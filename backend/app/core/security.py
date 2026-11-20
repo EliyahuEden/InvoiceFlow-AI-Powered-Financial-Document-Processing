@@ -1,4 +1,4 @@
-"""Password hashing (Argon2id) and JWT access tokens."""
+"""Password hashing (Argon2id) and short-lived JWT access tokens bound to a session."""
 from __future__ import annotations
 
 import uuid
@@ -24,13 +24,14 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(user_id: uuid.UUID, org_id: uuid.UUID, role: str) -> str:
+def create_access_token(user_id: uuid.UUID, org_id: uuid.UUID, role: str, sid: uuid.UUID) -> str:
     s = get_settings()
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "org": str(org_id),
         "role": role,
+        "sid": str(sid),
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=s.access_token_minutes)).timestamp()),
         "jti": uuid.uuid4().hex,

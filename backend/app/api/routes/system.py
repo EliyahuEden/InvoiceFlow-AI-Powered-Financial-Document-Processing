@@ -13,11 +13,11 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.deps import Principal, get_db, get_principal, require
+from app.api.deps import Principal, get_db, get_principal, principal_from_claims, require
 from app.core.db import new_session
 from app.core.security import hash_password
 from app.models import Job, Membership, Organization, Role, User
-from app.services import audit
+from app.services import audit, auth_sessions, sse_tickets
 from app.services.events import channel, get_redis
 from app.services.llm.provider import mode_label
 from app.services.rbac import ROLE_PERMISSIONS, Perm
@@ -146,16 +146,41 @@ def job_status(job_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOICE_RE
         s.close()
 
 
+@router.post("/api/events/ticket")
+def events_ticket(request: Request, p: Principal = Depends(get_principal)) -> dict:
+    """A single-use ticket for opening the event stream (EventSource cannot send headers)."""
+    if request.headers.get("x-requested-with") != "invoiceflow":
+        raise HTTPException(403, "Missing CSRF header")
+    try:
+        ticket, ttl = sse_tickets.issue(user_id=p.user.id, org_id=p.org_id, sid=str(p.session_id))
+    except Exception as exc:  # noqa: BLE001 - Redis down: the client falls back to polling
+        raise HTTPException(503, "Event stream unavailable") from exc
+    return {"ticket": ticket, "expires_in": ttl}
+
+
+SESSION_RECHECK_SECONDS = 60
+
+
 @router.get("/api/events")
-async def events(request: Request, p: Principal = Depends(get_principal)) -> EventSourceResponse:
-    """Server-sent events for the caller's organization (job progress, status changes)."""
+async def events(request: Request, ticket: str | None = None) -> EventSourceResponse:
+    """Server-sent events for the caller's organization (job progress, status changes).
+
+    Opened with a single-use ticket from POST /api/events/ticket (or, for same-origin
+    clients, the session cookie). The stream ends once the session is revoked or expires."""
+    if ticket:
+        claims = await asyncio.to_thread(sse_tickets.consume, ticket)
+        if claims is None:
+            raise HTTPException(401, "Invalid or expired ticket")
+        p = await asyncio.to_thread(principal_from_claims, claims)
+    else:
+        p = await asyncio.to_thread(get_principal, request)
 
     async def stream():  # noqa: ANN202
         pubsub = get_redis().pubsub(ignore_subscribe_messages=True)
         try:
             pubsub.subscribe(channel(p.org_id))
             yield {"event": "ready", "data": json.dumps({"org": str(p.org_id)})}
-            idle = 0
+            idle = since_check = 0
             while not await request.is_disconnected():
                 msg = await asyncio.to_thread(pubsub.get_message, timeout=1.0)
                 if msg and msg.get("type") == "message":
@@ -167,6 +192,12 @@ async def events(request: Request, p: Principal = Depends(get_principal)) -> Eve
                     if idle >= 15:
                         yield {"event": "ping", "data": "{}"}
                         idle = 0
+                since_check += 1
+                if since_check >= SESSION_RECHECK_SECONDS:
+                    since_check = 0
+                    if not await asyncio.to_thread(auth_sessions.is_active, str(p.session_id)):
+                        yield {"event": "session.ended", "data": "{}"}
+                        return
         except Exception:  # noqa: BLE001 - Redis unavailable: client falls back to polling
             yield {"event": "degraded", "data": json.dumps({"reason": "event bus unavailable"})}
         finally:

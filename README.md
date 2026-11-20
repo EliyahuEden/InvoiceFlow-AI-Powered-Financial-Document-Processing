@@ -29,6 +29,7 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 - **Agent with guard-rails:** LangGraph with typed, RBAC-checked tools; tenant and supplier scope enforced by code; PostgreSQL checkpoints with crash recovery; a human-approval interrupt; no payment tools.
 - **Multi-tenant SaaS foundations:**
   - RBAC (4 roles), tenant isolation in the app **and** in PostgreSQL row-level security;
+  - revocable server-side sessions: 15-minute access tokens, rotating refresh tokens with reuse detection, single-use SSE tickets;
   - segregated two-step approvals;
   - append-only, hash-chained audit log;
   - durable job queue with retries, idempotency and stale-lock recovery;
@@ -75,18 +76,18 @@ These come from the scripts in `/eval`; the JSON is in `eval/results/` and is re
 
 | Component | Headline (honest scope) |
 |---|---|
-| Extraction, rule-based baseline, 57 synthetic docs | Field accuracy **0.837**: native 0.894, scanned 0.727, photo 0.545, **held-out layouts 0.341**. Line-item F1 0.870. Absent fields returned as null in 43/43 cases. |
-| Retrieval, 50 hand-written questions (he/en/mixed/multi-doc/conflicting/unanswerable) | Clause + hybrid + rerank: **R@5 0.940, nDCG@5 0.870, MRR 0.859**. Dense MiniLM alone: MRR 0.642. BM25: MRR 0.860. Reranking costs about 1 s/query on CPU. |
-| Grounded answers (offline extractive) | Correctness 0.643, citation accuracy 0.686, abstention P / R 0.80 / 1.00, injection parroting 0/1 |
+| Extraction, rule-based baseline, 73 synthetic docs | Field accuracy **0.917**: native 0.976, scanned 0.758, photo 0.705. **Held-out layouts (v2, scored once before and once after the layout-tolerant parser): 0.278 → 0.830.** Line-item F1 0.944. Absent fields returned as null in 57/57 cases. |
+| Retrieval, 50 hand-written questions (he/en/mixed/multi-doc/conflicting/unanswerable) | Clause + hybrid + rerank: **R@5 0.940, nDCG@5 0.870, MRR 0.859**. Dense MiniLM alone: MRR 0.642. BM25: MRR 0.860. Reranking costs about 1 s/query on CPU. On 35 **held-out** questions: R@5 0.980, MRR 0.960. |
+| Grounded answers (offline extractive) | Correctness 0.643, citation accuracy 0.686, abstention P / R 0.80 / 1.00 (threshold calibrated on this set), injection parroting 0/1. **Held out:** correctness 0.760, abstention P / R 0.78 / 0.70. |
 | Reconciliation, 348 controlled cases | P = R = 1.00 on all 12 types; **0 false alarms** on 123 clean or near-miss invoices |
-| End to end (PDF → OCR/extraction → engine), 13 demo docs | 12/13 scenarios exact. The miss is a real OCR error, corrected by a human in the demo flow. |
+| End to end (PDF → OCR/extraction → engine), 13 demo docs | 13/13 scenarios exact, P = R = 1.00 (was 12/13 because of a PO-label extraction bug, now fixed). |
 
 LLM extraction and answering are **not** benchmarked here, because that needs a paid API. `run_extraction_eval.py --llm` measures it once you configure a provider. Full methodology and limitations: [docs/EVALUATION_PLAN.md](docs/EVALUATION_PLAN.md).
 
 ## Tests
 ```bash
-cd backend && python -m pytest -q          # 94 tests: unit + PostgreSQL/RLS integration (needs the compose postgres + redis)
-cd frontend && npm test && npm run typecheck && npm run lint   # Vitest (11)
+cd backend && python -m pytest -q          # unit + PostgreSQL/RLS integration (needs the compose postgres + redis)
+cd frontend && npm test && npm run typecheck && npm run lint   # Vitest
 cd frontend && npx playwright test          # E2E against the running stack (4)
 ```
 CI (`.github/workflows/ci.yml`) runs the backend tests against pgvector and Redis services, the frontend checks and build, then Docker Compose and Playwright.

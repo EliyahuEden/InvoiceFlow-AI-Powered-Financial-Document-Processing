@@ -45,10 +45,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title={t.settings.title} sub={!admin ? t.settings.adminOnly : undefined} />
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <Panel>
           <PanelHeader title={t.settings.tolerances} sub={t.ai.deterministic} />
-          <div className="grid gap-4 p-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
             {Object.keys(tol).map((k) => (
               <Field key={k} label={(t.settings as Record<string, string>)[k] ?? k} htmlFor={k}>
                 <Input id={k} dir="ltr" inputMode="decimal" value={tol[k]} disabled={!admin} onChange={(e) => setTol({ ...tol, [k]: e.target.value })} />

@@ -39,6 +39,45 @@ SEVERITY = {
 BLOCKING = {"UNRECOGNIZED_SUPPLIER", "AMBIGUOUS_SUPPLIER", "DUPLICATE_INVOICE", "MISSING_PURCHASE_ORDER",
             "PO_SUPPLIER_MISMATCH", "SUPPLIER_BLOCKED", "INCOMPLETE_EXTRACTION"}
 
+# Message templates are rendered by the client in the reader's language. Each finding carries a
+# message key (its type, or a variant of it) plus these display-ready parameters. The English
+# `message` is kept for the API, the audit log and the agent. The contract is enforced against
+# frontend/src/lib/i18n/dictionaries.ts by tests/test_finding_messages.py.
+MESSAGE_PARAMS: dict[str, set[str]] = {
+    "UNRECOGNIZED_SUPPLIER": {"name", "tax_id"},
+    "AMBIGUOUS_SUPPLIER": {"name", "count"},
+    "SUPPLIER_BLOCKED": {"name"},
+    "DUPLICATE_INVOICE": {"number"},
+    "DUPLICATE_INVOICE_FILE": set(),
+    "POSSIBLE_DUPLICATE": {"total", "number", "days"},
+    "MISSING_PURCHASE_ORDER": {"reference"},
+    "MISSING_PURCHASE_ORDER_NONE": set(),
+    "PO_SUPPLIER_MISMATCH": {"po"},
+    "PO_CLOSED": {"po", "status"},
+    "CURRENCY_MISMATCH": {"invoice_currency", "po", "po_currency"},
+    "CURRENCY_NOT_STATED": {"currency"},
+    "AMBIGUOUS_DESCRIPTION": {"line", "description", "first", "second"},
+    "ITEM_NOT_ON_PO": {"line", "description", "po"},
+    "PRICE_MISMATCH": {"line", "invoice_price", "po_price", "po", "pct", "tolerance_pct", "tolerance_abs"},
+    "QUANTITY_EXCEEDS_ORDERED": {"line", "billed", "ordered"},
+    "QUANTITY_EXCEEDS_RECEIVED": {"line", "billed", "received"},
+    "MISSING_GOODS_RECEIPT": {"po"},
+    "LINE_TOTAL_MISMATCH": {"line", "quantity", "unit_price", "expected", "actual"},
+    "SUBTOTAL_MISMATCH": {"sum", "subtotal"},
+    "TOTAL_MISMATCH": {"expected", "total"},
+    "UNBILLED_PO_LINES": {"count"},
+    "INCOMPLETE_EXTRACTION": {"missing"},
+    "SUSPICIOUS_CONTENT": set(),
+}
+
+
+def amt(v: Decimal | None) -> str | None:
+    """Display form of an amount: 5380.0000 -> 5380.00, 0.1250 -> 0.125 (no precision lost)."""
+    if v is None:
+        return None
+    n = v.normalize()
+    return f"{v:.2f}" if -n.as_tuple().exponent <= 2 else format(n, "f")
+
 
 def q(v: Decimal | None) -> str:
     """Human-readable quantity: 60.000 -> 60, 2.500 -> 2.5."""
@@ -166,9 +205,12 @@ class Finding:
     difference: str | None = None
     amount_at_risk: str | None = None
     evidence: dict = field(default_factory=dict)
+    params: dict = field(default_factory=dict)  # values for the localized template, see MESSAGE_PARAMS
+    message_key: str = ""
 
     def __post_init__(self) -> None:
         self.severity = self.severity or SEVERITY[self.type]
+        self.message_key = self.message_key or self.type
 
 
 @dataclass
@@ -226,10 +268,11 @@ def identify_supplier(inv: InvoiceData, suppliers: list[SupplierData]) -> tuple[
         return None, {"method": "ambiguous", "candidates": cands}, [Finding(
             "AMBIGUOUS_SUPPLIER",
             f"Supplier '{name}' matches {len(strong)} suppliers and no tax ID is printed; a reviewer must choose.",
-            actual=name, evidence={"candidates": cands})]
+            actual=name, evidence={"candidates": cands}, params={"name": name, "count": len(strong)})]
     return None, {"method": "none", "candidates": cands}, [Finding(
         "UNRECOGNIZED_SUPPLIER", f"Supplier '{name or 'unknown'}' (tax ID {tax or 'not printed'}) is not in the supplier master.",
-        actual=name or None, evidence={"tax_id": tax or None, "candidates": cands})]
+        actual=name or None, evidence={"tax_id": tax or None, "candidates": cands},
+        params={"name": name or None, "tax_id": tax or None})]
 
 
 def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Context) -> list[Finding]:
@@ -240,7 +283,8 @@ def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Contex
             continue
         if inv.document_sha256 and p.document_sha256 == inv.document_sha256:
             out.append(Finding("DUPLICATE_INVOICE", "The identical file was already uploaded.",
-                               evidence={"invoice_id": str(p.id), "rule": "same_file_sha256"}))
+                               evidence={"invoice_id": str(p.id), "rule": "same_file_sha256"},
+                               message_key="DUPLICATE_INVOICE_FILE"))
             return out
         if supplier and p.supplier_id == supplier.id and num and normalize_doc_number(p.invoice_number) == num:
             out.append(Finding(
@@ -248,7 +292,8 @@ def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Contex
                 f"Invoice {inv.invoice_number} from this supplier was already received.",
                 expected="unique (supplier, invoice number)", actual=inv.invoice_number,
                 amount_at_risk=str(inv.total) if inv.total is not None else None,
-                evidence={"invoice_id": str(p.id), "rule": "same_supplier_and_number"}))
+                evidence={"invoice_id": str(p.id), "rule": "same_supplier_and_number"},
+                params={"number": inv.invoice_number}))
             return out
     for p in ctx.prior_invoices:
         if p.id == inv.id or p.status in ("rejected", "failed") or not supplier or p.supplier_id != supplier.id:
@@ -257,9 +302,11 @@ def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Contex
                 and abs((inv.invoice_date - p.invoice_date).days) <= ctx.tolerances.duplicate_window_days):
             out.append(Finding(
                 "POSSIBLE_DUPLICATE",
-                f"Same supplier and same total ({inv.total}) as invoice {p.invoice_number} within "
+                f"Same supplier and same total ({amt(inv.total)}) as invoice {p.invoice_number} within "
                 f"{ctx.tolerances.duplicate_window_days} days.",
-                evidence={"invoice_id": str(p.id), "rule": "same_supplier_total_window"}))
+                evidence={"invoice_id": str(p.id), "rule": "same_supplier_total_window"},
+                params={"total": amt(inv.total), "number": p.invoice_number,
+                        "days": ctx.tolerances.duplicate_window_days}))
     return out
 
 
@@ -277,11 +324,12 @@ def resolve_po(inv: InvoiceData, supplier: SupplierData, ctx: Context) -> tuple[
         if po is None:
             return None, {"method": "reference", "reference": inv.po_reference}, [Finding(
                 "MISSING_PURCHASE_ORDER", f"The invoice references {inv.po_reference}, which does not exist.",
-                actual=inv.po_reference, evidence={"rule": "referenced_po_not_found"})]
+                actual=inv.po_reference, evidence={"rule": "referenced_po_not_found"},
+                params={"reference": inv.po_reference})]
         if po.supplier_id != supplier.id:
             return po, {"method": "reference"}, [Finding(
                 "PO_SUPPLIER_MISMATCH", f"{po.number} belongs to a different supplier.",
-                actual=inv.po_reference, evidence={"po_id": str(po.id)})]
+                actual=inv.po_reference, evidence={"po_id": str(po.id)}, params={"po": po.number})]
         return po, {"method": "reference", "reference": inv.po_reference}, []
     # No reference: look for an open PO of this supplier whose lines cover the invoice.
     best, best_score = None, 0.0
@@ -296,7 +344,8 @@ def resolve_po(inv: InvoiceData, supplier: SupplierData, ctx: Context) -> tuple[
         return best, {"method": "inferred_from_lines", "coverage": best_score}, []
     return None, {"method": "none"}, [Finding(
         "MISSING_PURCHASE_ORDER", "No purchase order is referenced and no open PO of this supplier covers the invoice lines.",
-        evidence={"rule": "no_po_reference_no_matching_open_po", "best_coverage": best_score})]
+        evidence={"rule": "no_po_reference_no_matching_open_po", "best_coverage": best_score},
+        message_key="MISSING_PURCHASE_ORDER_NONE")]
 
 
 def match_lines(inv: InvoiceData, po: POData, tol: Tolerances) -> tuple[list[LineMatch], list[Finding]]:
@@ -314,7 +363,8 @@ def match_lines(inv: InvoiceData, po: POData, tol: Tolerances) -> tuple[list[Lin
             findings.append(Finding("ITEM_NOT_ON_PO", f"Line {il.line_no} '{il.description}' does not match any line of {po.number}.",
                                     invoice_line_id=str(il.id) if il.id else None, invoice_line_no=il.line_no,
                                     amount_at_risk=str(il.line_total) if il.line_total is not None else None,
-                                    evidence={"candidates": cands}))
+                                    evidence={"candidates": cands},
+                                    params={"line": il.line_no, "description": il.description, "po": po.number}))
             continue
         method, score, pl = scored[0]
         if method != "sku" and len(scored) > 1 and scored[0][1] - scored[1][1] < float(tol.description_ambiguity_margin):
@@ -327,7 +377,9 @@ def match_lines(inv: InvoiceData, po: POData, tol: Tolerances) -> tuple[list[Lin
                 f"Line {il.line_no} '{il.description}' matches several PO lines almost equally "
                 f"({cands[0]['description']} / {cands[1]['description']}).",
                 invoice_line_id=str(il.id) if il.id else None, invoice_line_no=il.line_no,
-                evidence={"candidates": cands[:2], "price_hint": hint}))
+                evidence={"candidates": cands[:2], "price_hint": hint},
+                params={"line": il.line_no, "description": il.description,
+                        "first": cands[0]["description"], "second": cands[1]["description"]}))
             continue
         used.add(pl.id)
         matches.append(LineMatch(il.line_no, str(il.id) if il.id else None, str(pl.id), pl.line_no, method, score, cands))
@@ -345,7 +397,7 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
         out.append(Finding("MISSING_GOODS_RECEIPT",
                            f"No goods receipt has been recorded for {po.number}; nothing can be confirmed as delivered.",
                            amount_at_risk=str(inv.subtotal) if inv.subtotal is not None else None,
-                           evidence={"po_id": str(po.id), "rule": "three_way_requires_receipt"}))
+                           evidence={"po_id": str(po.id), "rule": "three_way_requires_receipt"}, params={"po": po.number}))
     for m in matches:
         if not m.po_line_id:
             continue
@@ -357,11 +409,14 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
             qty = il.quantity or ZERO
             out.append(Finding(
                 "PRICE_MISMATCH",
-                f"Line {il.line_no}: unit price {il.unit_price} vs {pl.unit_price} on {po.number} "
+                f"Line {il.line_no}: unit price {amt(il.unit_price)} vs {amt(pl.unit_price)} on {po.number} "
                 f"({'+' if diff > 0 else ''}{pct}%), tolerance {tol.price_pct}% / {tol.price_abs}.",
-                expected=str(pl.unit_price), actual=str(il.unit_price), difference=str(diff),
+                expected=amt(pl.unit_price), actual=amt(il.unit_price), difference=amt(diff),
                 amount_at_risk=str(round_money(max(diff, ZERO) * qty)),
-                evidence={"pct": str(pct), "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs)}, **ref))
+                evidence={"pct": str(pct), "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs)},
+                params={"line": il.line_no, "invoice_price": amt(il.unit_price), "po_price": amt(pl.unit_price),
+                        "po": po.number, "pct": None if pct is None else f"{'+' if diff > 0 else ''}{pct}",
+                        "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs)}, **ref))
         if il.quantity is not None:
             billed = il.quantity + ctx.previously_invoiced.get(pl.id, ZERO)
             if billed > pl.quantity + tol.quantity_abs:
@@ -371,7 +426,8 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
                     f"Line {il.line_no}: cumulative billed quantity {q(billed)} exceeds ordered {q(pl.quantity)}.",
                     expected=q(pl.quantity), actual=q(billed), difference=q(excess),
                     amount_at_risk=str(round_money(excess * (il.unit_price or pl.unit_price))),
-                    evidence={"previously_invoiced": str(ctx.previously_invoiced.get(pl.id, ZERO))}, **ref))
+                    evidence={"previously_invoiced": str(ctx.previously_invoiced.get(pl.id, ZERO))},
+                    params={"line": il.line_no, "billed": q(billed), "ordered": q(pl.quantity)}, **ref))
             if mode == "three_way" and not no_receipts:
                 received = ctx.received.get(pl.id, ZERO)
                 if billed > received + tol.quantity_abs:
@@ -382,12 +438,13 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
                         expected=q(received), actual=q(billed), difference=q(excess),
                         amount_at_risk=str(round_money(excess * (il.unit_price or pl.unit_price))),
                         evidence={"received": str(received),
-                                  "previously_invoiced": str(ctx.previously_invoiced.get(pl.id, ZERO))}, **ref))
+                                  "previously_invoiced": str(ctx.previously_invoiced.get(pl.id, ZERO))},
+                        params={"line": il.line_no, "billed": q(billed), "received": q(received)}, **ref))
     matched_ids = {m.po_line_id for m in matches if m.po_line_id}
     unbilled = [pl for pl in po.lines if str(pl.id) not in matched_ids and ctx.previously_invoiced.get(pl.id, ZERO) < pl.quantity]
     if unbilled and not any(m.method == "ambiguous" for m in matches):
         out.append(Finding("UNBILLED_PO_LINES", f"{len(unbilled)} PO line(s) not billed on this invoice (partial billing).",
-                           evidence={"po_line_ids": [str(p.id) for p in unbilled]}))
+                           evidence={"po_line_ids": [str(p.id) for p in unbilled]}, params={"count": len(unbilled)}))
     return out
 
 
@@ -399,21 +456,25 @@ def check_arithmetic(inv: InvoiceData, tol: Tolerances) -> list[Finding]:
         expected = round_money(il.quantity * il.unit_price - (il.discount or ZERO))
         if abs(expected - il.line_total) > tol.line_total_abs:
             out.append(Finding("LINE_TOTAL_MISMATCH",
-                               f"Line {il.line_no}: {q(il.quantity)} × {il.unit_price} = {expected}, invoice shows {il.line_total}.",
+                               f"Line {il.line_no}: {q(il.quantity)} × {amt(il.unit_price)} = {amt(expected)}, invoice shows {amt(il.line_total)}.",
                                invoice_line_id=str(il.id) if il.id else None, invoice_line_no=il.line_no,
-                               expected=str(expected), actual=str(il.line_total), difference=str(il.line_total - expected)))
+                               expected=amt(expected), actual=amt(il.line_total), difference=amt(il.line_total - expected),
+                               params={"line": il.line_no, "quantity": q(il.quantity), "unit_price": amt(il.unit_price),
+                                       "expected": amt(expected), "actual": amt(il.line_total)}))
     line_totals = [il.line_total for il in inv.lines]
     if inv.subtotal is not None and line_totals and all(t is not None for t in line_totals):
         s = sum(line_totals, ZERO)
         if abs(s - inv.subtotal) > tol.total_abs:
-            out.append(Finding("SUBTOTAL_MISMATCH", f"Lines sum to {s}; subtotal shows {inv.subtotal}.",
-                               expected=str(s), actual=str(inv.subtotal), difference=str(inv.subtotal - s)))
+            out.append(Finding("SUBTOTAL_MISMATCH", f"Lines sum to {amt(s)}; subtotal shows {amt(inv.subtotal)}.",
+                               expected=amt(s), actual=amt(inv.subtotal), difference=amt(inv.subtotal - s),
+                               params={"sum": amt(s), "subtotal": amt(inv.subtotal)}))
     if inv.subtotal is not None and inv.tax_amount is not None and inv.total is not None:
         expected = inv.subtotal - (inv.discount_total or ZERO) + inv.tax_amount
         if abs(expected - inv.total) > tol.total_abs:
-            out.append(Finding("TOTAL_MISMATCH", f"Subtotal − discount + tax = {expected}; total shows {inv.total}.",
-                               expected=str(expected), actual=str(inv.total), difference=str(inv.total - expected),
-                               amount_at_risk=str(max(inv.total - expected, ZERO))))
+            out.append(Finding("TOTAL_MISMATCH", f"Subtotal − discount + tax = {amt(expected)}; total shows {amt(inv.total)}.",
+                               expected=amt(expected), actual=amt(inv.total), difference=amt(inv.total - expected),
+                               amount_at_risk=str(max(inv.total - expected, ZERO)),
+                               params={"expected": amt(expected), "total": amt(inv.total)}))
     return out
 
 
@@ -430,7 +491,7 @@ def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result
     if missing:
         findings.append(Finding("INCOMPLETE_EXTRACTION",
                                 f"Required data is missing ({', '.join(missing)}); correct the extraction before matching.",
-                                evidence={"missing": missing}))
+                                evidence={"missing": missing}, params={"missing": ", ".join(missing)}))
     check("required_fields_present", not missing, ",".join(missing))
     if inv.security_flags:
         findings.append(Finding("SUSPICIOUS_CONTENT",
@@ -442,7 +503,8 @@ def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result
     findings += f
     check("supplier_identified", supplier is not None, sup_match.get("method", ""))
     if supplier and supplier.status == "blocked":
-        findings.append(Finding("SUPPLIER_BLOCKED", f"Supplier {supplier.name} is blocked for payment."))
+        findings.append(Finding("SUPPLIER_BLOCKED", f"Supplier {supplier.name} is blocked for payment.",
+                                params={"name": supplier.name}))
 
     dups = find_duplicates(inv, supplier, ctx)
     findings += dups
@@ -465,16 +527,19 @@ def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result
         if not inv.currency:
             findings.append(Finding("CURRENCY_NOT_STATED", f"Invoice does not state a currency; assuming PO currency "
                                                            f"{po.currency} for comparison only.",
-                                    expected=po.currency))
+                                    expected=po.currency, params={"currency": po.currency}))
         elif inv.currency != po.currency:
             currency_ok = False
             findings.append(Finding("CURRENCY_MISMATCH", f"Invoice currency {inv.currency} differs from {po.number} "
                                                          f"currency {po.currency}; price comparison skipped.",
                                     expected=po.currency, actual=inv.currency,
-                                    amount_at_risk=str(inv.total) if inv.total is not None else None))
+                                    amount_at_risk=str(inv.total) if inv.total is not None else None,
+                                    params={"invoice_currency": inv.currency, "po": po.number,
+                                            "po_currency": po.currency}))
         check("currency_consistent", currency_ok)
         if po.status in ("closed", "cancelled"):
-            findings.append(Finding("PO_CLOSED", f"{po.number} is {po.status}."))
+            findings.append(Finding("PO_CLOSED", f"{po.number} is {po.status}.",
+                                    params={"po": po.number, "status": po.status}))
         matches, f = match_lines(inv, po, ctx.tolerances)
         findings += f
         check("all_lines_matched", all(m.po_line_id for m in matches))

@@ -65,7 +65,7 @@ function Extraction({ r }: { r: any }) {
         <Stat label="Documents fully correct" value={pct(sys.documents_fully_correct)} />
         <Stat label="Latency p50" value={`${sys.latency_ms_p50} ms`} hint="text/OCR + extraction" />
       </div>
-      <div className="grid gap-6 p-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-3">
         <div><h3 className="mb-3 text-sm font-semibold">By rendering</h3><BarList items={pick("render")} format={(v) => pct(v)} max={1} /></div>
         <div><h3 className="mb-3 text-sm font-semibold">{t.evaluation.byLanguage}</h3><BarList items={pick("language")} format={(v) => pct(v)} max={1} color="var(--series-2)" /></div>
         <div><h3 className="mb-3 text-sm font-semibold">Layout (seen vs held-out)</h3><BarList items={pick("layout")} format={(v) => pct(v)} max={1} color="var(--series-3)" /></div>
@@ -124,20 +124,49 @@ function Rag({ r }: { r: any }) {
             <Td className="text-end num">{c.latency_ms_p50} ms</Td>
           </tr>))}</tbody>
       </Table>
-      <div className="grid gap-4 border-t border-line p-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 border-t border-line p-4 md:grid-cols-2">
         {Object.entries(r.answers as Record<string, any>).map(([k, a]) => (
           <div key={k} className="rounded-md border border-line p-3">
             <p className="font-mono text-xs text-ink-2">{k} · clause chunks</p>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
               <dt className="text-ink-3">Answer correctness</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
               <dt className="text-ink-3">Citation accuracy</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
-              <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num">{pct(a.abstention.precision)} / {pct(a.abstention.recall)}</dd>
+              <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention.precision)} / {pct(a.abstention.recall)}</span></dd>
               <dt className="text-ink-3">Injection parroting</dt><dd className="text-end font-medium num">{a.injection_parroting}</dd>
               <dt className="text-ink-3">Groundedness</dt><dd className="text-end text-xs">{a.groundedness}</dd>
             </dl>
           </div>
         ))}
       </div>
+      {r.held_out && (
+        <div className="border-t border-line p-4">
+          <p className="text-sm font-semibold text-ink">Held-out questions</p>
+          <p className="mt-0.5 text-xs text-ink-3">
+            {r.held_out.dataset.questions} questions ({r.held_out.dataset.answerable} answerable), written before any held-out scoring and never used for tuning ·
+            abstention threshold {r.held_out.abstain_logit} calibrated on the set above
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <Table>
+              <thead><tr><Th>{t.evaluation.config}</Th><Th className="text-end">R@1</Th><Th className="text-end">R@5</Th><Th className="text-end">MRR</Th><Th className="text-end">nDCG@5</Th></tr></thead>
+              <tbody>{r.held_out.retrieval.map((c: any) => (
+                <tr key={c.name}>
+                  <Td className="whitespace-nowrap font-mono text-xs">{c.chunking}/{c.name}</Td>
+                  {["recall@1", "recall@5", "mrr", "ndcg@5"].map((k) => <Td key={k} className="text-end num">{c[k].toFixed(3)}</Td>)}
+                </tr>))}</tbody>
+            </Table>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {Object.entries(r.held_out.answers as Record<string, any>).map(([k, a]) => (
+              <dl key={k} className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-md border border-line p-3 text-sm">
+                <dt className="col-span-2 font-mono text-xs text-ink-2">{k}</dt>
+                <dt className="text-ink-3">Answer correctness</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
+                <dt className="text-ink-3">Citation accuracy</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
+                <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention.precision)} / {pct(a.abstention.recall)}</span></dd>
+              </dl>
+            ))}
+          </div>
+        </div>
+      )}
       <p className="border-t border-line px-4 py-2 text-xs text-ink-3">LLM answers: {r.llm_answers}</p>
       <Notes notes={r.notes} /><Meta r={r} />
     </Panel>
@@ -157,7 +186,7 @@ function Recon({ r }: { r: any }) {
         <Stat label="End-to-end (PDF → findings)" value={e.exact_scenarios} hint={`P ${pct(e.precision)} · R ${pct(e.recall)}`} />
         <Stat label="Finding types" value={String(c.per_type.length)} />
       </div>
-      <div className="grid gap-5 p-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-2">
         <Table>
           <thead><tr><Th>Finding type</Th><Th className="text-end">TP</Th><Th className="text-end">FP</Th><Th className="text-end">FN</Th><Th className="text-end">Precision</Th><Th className="text-end">Recall</Th></tr></thead>
           <tbody>{c.per_type.map((x: any) => (

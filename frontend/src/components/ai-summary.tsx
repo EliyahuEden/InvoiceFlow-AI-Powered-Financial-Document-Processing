@@ -2,6 +2,7 @@
 
 import { Lightbulb } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { findingMessage } from "@/lib/findings";
 import { money } from "@/lib/format";
 import type { AiSummary } from "@/lib/types";
 import { ActionLabel, AiBlock, AiText, Citation, FindingTag, SecurityNotice } from "./domain";
@@ -24,7 +25,7 @@ export function AiSummaryView({ s, currency }: { s: AiSummary; currency?: string
                 {f.amount_at_risk && <span className="text-xs text-ink-3">{t.recon.atRisk}: <b className="ltr text-danger">{money(f.amount_at_risk, currency)}</b></span>}
               </div>
               {/* the deterministic message is a verified result, the explanation is AI text */}
-              <p className="mt-2 text-sm text-ink" dir="auto">{f.message}</p>
+              <p className="mt-2 text-sm text-ink" dir="auto">{findingMessage(t, f)}</p>
               {Object.keys(f.explanation ?? {}).length > 0 && (
                 <p className="mt-1.5 text-sm text-ai/90" dir="auto"><AiText value={f.explanation} /></p>
               )}

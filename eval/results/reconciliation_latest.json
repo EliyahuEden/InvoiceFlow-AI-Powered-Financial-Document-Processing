@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20T11:30:43+00:00",
+  "generated_at": "2026-11-20T17:13:10+00:00",
   "git_rev": null,
   "python": "3.12.16",
   "engine_version": "recon-1.2",
@@ -195,12 +195,12 @@
     "documents": 13,
     "skipped_ocr": [],
     "tp": 9,
-    "fp": 1,
+    "fp": 0,
     "fn": 0,
-    "precision": 0.9,
+    "precision": 1.0,
     "recall": 1.0,
-    "f1": 0.947,
-    "exact_scenarios": "12/13",
+    "f1": 1.0,
+    "exact_scenarios": "13/13",
     "rows": [
       {
         "file": "invoices/01_correct_tavor_he.pdf",
@@ -268,10 +268,8 @@
         "file": "invoices/07_ocr_scan_hermon_he.pdf",
         "scenario": "ocr_scanned",
         "expected": [],
-        "got": [
-          "MISSING_PURCHASE_ORDER"
-        ],
-        "exact": false
+        "got": [],
+        "exact": true
       },
       {
         "file": "invoices/08_prompt_injection_bluewave_en.pdf",

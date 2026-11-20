@@ -3,7 +3,9 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,3 +69,20 @@ class Membership(UUIDPk, Timestamps, Base):
 
     user: Mapped[User] = relationship(back_populates="memberships")
     organization: Mapped[Organization] = relationship(back_populates="memberships")
+
+
+class AuthSession(UUIDPk, Timestamps, Base):
+    """A signed-in browser or client. Access tokens carry its id (``sid``) and are rejected
+    as soon as it is revoked or expired; the refresh token is stored only as a hash."""
+
+    __tablename__ = "auth_sessions"
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
+    refresh_token_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_reason: Mapped[str | None] = mapped_column(String(40))
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(300))

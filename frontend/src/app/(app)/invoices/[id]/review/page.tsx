@@ -74,7 +74,7 @@ export default function ReviewPage() {
   const setLine = (i: number, k: keyof LineDraft, v: string) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, [k]: v } : l)));
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {inv.document && (
         <DocumentViewer className="h-[calc(100vh-14rem)] min-h-[560px] xl:sticky xl:top-20" documentId={inv.document.id}
           pageCount={inv.document.page_count ?? 1} filename={inv.document.filename} highlights={fieldHighlights(inv)} activeId={focus} />
@@ -82,7 +82,7 @@ export default function ReviewPage() {
       <div className="space-y-5">
         <Panel>
           <PanelHeader title={t.invoice.tabs.review} sub={t.invoice.corrections} />
-          <div className="grid gap-4 p-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Field label={t.invoice.supplierConfirm} htmlFor="supplier">
                 <Select id="supplier" value={supplierId} onChange={(e) => setSupplierId(e.target.value)} disabled={!editable} className="w-full">

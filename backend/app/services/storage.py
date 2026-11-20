@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 
 
 class Storage(Protocol):
@@ -66,15 +66,24 @@ class S3Storage:
             self.client.create_bucket(Bucket=self.bucket)
 
     def put(self, key: str, data: bytes, content_type: str) -> None:
-        # Server-side encryption should be enabled on the production bucket policy
-        # (SSE-S3/SSE-KMS); the local SeaweedFS dev server does not implement it.
-        self.client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
+        self.client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type,
+                               **sse_args(get_settings()))
 
     def get(self, key: str) -> bytes:
         return self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
 
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
+
+
+def sse_args(s: Settings) -> dict[str, str]:
+    """put_object arguments for server-side encryption (see S3_SSE / S3_KMS_KEY_ID)."""
+    if s.s3_sse == "none":
+        return {}
+    args = {"ServerSideEncryption": s.s3_sse}
+    if s.s3_sse == "aws:kms" and s.s3_kms_key_id:
+        args["SSEKMSKeyId"] = s.s3_kms_key_id
+    return args
 
 
 @lru_cache

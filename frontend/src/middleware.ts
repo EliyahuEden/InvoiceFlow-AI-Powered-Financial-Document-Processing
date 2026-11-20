@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // is enforced by the backend on every API request.
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
-  const hasSession = req.cookies.has("invoiceflow_session");
+  // The access cookie lives 15 minutes; the refresh cookie keeps the session alive longer.
+  const hasSession = req.cookies.has("invoiceflow_session") || req.cookies.has("invoiceflow_refresh");
   if (!hasSession && pathname !== "/login") {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

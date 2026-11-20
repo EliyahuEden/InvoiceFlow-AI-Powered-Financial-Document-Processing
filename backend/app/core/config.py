@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -32,7 +32,13 @@ class Settings(BaseSettings):
     # --- auth ---
     jwt_secret: SecretStr = SecretStr("dev-only-change-me-0123456789abcdef0123456789")
     jwt_algorithm: str = "HS256"
-    access_token_minutes: int = 60 * 8
+    # Short-lived access JWTs bound to a server-side session (revocable); the session is
+    # kept alive by a rotating refresh token (idle timeout) up to an absolute maximum.
+    access_token_minutes: int = 15
+    session_idle_days: int = 7
+    session_max_days: int = 30
+    sse_ticket_seconds: int = 30
+    rate_limit_refresh_per_minute: int = 60
     cookie_secure: bool = False
 
     # --- storage ---
@@ -43,6 +49,10 @@ class Settings(BaseSettings):
     s3_secret_key: SecretStr = SecretStr("invoiceflow_dev_secret")
     s3_bucket: str = "invoiceflow-documents"
     s3_region: str = "us-east-1"
+    # Server-side encryption for uploaded originals: AES256 (SSE-S3) or aws:kms (SSE-KMS).
+    # Required in production; the local SeaweedFS dev server does not implement it.
+    s3_sse: Literal["none", "AES256", "aws:kms"] = "none"
+    s3_kms_key_id: str | None = None
     max_upload_bytes: int = 20 * 1024 * 1024
     max_pdf_pages: int = 50
 
@@ -90,6 +100,12 @@ class Settings(BaseSettings):
         if len(v.get_secret_value()) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters")
         return v
+
+    @model_validator(mode="after")
+    def _production_encrypts_documents(self) -> Settings:
+        if self.environment == "production" and self.storage_backend == "s3" and self.s3_sse == "none":
+            raise ValueError("S3_SSE must be AES256 or aws:kms in production (documents must be encrypted at rest)")
+        return self
 
     @property
     def pricing(self) -> dict[str, dict[str, float]]:

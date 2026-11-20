@@ -47,7 +47,7 @@ export function AuditList({ items }: { items: AuditEntry[] }) {
                 <Icon className="h-3.5 w-3.5" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="font-mono text-sm text-ink">{a.action}</span>
+                <span className="break-all font-mono text-sm text-ink">{a.action}</span>
                 <span className="ms-2 text-xs text-ink-3">{a.actor_label ?? a.actor_type}</span>
               </span>
               <span className="text-xs text-ink-3">{dateTime(a.created_at, locale)}</span>

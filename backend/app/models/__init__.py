@@ -2,7 +2,7 @@ from app.models.base import Base
 from app.models.documents import Document, DocumentPage, Invoice, InvoiceLine
 from app.models.knowledge import KnowledgeChunk, KnowledgeDocument
 from app.models.procurement import GoodsReceipt, GRLine, POLine, PurchaseOrder, Supplier
-from app.models.tenancy import DEFAULT_ORG_SETTINGS, Membership, Organization, Role, User
+from app.models.tenancy import DEFAULT_ORG_SETTINGS, AuthSession, Membership, Organization, Role, User
 from app.models.workflow import (
     AgentRun,
     AICall,
@@ -24,7 +24,7 @@ RLS_TABLES = [
 ]
 
 __all__ = [
-    "Base", "Organization", "User", "Membership", "Role", "DEFAULT_ORG_SETTINGS",
+    "Base", "Organization", "User", "Membership", "Role", "DEFAULT_ORG_SETTINGS", "AuthSession",
     "Supplier", "PurchaseOrder", "POLine", "GoodsReceipt", "GRLine",
     "Document", "DocumentPage", "Invoice", "InvoiceLine",
     "KnowledgeDocument", "KnowledgeChunk",

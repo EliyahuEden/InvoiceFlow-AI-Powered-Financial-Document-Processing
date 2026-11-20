@@ -29,7 +29,7 @@ function NewSupplier({ onDone }: { onDone: () => void }) {
     } catch (err) { toast.error(err instanceof ApiError ? String(err.message) : t.common.error); } finally { setBusy(false); }
   };
   return (
-    <form onSubmit={submit} className="grid gap-3 border-b border-line bg-sunken/50 p-4 sm:grid-cols-5">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-3 border-b border-line bg-sunken/50 p-4 sm:grid-cols-5">
       <Field label={t.common.supplier}><Input required dir="auto" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
       <Field label="English name"><Input dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} /></Field>
       <Field label={t.suppliers.taxId}><Input dir="ltr" pattern="\d{8,10}" value={f.tax_id} onChange={(e) => setF({ ...f, tax_id: e.target.value })} /></Field>

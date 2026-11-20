@@ -53,7 +53,7 @@ export default function ObservabilityPage() {
           </Table>
         )}
       </Panel>
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Panel><PanelHeader title="Agent tool calls" sub={s && `${s.agent.runs} runs · ${s.agent.rejected_tool_calls} ${t.agent.rejectedCalls}`} />
           <div className="p-4">{s && <BarList items={Object.entries(s.agent.tool_usage).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v }))} />}</div></Panel>
         <Panel><PanelHeader title={t.invoice.warnings} />

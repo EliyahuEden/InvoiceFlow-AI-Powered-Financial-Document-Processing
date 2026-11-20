@@ -3,7 +3,7 @@
 REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 
 **Authentication**
-- `POST /api/auth/login` returns a JWT (HS256, 8 h). It is also set as an `httpOnly`, `SameSite=Lax` cookie.
+- `POST /api/auth/login` returns a short-lived access JWT (HS256, 15 min, bound to a server-side session) and sets it, plus a rotating refresh token, as `httpOnly`, `SameSite=Lax` cookies. `POST /api/auth/refresh` renews both.
 - The browser calls the API through the Next.js same-origin proxy and uses the cookie. Unsafe methods must send `X-Requested-With: invoiceflow` (CSRF guard).
 - API clients can use `Authorization: Bearer <token>` instead.
 
@@ -17,7 +17,9 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 
 | Method | Path | Permission | Purpose |
 |---|---|---|---|
-| POST | `/api/auth/login` · `/logout` | – | Session (rate-limited per IP and per email) |
+| POST | `/api/auth/login` · `/logout` | – | Create / revoke a session (login rate-limited per IP and per email) |
+| POST | `/api/auth/refresh` | refresh cookie + CSRF header | Rotate the refresh token, new access token; replaying an old one revokes the session |
+| POST | `/api/auth/logout-all` | auth | Revoke every session of the user |
 | GET | `/api/auth/me` | auth | User, organization, role, permissions, AI mode |
 | POST | `/api/auth/switch-organization` | member | Change the active tenant |
 | GET | `/api/dashboard` | invoice:read | KPIs, status mix, discrepancy types, activity |
@@ -46,5 +48,6 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 | GET/PATCH | `/api/org`, `/api/org/settings` | read / org:manage | Settings (validated, audited) |
 | GET/POST/PATCH | `/api/org/members[/{id}]` | read / org:manage | Members and roles (you cannot change your own role) |
 | GET | `/api/jobs/{id}` | invoice:read | Job status (polling fallback) |
-| GET | `/api/events` (SSE) | auth | `job.progress`, `job.completed`, `job.failed`, `invoice.updated`, `exception.updated`, `agent.updated` |
+| POST | `/api/events/ticket` | auth | Single-use ticket (30 s) for opening the event stream |
+| GET | `/api/events?ticket=…` (SSE) | ticket (or cookie) | `job.progress`, `job.completed`, `job.failed`, `invoice.updated`, `exception.updated`, `agent.updated` |
 | GET | `/health/live` · `/health/ready` | – | Liveness; readiness checks DB (Redis is reported as degraded, not failing) |

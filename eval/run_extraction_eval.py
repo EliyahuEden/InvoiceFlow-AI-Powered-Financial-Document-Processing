@@ -122,7 +122,7 @@ def run(system: str, rows: list, skip_ocr: bool) -> dict:
         acc = sum(doc_ok) / len(doc_ok)
         docs_all_correct += all(doc_ok)
         for key in (f"language:{r['language']}", f"render:{r['render']}", f"template:{r['template']}",
-                    f"layout:{'held_out' if r['held_out_template'] else 'seen'}"):
+                    f"layout:{'held_out_' + r.get('held_out_set', 'v1') if r['held_out_template'] else 'seen'}"):
             groups[key].append(acc)
         ct, cp = match_lines(n.lines, truth["lines"])
         line_tp += ct
@@ -175,12 +175,15 @@ def main() -> None:
                     "by_render": {k: sum(1 for r in rows if r["render"] == k) for k in ("native", "scanned", "photo")},
                     "by_language": {k: sum(1 for r in rows if r["language"] == k) for k in ("he", "en", "mixed")},
                     "held_out_layouts": sum(1 for r in rows if r["held_out_template"]),
+                    "held_out_by_set": {k: sum(1 for r in rows if r.get("held_out_set") == k) for k in ("v1", "v2")},
                     "source": "eval/datasets/extraction (synthetic, labels exact by construction)"},
         "fields": FIELDS, "systems": systems,
         "command": "docker compose run --rm --no-deps -v ./eval:/srv/eval worker python /srv/eval/run_extraction_eval.py",
         "notes": [
             "Labels are the structured specs the PDFs were rendered from (exact by construction).",
-            "The rule-based baseline was developed against the five 'seen' templates; 'held_out' layouts measure generalisation.",
+            "The first rule-based baseline was developed against the five 'seen' templates only.",
+            "held_out_v1 layouts were inspected while the layout-tolerant parser was built, so they are development data now.",
+            "held_out_v2 layouts were written before those changes and scored afterwards: they measure generalisation.",
             "supplier_name is scored with fuzzy company-name similarity >= 0.9; all other fields require exact equality.",
             "Values not printed in a document must be returned as null; 'missing_field_handling' counts that.",
         ],

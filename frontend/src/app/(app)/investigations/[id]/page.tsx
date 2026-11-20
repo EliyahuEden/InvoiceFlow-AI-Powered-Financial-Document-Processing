@@ -51,7 +51,7 @@ export default function RunDetail() {
             {r.result.decision.note && <span dir="auto"> — {r.result.decision.note}</span>}</p>
         )}
       </Panel>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>{r.result?.report ? <AiSummaryView s={r.result.report} /> : <Skeleton className="h-64 w-full" />}</div>
         <Panel className="self-start">
           <PanelHeader title={t.agent.trace} sub={<span>{r.steps.length} {t.agent.tools} · {t.agent.proposed}: <ActionLabel action={r.result?.proposed_action} /></span>} />

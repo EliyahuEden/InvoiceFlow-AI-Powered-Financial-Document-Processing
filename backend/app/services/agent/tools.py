@@ -149,7 +149,7 @@ def run_reconciliation(ctx: ToolContext, inp: RunReconIn) -> dict:
     run = reconcile_invoice(ctx.session, inv, triggered_by="agent", mode=inp.mode)
     return {"run_id": str(run.id), "outcome": run.outcome, "engine_version": run.engine_version,
             "findings": [{k: f.get(k) for k in ("type", "severity", "message", "expected", "actual", "difference",
-                                                 "amount_at_risk", "invoice_line_no")}
+                                                 "amount_at_risk", "invoice_line_no", "message_key", "params")}
                          for f in run.result["findings"]],
             "purchase_order_id": run.result.get("purchase_order_id"), "supplier_id": run.result.get("supplier_id"),
             "supplier_match": run.result.get("supplier_match")}

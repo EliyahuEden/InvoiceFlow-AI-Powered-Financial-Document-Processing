@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { dateTime, money, num } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
+import { findingMessage } from "@/lib/findings";
 
 export default function ReconciliationPage() {
   const { t, locale } = useI18n();
@@ -47,7 +48,7 @@ export default function ReconciliationPage() {
         )}
       </Panel>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <Panel>
           <PanelHeader title={<span className="inline-flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-ink-3" />{t.recon.invoice} ↔ {t.recon.po}</span>}
             sub={inv.purchase_order ? <Link href={`/purchase-orders/${inv.purchase_order.id}`} className="ltr font-mono hover:text-accent">{inv.purchase_order.po_number} · {inv.purchase_order.currency}</Link> : t.recon.noPo} />
@@ -127,7 +128,7 @@ export default function ReconciliationPage() {
                 {findings.map((f) => (
                   <li key={f.id} className="px-4 py-3">
                     <div className="flex items-center gap-2"><SeverityDot severity={f.severity} /><FindingTag type={f.type} severity={f.severity} /></div>
-                    <p className="mt-1.5 text-sm text-ink" dir="auto">{f.message}</p>
+                    <p className="mt-1.5 text-sm text-ink" dir="auto">{findingMessage(t, f)}</p>
                     {(f.expected || f.actual) && (
                       <dl className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-sunken px-3 py-2 text-xs">
                         <div><dt className="text-ink-3">{t.recon.expected}</dt><dd className="font-medium num ltr">{f.expected ?? "—"}</dd></div>

@@ -34,7 +34,7 @@ export default function ExceptionsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title={t.exceptions.title} />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-3">
             <Segmented value={status} onChange={(v) => { setStatus(v); setPage(1); }} options={[
