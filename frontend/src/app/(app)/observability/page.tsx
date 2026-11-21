@@ -5,7 +5,7 @@ import { BarList, Lines } from "@/components/charts";
 import { Pill } from "@/components/domain";
 import { Pager, Segmented, type Page } from "@/components/list";
 import { PageHeader } from "@/components/shell";
-import { Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
+import { ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { qs, useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -23,24 +23,24 @@ type Call = { id: string; created_at: string; kind: string; workflow: string; pr
 
 export default function ObservabilityPage() {
   const { t, locale } = useI18n();
-  const { data: s } = useApi<Summary>("/api/observability/summary", { refreshInterval: 15000 });
+  const { data: s, error, mutate } = useApi<Summary>("/api/observability/summary", { refreshInterval: 15000 });
   const [kind, setKind] = useState("");
   const [page, setPage] = useState(1);
-  const { data: calls } = useApi<Page<Call>>(`/api/observability/calls${qs({ kind, page, page_size: 15 })}`);
+  const { data: calls, error: callsError, mutate: retryCalls } = useApi<Page<Call>>(`/api/observability/calls${qs({ kind, page, page_size: 15 })}`);
   const kinds = Array.from(new Set(s?.by_model.map((r) => r.kind) ?? []));
   return (
     <div className="space-y-5">
-      <PageHeader title={t.observability.title} sub={!s?.pricing_configured ? t.observability.noPricing : undefined} />
+      <PageHeader title={t.observability.title} sub={s && !s.pricing_configured ? t.observability.noPricing : undefined} />
       <Panel>
         <PanelHeader title={t.observability.calls} />
-        {!s ? <div className="p-4"><Skeleton className="h-40 w-full" /></div> : (
+        {error ? <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} /> : !s ? <div className="p-4"><Skeleton className="h-40 w-full" /></div> : (
           <Table>
             <thead><tr><Th>Kind</Th><Th>Provider / model</Th><Th>Prompt</Th><Th className="text-end">{t.observability.calls}</Th>
               <Th className="text-end">p50</Th><Th className="text-end">p95</Th><Th className="text-end">{t.observability.tokens} in/out</Th>
               <Th className="text-end">{t.observability.cost}</Th><Th className="text-end">{t.observability.errors}</Th></tr></thead>
             <tbody>{s.by_model.map((r, i) => (
               <tr key={i}>
-                <Td><Pill tone={r.provider === "offline" || r.provider === "local" || r.provider === "tesseract" ? "neutral" : "ai"}>{r.kind}</Pill></Td>
+                <Td><Pill tone="neutral">{r.kind}</Pill></Td>
                 <Td className="font-mono text-xs">{r.provider} / {r.model}</Td>
                 <Td className="font-mono text-xs text-ink-3">{r.prompt_version}</Td>
                 <Td className="text-end num">{r.calls}</Td>
@@ -70,6 +70,7 @@ export default function ObservabilityPage() {
       <Panel>
         <PanelHeader title="Recent calls" actions={<Segmented value={kind} onChange={(v) => { setKind(v); setPage(1); }}
           options={[{ value: "", label: t.common.all }, ...kinds.map((k) => ({ value: k, label: k }))]} />} />
+        {callsError && <ErrorState message={t.common.error} retryLabel={t.common.retry} onRetry={() => retryCalls()} />}
         <Table>
           <thead><tr><Th>{t.common.date}</Th><Th>Workflow</Th><Th>Model</Th><Th className="text-end">{t.observability.latency}</Th>
             <Th className="text-end">{t.observability.tokens}</Th><Th>{t.common.status}</Th></tr></thead>

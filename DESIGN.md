@@ -1,341 +1,176 @@
 ---
 "name": "InvoiceFlow"
-"description": "Ledger & Red Pen: a modern, premium financial operations workspace."
+"description": "Modern Financial Command Center: a calm periwinkle financial-operations workspace."
 "colors":
-  "bg": "rgb(245 247 249)"
-  "surface": "rgb(255 255 255)"
-  "sunken": "rgb(240 243 246)"
-  "ink": "rgb(17 25 43)"
-  "ink-2": "rgb(65 76 97)"
-  "ink-3": "rgb(98 108 128)"
-  "line": "rgb(224 229 234)"
-  "line-strong": "rgb(199 207 216)"
-  "rule": "rgb(207 220 216)"
-  "accent": "rgb(30 52 112)"
-  "accent-soft": "rgb(233 238 249)"
-  "accent-ink": "rgb(20 37 84)"
-  "ok": "rgb(22 122 64)"
-  "ok-soft": "rgb(230 244 235)"
-  "warn": "rgb(172 84 10)"
-  "warn-soft": "rgb(253 242 225)"
-  "danger": "rgb(185 32 26)"
-  "danger-soft": "rgb(253 236 234)"
-  "info": "rgb(70 88 130)"
-  "info-soft": "rgb(236 240 247)"
-  "ai": "rgb(104 64 196)"
-  "ai-soft": "rgb(243 239 252)"
-  "ai-line": "rgb(214 200 245)"
-  "highlight": "rgb(244 191 38)"
-  "rail": "rgb(19 30 58)"
-  "rail-ink": "rgb(232 237 247)"
-  "rail-ink-2": "rgb(158 172 200)"
-  "rail-line": "rgb(39 54 90)"
-  "rail-active": "rgb(33 50 92)"
-  "series-1": "#2a5bd7"
-  "series-2": "#d9822b"
-  "series-3": "#1f9a6a"
-  "series-4": "#8c6bd8"
-  "chart-grid": "#e3e8ee"
-  "chart-axis": "#626c80"
-  "dark-bg": "rgb(13 17 26)"
-  "dark-surface": "rgb(20 25 37)"
-  "dark-sunken": "rgb(16 21 31)"
-  "dark-ink": "rgb(229 234 242)"
-  "dark-ink-2": "rgb(178 188 204)"
-  "dark-ink-3": "rgb(139 151 170)"
-  "dark-line": "rgb(37 45 61)"
-  "dark-line-strong": "rgb(55 66 87)"
-  "dark-rule": "rgb(52 70 72)"
-  "dark-accent": "rgb(138 164 236)"
-  "dark-accent-soft": "rgb(29 39 68)"
-  "dark-accent-ink": "rgb(178 197 246)"
-  "dark-ok": "rgb(88 196 132)"
-  "dark-ok-soft": "rgb(18 46 33)"
-  "dark-warn": "rgb(232 164 82)"
-  "dark-warn-soft": "rgb(56 38 16)"
-  "dark-danger": "rgb(240 112 100)"
-  "dark-danger-soft": "rgb(62 24 23)"
-  "dark-info": "rgb(150 168 210)"
-  "dark-info-soft": "rgb(28 36 56)"
-  "dark-ai": "rgb(178 152 245)"
-  "dark-ai-soft": "rgb(38 31 64)"
-  "dark-ai-line": "rgb(74 61 118)"
-  "dark-highlight": "rgb(244 191 38)"
-  "dark-rail": "rgb(9 13 22)"
-  "dark-rail-ink": "rgb(226 232 244)"
-  "dark-rail-ink-2": "rgb(140 154 182)"
-  "dark-rail-line": "rgb(30 40 64)"
-  "dark-rail-active": "rgb(28 40 70)"
-  "dark-series-1": "#6f93f0"
-  "dark-series-2": "#e09a52"
-  "dark-series-3": "#3bb886"
-  "dark-series-4": "#a68be6"
-  "dark-chart-grid": "#263044"
-  "dark-chart-axis": "#8b97aa"
+  "bg": "rgb(228 236 255)"
+  "surface": "rgb(252 253 255)"
+  "sunken": "rgb(237 242 253)"
+  "ink": "rgb(17 24 39)"
+  "ink-2": "rgb(57 73 100)"
+  "ink-3": "rgb(85 102 132)"
+  "line": "rgb(206 217 240)"
+  "line-strong": "rgb(134 153 184)"
+  "rule": "rgb(206 217 240)"
+  "accent": "rgb(44 65 126)"
+  "accent-soft": "rgb(226 234 255)"
+  "accent-ink": "rgb(25 43 94)"
+  "primary": "rgb(17 19 25)"
+  "primary-hover": "rgb(38 44 58)"
+  "primary-ink": "rgb(255 255 255)"
+  "primary-line": "rgb(17 19 25)"
+  "ok": "rgb(17 113 81)"
+  "ok-soft": "rgb(220 245 234)"
+  "warn": "rgb(149 75 15)"
+  "warn-soft": "rgb(255 239 212)"
+  "danger": "rgb(167 39 39)"
+  "danger-soft": "rgb(255 228 225)"
+  "info": "rgb(48 75 133)"
+  "info-soft": "rgb(229 237 255)"
+  "ai": "rgb(100 61 164)"
+  "ai-soft": "rgb(242 235 255)"
+  "ai-line": "rgb(206 188 239)"
+  "highlight": "rgb(219 162 16)"
+  "rail": "rgb(237 243 255)"
+  "rail-ink": "rgb(21 31 51)"
+  "rail-ink-2": "rgb(66 84 118)"
+  "rail-line": "rgb(200 213 240)"
+  "rail-active": "rgb(255 255 255)"
+  "atmosphere-a": "rgb(179 197 250)"
+  "atmosphere-b": "rgb(218 230 255)"
+  "hero": "rgb(241 246 255)"
+  "hero-wave": "rgb(141 164 241)"
+  "series-1": "#4369bb"
+  "series-2": "#b27625"
+  "series-3": "#21856b"
+  "series-4": "#697e9f"
+  "chart-grid": "#d9e3f4"
+  "chart-axis": "#556684"
+  "dark-bg": "rgb(15 22 39)"
+  "dark-surface": "rgb(25 34 54)"
+  "dark-sunken": "rgb(31 43 67)"
+  "dark-ink": "rgb(237 242 255)"
+  "dark-ink-2": "rgb(188 202 227)"
+  "dark-ink-3": "rgb(157 175 205)"
+  "dark-line": "rgb(57 75 108)"
+  "dark-line-strong": "rgb(107 128 165)"
+  "dark-rule": "rgb(57 75 108)"
+  "dark-accent": "rgb(169 193 255)"
+  "dark-accent-soft": "rgb(39 55 89)"
+  "dark-accent-ink": "rgb(202 217 255)"
+  "dark-primary": "rgb(8 12 21)"
+  "dark-primary-hover": "rgb(21 31 49)"
+  "dark-primary-ink": "rgb(246 249 255)"
+  "dark-primary-line": "rgb(107 128 165)"
+  "dark-ok": "rgb(116 220 175)"
+  "dark-ok-soft": "rgb(23 57 48)"
+  "dark-warn": "rgb(246 193 120)"
+  "dark-warn-soft": "rgb(66 48 29)"
+  "dark-danger": "rgb(255 159 148)"
+  "dark-danger-soft": "rgb(73 38 42)"
+  "dark-info": "rgb(167 195 255)"
+  "dark-info-soft": "rgb(38 55 89)"
+  "dark-ai": "rgb(205 177 255)"
+  "dark-ai-soft": "rgb(49 37 76)"
+  "dark-ai-line": "rgb(112 86 155)"
+  "dark-highlight": "rgb(245 193 68)"
+  "dark-rail": "rgb(20 30 51)"
+  "dark-rail-ink": "rgb(232 239 255)"
+  "dark-rail-ink-2": "rgb(168 187 219)"
+  "dark-rail-line": "rgb(57 75 108)"
+  "dark-rail-active": "rgb(45 63 97)"
+  "dark-atmosphere-a": "rgb(36 56 101)"
+  "dark-atmosphere-b": "rgb(23 38 70)"
+  "dark-hero": "rgb(34 48 77)"
+  "dark-hero-wave": "rgb(83 110 176)"
+  "dark-series-1": "#9bbaff"
+  "dark-series-2": "#e2b06c"
+  "dark-series-3": "#79ceb0"
+  "dark-series-4": "#b0bfd9"
+  "dark-chart-grid": "#354969"
+  "dark-chart-axis": "#9dafcd"
 "typography":
-  "2xs":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "0.71875rem"
-    "lineHeight": "1rem"
-  "xs":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "0.78125rem"
-    "lineHeight": "1.125rem"
-  "sm":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "0.84375rem"
-    "lineHeight": "1.25rem"
-  "base":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "0.9375rem"
-    "lineHeight": "1.45rem"
-  "md":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "1.0625rem"
-    "lineHeight": "1.55rem"
-  "lg":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "1.25rem"
-    "lineHeight": "1.7rem"
-  "xl":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "1.5rem"
-    "lineHeight": "1.9rem"
-  "2xl":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "1.8rem"
-    "lineHeight": "2.2rem"
-    "fontWeight": 600
-    "letterSpacing": "-0.025em"
-  "3xl":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "1.875rem"
-    "lineHeight": "2.25rem"
-    "fontWeight": 600
-    "letterSpacing": "-0.025em"
-  "figure":
-    "fontFamily": "Assistant, system-ui, sans-serif"
-    "fontSize": "2.125rem"
-    "lineHeight": "2.4rem"
-    "letterSpacing": "-0.02em"
-  "code":
-    "fontFamily": "JetBrains Mono, ui-monospace, monospace"
-    "fontSize": "0.78125rem"
-    "lineHeight": "1.125rem"
-    "fontWeight": 400
+  "body": {"fontFamily": "Assistant, system-ui, sans-serif", "fontSize": "0.9375rem", "lineHeight": "1.45rem"}
+  "section-title": {"fontFamily": "Assistant", "fontSize": "1.25rem", "fontWeight": 600, "letterSpacing": "-0.025em"}
+  "page-title": {"fontFamily": "Assistant", "fontSize": "2.25rem", "fontWeight": 600, "letterSpacing": "-0.025em"}
+  "figure": {"fontFamily": "Assistant", "fontSize": "2.5rem", "lineHeight": "2.8rem", "letterSpacing": "-0.03em", "fontVariantNumeric": "tabular-nums"}
+  "code": {"fontFamily": "JetBrains Mono, ui-monospace, monospace", "fontSize": "0.78125rem"}
 "rounded":
-  "sm": "6px"
-  "default": "8px"
-  "md": "10px"
-  "lg": "12px"
-  "full": "9999px"
+  "control": "14px"
+  "metric": "20px"
+  "panel": "24px"
+  "hero": "28px"
+  "pill": "9999px"
 "spacing":
-  "1": "4px"
-  "1.5": "6px"
-  "2": "8px"
-  "2.5": "10px"
-  "3": "12px"
-  "3.5": "14px"
-  "4": "16px"
-  "5": "20px"
-  "6": "24px"
-"components":
-  "button-primary":
-    "backgroundColor": "{colors.accent}"
-    "textColor": "#fff"
-    "rounded": "{rounded.default}"
-    "height": "36px"
-    "padding": "0 14px"
-  "button-primary-hover":
-    "backgroundColor": "{colors.accent-ink}"
-  "button-primary-dark":
-    "backgroundColor": "{colors.dark-accent}"
-    "textColor": "{colors.dark-bg}"
-  "button-secondary":
-    "backgroundColor": "{colors.surface}"
-    "textColor": "{colors.ink}"
-    "rounded": "{rounded.default}"
-    "height": "36px"
-    "padding": "0 14px"
-  "button-ghost":
-    "textColor": "{colors.ink-2}"
-    "rounded": "{rounded.default}"
-    "height": "36px"
-    "padding": "0 14px"
-  "button-danger":
-    "backgroundColor": "{colors.surface}"
-    "textColor": "{colors.danger}"
-    "rounded": "{rounded.default}"
-    "height": "36px"
-    "padding": "0 14px"
-  "button-ai":
-    "backgroundColor": "{colors.ai-soft}"
-    "textColor": "{colors.ai}"
-    "rounded": "{rounded.default}"
-    "height": "36px"
-    "padding": "0 14px"
-  "input":
-    "backgroundColor": "{colors.surface}"
-    "textColor": "{colors.ink}"
-    "rounded": "{rounded.default}"
-    "height": "36px"
-    "padding": "0 12px"
-  "panel":
-    "backgroundColor": "{colors.surface}"
-    "rounded": "{rounded.lg}"
-  "pill-warning":
-    "backgroundColor": "{colors.warn-soft}"
-    "textColor": "{colors.warn}"
-    "rounded": "{rounded.full}"
-    "height": "24px"
-    "padding": "0 8px"
-  "navigation-active":
-    "backgroundColor": "{colors.rail-active}"
-    "textColor": "{colors.rail-ink}"
-    "rounded": "{rounded.md}"
-    "height": "36px"
-    "padding": "0 10px"
-  "ai-block":
-    "backgroundColor": "rgb(243 239 252 / 0.6)"
-    "textColor": "{colors.ai}"
-    "rounded": "{rounded.lg}"
+  "base": "8px"
+  "page-gutter": "16px / 24px / 32px"
+  "panel-padding": "20px"
+"elevation":
+  "panel": "0 10px 32px -22px rgb(42 65 122 / .24)"
+  "pop": "0 22px 64px -20px rgb(31 47 88 / .28)"
+"motion":
+  "fast": "160ms cubic-bezier(.16, 1, .3, 1)"
+  "reduced": "all animation and transition durations collapse to 0.01ms"
 ---
 
-# Design System: InvoiceFlow
+# Design System: InvoiceFlow — Modern Financial Command Center
 
 ## Overview
+A calm, premium financial-operations workspace for long review sessions. A soft periwinkle / powder-blue atmosphere surrounds the app shell; the work itself sits on opaque, readable surfaces. Strong near-black type, tabular figures and one charcoal pill per screen keep the reviewer's attention on the problem that matters most. It supersedes the earlier "Ledger & Red Pen" appearance (2026-11-20); that direction's business, safety, provenance, accessibility and RTL rules remain in force.
 
-**Creative North Star: "Ledger & Red Pen"**
+The look was set by seven user-supplied concepts (`docs/design/command-center-references/`). They are visual references only: no number, label, metric or capability in them is used as data.
 
-An audited ledger, modernized for a premium financial operations workspace. A cool neutral ground, an ink-navy navigation rail and restrained rules keep dense review work calm. Assistant carries Hebrew and Latin text; aligned figures and explicit evidence make the information feel factual.
-
-The signature is a correction made visible: the invoice figure is struck through beside the expected figure, with a severity-aware mark. Depth is quiet, controls are compact, and color explains status. AI-written material has a labelled violet container so it remains distinguishable from deterministic records.
-
-**Key Characteristics:**
-- Calm density with horizontal rules and compact controls.
-- Hebrew-first RTL with isolated LTR amounts, identifiers and codes.
-- Severity-aware corrections, traceable exact figures and explicit AI provenance.
-- Light and dark semantic palettes with the same component structure.
+## Principles
+1. **Exception-driven.** The first screen answers "what needs me, why, and what first"; the single primary action is *Review next priority*.
+2. **Evidence before opinion.** Source documents, deterministic results and records are opaque, solid and factual. AI text is violet, labelled advisory, and always cites real passages.
+3. **Colour is a state vocabulary.** It never decorates and never stands alone: every state also has a word or an icon.
+4. **Atmosphere is for space, not for data.** Gradients, glows and frosted surfaces appear only in spacious hero areas, never behind tables, forms, documents or citations.
+5. **Hebrew-first and truly bidirectional.** RTL is the default; identifiers, SKUs, amounts and hashes are isolated LTR islands (`<bdi>`, `.ltr`, `dir="auto"`).
 
 ## Colors
+Semantic tokens live in `frontend/src/app/globals.css` (light under `:root`, dark under `[data-theme="dark"]`) and are exposed to Tailwind in `tailwind.config.ts`. The dark palette is designed separately (deep navy surfaces, lifted state colours), not inverted.
 
-The frontmatter records the RGB semantic values from `frontend/src/app/globals.css`; the unprefixed entries are light mode and `dark-` entries are their dark-mode counterparts. Runtime colors remain bound to the original CSS custom properties, selected by `[data-theme="dark"]`.
+| Role | Token | Meaning — and only this |
+|---|---|---|
+| Critical | `danger` / `danger-soft` | blocking or high-risk discrepancies, critical priority, destructive confirmation |
+| Warning | `warn` / `warn-soft` | warnings, pending information, delivery shortfalls, due-date urgency, offline demo mode |
+| Verified | `ok` / `ok-soft` | verified, matched, completed, received in full |
+| AI advisory | `ai` / `ai-soft` / `ai-line` | explicitly labelled AI-generated or advisory content, live-model indicator |
+| Information | `info` / `accent` | navigation, neutral information, links, focus, selection |
+| Primary action | `primary` / `primary-hover` / `primary-ink` | the one charcoal pill per screen |
+| Evidence | `highlight` | the source-passage / field highlight on documents |
+| Atmosphere | `atmosphere-a/b`, `hero`, `hero-wave` | shell background and hero panels only |
 
-### Primary
-
-- **Ink-navy action** (`accent`, `accent-ink`, `accent-soft`): primary review actions, links, selected/current context and quiet interaction feedback. The primary button uses white text in light mode and the page-ground color in dark mode.
-- **Ink-navy rail** (`rail`, `rail-ink`, `rail-ink-2`, `rail-line`, `rail-active`): a consistently dark navigation shell with readable active and muted text.
-
-### Secondary
-
-- **Auditor red** (`danger`, `danger-soft`): critical risk, critical findings, blocking/security errors and destructive controls.
-- **Warning amber** (`warn`, `warn-soft`): high-priority review, overdue work, warning-severity differences and offline mode.
-- **Verified green** (`ok`, `ok-soft`): matched, approved and completed evidence or outcomes.
-- **Quiet information** (`info`, `info-soft`): processing and informational states.
-- **AI violet** (`ai`, `ai-soft`, `ai-line`): labelled AI-generated/advisory content, AI actions and source citations.
-- **Evidence yellow** (`highlight`): the selected source-document region; it is a locating aid, not a new business status.
-
-### Neutral
-
-- **Cool ground** (`bg`, `surface`, `sunken`): application background, working panels and recessed table/document areas.
-- **Ink hierarchy** (`ink`, `ink-2`, `ink-3`): main figures and text, supporting text and quiet metadata.
-- **Hairline structure** (`line`, `line-strong`, `rule`): ordinary dividers, stronger field strokes and the available cool grey-green rule token. `rule` is defined but not visibly applied in the reviewed surfaces.
-- **Chart slots** (`series-1` through `series-4`, `chart-grid`, `chart-axis`): the fixed categorical series order and chart scaffolding. These are data-visualization slots, separate from status meaning.
-
-**The State Color Rule.** Reserve red for critical discrepancies and genuine critical issues, amber for warnings, green for verified or completed outcomes, and violet for labelled AI-written material.
-
-Status mappings follow the business state: open and draft are neutral; awaiting approval is informational; exceptions and pending information are amber; reconciled, matched, approved and completed are green. Failed or blocked states use danger. Source-document overlays mark only open discrepant lines: critical findings use red, while other finding locations use the quiet action-color field treatment.
+Text: `ink` (headlines, figures), `ink-2` (body), `ink-3` (secondary, ≥4.5:1 on surface). Lines: `line`, `line-strong`. Charts use `series-1…4` in fixed order with `chart-grid` / `chart-axis`.
 
 ## Typography
-
-**Display and Body Font:** Assistant, then system-ui and sans-serif. Hebrew and Latin subsets ship in weights 400, 500, 600 and 700. **Code Font:** JetBrains Mono, then ui-monospace and monospace, in weights 400 and 500; use it for filenames, codes and hashes.
-
-The humanist workhorse face keeps long Hebrew/English sessions coherent. The configured scale is approximately 1.2 at larger sizes, with small optical steps at the dense end; it is not a strict mathematical progression. The frontmatter preserves the actual scale names.
-
-### Hierarchy
-
-- **Large figures:** dashboard counters use `xl` (24px/30.4px) on narrow screens and Tailwind's inherited `3xl` (30px/36px) from `sm`, semibold with tight tracking. The custom `figure` size (34px/38.4px) exists in configuration but is not used on these reviewed surfaces.
-- **Page headline:** `2xl` (28.8px/35.2px), semibold and tight tracking.
-- **Section title:** `md` (17px/24.8px), typically semibold; `lg` is another available configured step.
-- **Body and table values:** `base` (15px/23.2px), regular or medium according to emphasis.
-- **Compact labels:** `sm` (13.5px/20px); field labels are medium. Table headers, metadata and pills use `xs` (12.5px/18px), with headers semibold and pills medium.
-- **Small metadata:** `2xs` (11.5px/16px), such as role text and citation indices. It is not the body size.
-
-Headings h1–h3 balance text and use slightly tightened tracking; explicit page-heading tight tracking takes precedence. Tables and `.num` use tabular lining numerals. No separate display family or decorative mono treatment is established.
-
-**The Evidence Precision Rule.** Use the shared string-based formatters: two decimals for monetary totals, significant fractional digits for unit-price evidence, and isolated tabular figures in mixed-direction text.
-
-`money()` groups a decimal string and prints two decimal places without floating-point arithmetic. `unitPrice()` retains significant digits beyond cents; `num()` retains nonzero fractional quantities. Missing data is an em dash. Monetary totals remain per currency, with no implied conversion.
+Assistant (Hebrew + Latin, 400–700) for everything; JetBrains Mono only for codes and hashes. Scale starts at 15px body (Assistant's small x-height) with roughly a 1.2 ratio: `sm` 13.5, `base` 15, `md` 17, `lg` 20 (section titles, 600), `3xl/4xl` 30–36 (page titles, 600, -0.025em), `figure` 40 and `6xl/7xl` for the one hero count. Figures always use `tabular-nums lining-nums`. No ultra-light weights. Headings use `text-wrap: balance`.
 
 ## Layout
-
-The desktop shell has a sticky full-height ink rail (240px) on the start side: right in Hebrew RTL, left in English LTR. The top bar is sticky (56px). Main content is full-width up to 1480px, centered, with 16px horizontal padding and 24px vertical padding; horizontal padding becomes 24px at the large breakpoint.
-
-The recurring spacing steps are the values in the frontmatter: 4–24px with 6px and 10px half-steps. Panels commonly use 16px horizontal/12px vertical header padding. Table headers use 12px horizontal/8px vertical padding and cells 12px horizontal/10px vertical padding. Screen sections commonly separate by 20px or 24px.
-
-The shell switches at Tailwind's `lg` (1024px) to a menu-triggered 256px start-side drawer with a backdrop. Below `sm` (640px), the top bar retains a short visible AI/offline-mode label, hides the organization name and uses an icon-only language control with its accessible label. The dashboard's shared bordered metric strip has two columns on compact screens and four at `xl` (1280px); counter padding grows from 12px to 20px at `sm`. It is a continuous ledger strip rather than four floating cards.
-
-Below `md` (768px), the review queue becomes a stacked list: invoice and priority, supplier, reasons, amount at risk, due date, status and an explicit action stay visible together. At `md` and above it uses the ranked table. Other evidence tables retain horizontal scrolling rather than hiding columns. Workspace evidence stacks until `xl`, then splits into 0.85fr/1.15fr columns with a 20px gap; the source column becomes sticky below the header. Source-document preview height is limited to 35vh below `xl` and 80vh from `xl`. A compact-screen Decision action jumps to the decision panel, and selecting a finding source scrolls back to the document.
-
-Hebrew is the default document direction. Use logical start/end spacing and borders, `<bdi>` or isolated LTR spans for identifiers and figures, and `dir="auto"` for source text, supplier names, comments and quotes. Directional navigation arrows follow the locale. Standalone document headings allow long filenames to break, and investigation headings wrap their title, invoice link and status instead of forcing a single row.
+- **Shell:** an 84px icon rail on the inline-start edge (right in Hebrew, left in English) on wide screens; every icon has an accessible name and a tooltip, and *All destinations* opens a labelled, grouped drawer with every permitted page (also the mobile menu). A translucent top bar carries the breadcrumb, AI/offline mode, the language and theme toggles, the user and sign-out. A skip link jumps to `#main`.
+- **Page:** max width 1560px, gutters 16 / 24 / 32px, 8px spacing rhythm, generous space between groups and tight rows inside tables.
+- **Layouts:** `.command-layout` (content + 280–320px aside at ≥1280px) for dashboard-style pages; `.workspace-layout` for the investigation workspace — evidence (sticky), findings, decision (sticky, own scroll) — collapsing to a stack with the decision kept reachable on narrow screens.
 
 ## Elevation & Depth
-
-The system combines nearly flat bordered surfaces with small functional lifts. Ordinary panels have a one-pixel line and no shadow. The sticky top bar uses a translucent ground and a small backdrop blur. The existing `raise` shadow is used on primary buttons, document paper, selected segments and login rows; `pop` supports tooltips, drawers and floating correction controls. Exact shadow and motion definitions are preserved in the sidecar.
-
-**The Quiet Depth Rule.** Use borders and tonal layering for ordinary panels. Reserve the existing raised and pop shadows for controls, source documents, selected segments and floating surfaces.
-
-State-color transitions on shared buttons and rail navigation take 150ms; inputs use the inherited Tailwind color transition. Loading buttons add a spinner and disable interaction. Skeletons shimmer for 1.4s. The configured rise animation is 180ms, but no reviewed surface uses it. Reduced-motion preference cuts animation and transition duration to 0.01ms.
+Two shadows only: `--shadow-panel` (resting panels, soft and offset) and `--shadow-pop` (drawers, tooltips, menus). Panels declare elevation once: a thin border plus the panel shadow; no ghost cards, no nested glass. Frosting (translucent surface) is used for `.command-hero` and `.command-metric` only.
 
 ## Shapes
-
-Corners are softly rectangular: the shared control radius is 8px, navigation and citation cards use 10px, and panels/document frames use 12px. The configured small radius is 6px. Pills, avatar discs and severity dots are fully rounded. Document overlay boxes use a small local 2px radius. Borders carry most structure; they are one pixel except focus treatment and the three-pixel double rule for totals.
-
-The `.ledger-total` primitive places a double rule above a total. The `.red-pen-struck` primitive uses a two-pixel danger-colored strike on muted ink; discrepancy tables instead apply their own severity-aware strike and expected-value emphasis. Preserve this distinction rather than treating every correction as red.
+Controls 14px, metric tiles 20px, panels 24px, hero 28px; pills (`rounded-full`) for buttons, inputs, filters, badges and status. Tables keep compact rows inside rounded panels.
 
 ## Components
-
-### Buttons
-
-Compact and confident. The default is secondary, medium size: 36px high, 14px horizontal padding, 8px corners, medium-weight body type and a 6px icon gap. Small is 28px high with 10px padding and compact type; large is 40px with 16px padding; icon controls are 32px square.
-
-Primary uses the action accent and a subtle raised shadow; hover uses accent ink. Secondary uses a white/themed surface, stronger border and sunken hover. Ghost uses supporting ink with a sunken hover. Danger keeps a surface background with critical ink and a partial-opacity critical border. AI uses the violet soft ground and AI border. Disabled/loading buttons block interaction at half opacity. Keyboard focus uses the global two-pixel accent outline with two-pixel offset.
-
-### Chips
-
-Small status vocabulary: 24px high, fully rounded, 8px horizontal padding, compact medium type and a one-pixel inset tone ring. Priority maps critical to danger, high to amber, normal to information. Status text and the optional circle icon communicate meaning beyond color. Business state tones are recorded in Colors.
-
-### Cards / Containers
-
-Quiet working surfaces: 12px corners, themed surface, one-pixel ordinary border and no default shadow. Headers separate with a hairline and use section-title type; header content and actions wrap, with the action group constrained to the available width. Desktop queue tables have sunken sticky headers and aligned, start-oriented text; amounts may align to the end. The current desktop session row uses a pale accent fill; a reviewed invoice receives a strike and a green explanatory label in both queue presentations. Compact queue entries use 16px padding, a two-column amount/due block and a minimum 40px-high action.
-
-### Inputs / Fields
-
-Inputs and selects are 36px high, with 8px corners and stronger borders. Inputs have 12px horizontal padding; selects use 10px. Textareas start at 80px high with 12px horizontal/8px vertical padding. Focus shifts the border to accent and adds a two-pixel accent ring at 20% opacity. Input placeholders use quiet ink; disabled inputs use sunken fill. Labels and hints remain visibly separate.
-
-### Navigation
-
-The rail uses grouped links at 36px height, 10px corners and compact padding. Default items use muted rail ink; hover adds a translucent active fill and brighter ink. Active links use solid rail-active fill, rail ink and semibold weight with `aria-current="page"`. On small screens the same navigation appears in the start-side drawer.
-
-### Evidence, Corrections and AI
-
-The discrepancy table places description/source link, invoice value, purchase-order/expected value, receipt quantity and difference in adjacent columns. Differing actual values are struck through; expected values become semibold; critical findings use danger, other findings use warning. Source links select a document bounding box and bring the preview into view on compact screens. Unit prices preserve their extra precision.
-
-The document viewer keeps its own wrapping toolbar, zoom, page controls and original-download action; controls can move to another row when space is tight. Its source raster retains the document's own visual design. Only open discrepant lines are highlighted in the review workspace: critical findings have red overlays, other finding locations have blue field overlays. A selected evidence box is yellow; citation boxes are violet. Sources are presented with document title, page, quote and an optional effective date. AI output has a violet framed block with mode/template label and an advisory footer; verified evidence has its own green label.
-
-Error alerts use soft danger ground and a retry action. Empty states provide plain task context and a relevant action where available. Loading states use themed skeletons rather than substituting fictional numbers.
+- **Buttons** (`ui.tsx`): `primary` charcoal pill (one per screen), `secondary` surface pill with a hairline ring, `ghost`, `danger` (outline, red text), `ai` (violet tonal). Sizes sm 32 / md 40 / lg 48px. Pressed state nudges 1px; disabled at 45% opacity; focus ring from `accent`.
+- **Panel / PanelHeader:** `.command-panel` opaque surface, 24px radius; header with an `lg` semibold title and `ink-2` subtitle.
+- **Hero and metrics:** `.command-hero` atmospheric header with a quiet wave; `.command-metric` translucent tiles whose figures come from the API with their denominators.
+- **Tables:** `.command-table` with a sunken header row, hairline rows, hover tint and tabular figures; on small screens core lists switch to information-complete stacked rows.
+- **Status and priority:** `StatusPill`, `PriorityBadge` and rank chips pair colour with words; business status, priority and due urgency are separate badges.
+- **Evidence:** `DocumentViewer` (real page images, zoom/page tools, field and citation highlights); provenance chips open the source location.
+- **AI advisory:** violet `AiBlock` with an explicit "advisory" label; citations open the real highlighted passage; abstention and missing evidence are stated plainly.
+- **Decision panel:** approve (proposed resolution), reject, request clarification (procurement or supplier), escalate — notes, overrides and permission rules from the backend; never "approve payment" by AI.
 
 ## Do's and Don'ts
-
-### Do:
-- Do use semantic CSS color variables so light and dark themes retain the same roles.
-- Do show priority and status in words as well as color.
-- Do keep invoice, purchase-order and receipt evidence adjacent and amounts directionally isolated.
-- Do label AI mode, offline templates and advisory output explicitly.
-- Do preserve significant unit-price digits and keep different currencies separate.
-
-### Don't:
-- Don't treat every discrepancy as critical or use red as a decorative accent.
-- Don't present violet AI treatment as proof that a record is verified.
-- Don't turn the ledger metaphor into paper texture, ornamental bookkeeping or oversized KPI cards.
-- Don't round unit-price evidence to two decimals when further digits explain the finding.
+- Do keep money separated by currency; never convert or sum across currencies.
+- Do show a metric only with its real source, name and denominator; omit unsupported charts.
+- Do keep red for critical only, amber for warnings/pending/shortfalls, green for verified, violet for AI.
+- Don't put gradients or glass behind documents, tables, forms or citations.
+- Don't add buttons without a real action (no fake search, no "Run evaluation" without an endpoint).
+- Don't use mockup numbers, confidence percentages or trends that the backend does not provide.
+- Don't animate mission-critical values; keep transitions 120–200ms and respect reduced motion.

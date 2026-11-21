@@ -13,17 +13,20 @@ export function cx(...v: ClassValue[]) {
 
 /* ---------------------------------------------------------------- Button */
 const buttonStyles = cva(
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded font-medium transition-[background-color,border-color,color,box-shadow] duration-150 disabled:pointer-events-none disabled:opacity-50 select-none",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold select-none " +
+  "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out active:translate-y-px " +
+  "disabled:pointer-events-none disabled:opacity-45",
   {
     variants: {
       variant: {
-        primary: "bg-accent text-white hover:bg-accent-ink shadow-raise dark:text-[rgb(var(--bg))]",
-        secondary: "bg-surface text-ink border border-line-strong hover:bg-sunken",
-        ghost: "text-ink-2 hover:bg-sunken hover:text-ink",
-        danger: "bg-surface text-danger border border-danger/40 hover:bg-danger-soft",
-        ai: "bg-ai-soft text-ai border border-ai-line hover:bg-ai/10",
+        // the single primary action of a screen: a charcoal pill
+        primary: "bg-primary text-primary-ink ring-1 ring-inset ring-primary-line hover:bg-primary-hover shadow-raise",
+        secondary: "bg-surface text-ink ring-1 ring-inset ring-line-strong/70 hover:bg-sunken",
+        ghost: "text-ink-2 hover:bg-surface/70 hover:text-ink",
+        danger: "bg-surface text-danger ring-1 ring-inset ring-danger/40 hover:bg-danger-soft",
+        ai: "bg-ai-soft text-ai ring-1 ring-inset ring-ai-line hover:bg-ai/10",
       },
-      size: { sm: "h-7 px-2.5 text-sm", md: "h-9 px-3.5 text-base", lg: "h-10 px-4 text-md", icon: "h-8 w-8" },
+      size: { sm: "h-8 px-3.5 text-sm", md: "h-10 px-4 text-base", lg: "h-12 px-6 text-md", icon: "h-9 w-9" },
     },
     defaultVariants: { variant: "secondary", size: "md" },
   },
@@ -47,7 +50,7 @@ Button.displayName = "Button";
 /* ---------------------------------------------------------------- Panel */
 export function Panel({ className, children, ...p }: React.HTMLAttributes<HTMLElement>) {
   return (
-    <section className={cx("rounded-lg border border-line bg-surface", className)} {...p}>
+    <section className={cx("command-panel", className)} {...p}>
       {children}
     </section>
   );
@@ -57,10 +60,10 @@ export function PanelHeader({ title, sub, actions, className }: {
   title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode; className?: string;
 }) {
   return (
-    <header className={cx("flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3", className)}>
+    <header className={cx("flex flex-wrap items-start justify-between gap-3 border-b border-line/70 px-5 py-4", className)}>
       <div className="min-w-0">
-        <h2 className="text-md font-semibold text-ink">{title}</h2>
-        {sub && <p className="mt-0.5 text-sm text-ink-3">{sub}</p>}
+        <h2 className="text-lg font-semibold tracking-tight text-ink">{title}</h2>
+        {sub && <p className="mt-0.5 text-sm text-ink-2">{sub}</p>}
       </div>
       {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
     </header>
@@ -73,8 +76,8 @@ export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTML
     <input
       ref={ref}
       className={cx(
-        "h-9 w-full rounded border border-line-strong bg-surface px-3 text-base text-ink placeholder:text-ink-3",
-        "transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-sunken",
+        "h-10 w-full rounded-full border border-line bg-surface px-4 text-base text-ink placeholder:text-ink-3",
+        "transition-colors focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15 disabled:bg-sunken",
         className,
       )}
       {...p}
@@ -88,8 +91,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
     <textarea
       ref={ref}
       className={cx(
-        "min-h-20 w-full rounded border border-line-strong bg-surface px-3 py-2 text-base text-ink placeholder:text-ink-3",
-        "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20",
+        "min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-3",
+        "focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15",
         className,
       )}
       {...p}
@@ -102,7 +105,7 @@ export function Select({ className, children, ...p }: React.SelectHTMLAttributes
   return (
     <select
       className={cx(
-        "h-9 rounded border border-line-strong bg-surface px-2.5 text-base text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20",
+        "h-10 rounded-full border border-line bg-surface pe-8 ps-4 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15",
         className,
       )}
       {...p}
@@ -142,7 +145,7 @@ export function EmptyState({ icon, title, body, action }: {
 
 export function ErrorState({ message, onRetry, retryLabel = "Retry" }: { message: string; onRetry?: () => void; retryLabel?: string }) {
   return (
-    <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+    <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
       <span>{message}</span>
       {onRetry && <Button size="sm" variant="danger" onClick={onRetry}>{retryLabel}</Button>}
     </div>
@@ -152,20 +155,20 @@ export function ErrorState({ message, onRetry, retryLabel = "Retry" }: { message
 /* ---------------------------------------------------------------- Table */
 export function Table({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cx("overflow-x-auto", className)}>
+    <div className={cx("command-table", className)}>
       <table className="w-full border-collapse text-start text-base">{children}</table>
     </div>
   );
 }
 export function Th({ className, children, ...p }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th className={cx("sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-sunken px-3 py-2 text-start text-xs font-semibold text-ink-3", className)} {...p}>
+    <th className={cx("sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-sunken px-4 py-2.5 text-start text-xs font-semibold text-ink-2", className)} {...p}>
       {children}
     </th>
   );
 }
 export function Td({ className, children, ...p }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cx("border-b border-line px-3 py-2.5 align-middle", className)} {...p}>{children}</td>;
+  return <td className={cx("border-b border-line/80 px-4 py-3 align-middle", className)} {...p}>{children}</td>;
 }
 
 /* ---------------------------------------------------------------- Key/value */

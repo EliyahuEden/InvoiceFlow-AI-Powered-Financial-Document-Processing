@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20T16:26:24+00:00",
+  "generated_at": "2026-11-20T22:11:28+00:00",
   "git_rev": null,
   "python": "3.12.16",
   "dataset": {
@@ -106,7 +106,7 @@
         "all@5": 0.72,
         "mrr": 0.799,
         "ndcg@5": 0.767,
-        "latency_ms_p50": 0.23,
+        "latency_ms_p50": 0.26,
         "by_category": {
           "conflicting": {
             "recall@5": 0.25,
@@ -166,7 +166,7 @@
         "all@5": 0.8,
         "mrr": 0.646,
         "ndcg@5": 0.679,
-        "latency_ms_p50": 12.1,
+        "latency_ms_p50": 10.03,
         "by_category": {
           "conflicting": {
             "recall@5": 1.0,
@@ -226,7 +226,7 @@
         "all@5": 0.84,
         "mrr": 0.763,
         "ndcg@5": 0.762,
-        "latency_ms_p50": 11.86,
+        "latency_ms_p50": 9.77,
         "by_category": {
           "conflicting": {
             "recall@5": 1.0,
@@ -286,7 +286,7 @@
         "all@5": 0.96,
         "mrr": 0.96,
         "ndcg@5": 0.949,
-        "latency_ms_p50": 2574.2,
+        "latency_ms_p50": 2337.7,
         "by_category": {
           "conflicting": {
             "recall@5": 1.0,
@@ -463,7 +463,7 @@
       "all@5": 0.857,
       "mrr": 0.885,
       "ndcg@5": 0.865,
-      "latency_ms_p50": 0.09,
+      "latency_ms_p50": 0.21,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -529,7 +529,7 @@
       "all@5": 0.881,
       "mrr": 0.889,
       "ndcg@5": 0.873,
-      "latency_ms_p50": 0.12,
+      "latency_ms_p50": 0.22,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -595,7 +595,7 @@
       "all@5": 0.833,
       "mrr": 0.741,
       "ndcg@5": 0.749,
-      "latency_ms_p50": 14.95,
+      "latency_ms_p50": 10.86,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -661,7 +661,7 @@
       "all@5": 0.857,
       "mrr": 0.834,
       "ndcg@5": 0.826,
-      "latency_ms_p50": 9.8,
+      "latency_ms_p50": 10.59,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -727,7 +727,7 @@
       "all@5": 0.976,
       "mrr": 0.907,
       "ndcg@5": 0.918,
-      "latency_ms_p50": 5625.03,
+      "latency_ms_p50": 5278.2,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -793,7 +793,7 @@
       "all@5": 0.81,
       "mrr": 0.838,
       "ndcg@5": 0.813,
-      "latency_ms_p50": 0.22,
+      "latency_ms_p50": 0.16,
       "by_category": {
         "conflicting": {
           "recall@5": 0.75,
@@ -859,7 +859,7 @@
       "all@5": 0.833,
       "mrr": 0.846,
       "ndcg@5": 0.824,
-      "latency_ms_p50": 0.28,
+      "latency_ms_p50": 0.16,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -925,7 +925,7 @@
       "all@5": 0.643,
       "mrr": 0.593,
       "ndcg@5": 0.582,
-      "latency_ms_p50": 11.13,
+      "latency_ms_p50": 9.26,
       "by_category": {
         "conflicting": {
           "recall@5": 0.75,
@@ -991,7 +991,7 @@
       "all@5": 0.81,
       "mrr": 0.753,
       "ndcg@5": 0.757,
-      "latency_ms_p50": 12.07,
+      "latency_ms_p50": 9.43,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -1057,7 +1057,7 @@
       "all@5": 0.929,
       "mrr": 0.848,
       "ndcg@5": 0.865,
-      "latency_ms_p50": 3612.2,
+      "latency_ms_p50": 3144.43,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -1123,7 +1123,7 @@
       "all@5": 0.762,
       "mrr": 0.86,
       "ndcg@5": 0.817,
-      "latency_ms_p50": 0.24,
+      "latency_ms_p50": 0.28,
       "by_category": {
         "conflicting": {
           "recall@5": 0.5,
@@ -1189,7 +1189,7 @@
       "all@5": 0.786,
       "mrr": 0.85,
       "ndcg@5": 0.815,
-      "latency_ms_p50": 0.24,
+      "latency_ms_p50": 0.25,
       "by_category": {
         "conflicting": {
           "recall@5": 0.5,
@@ -1255,7 +1255,7 @@
       "all@5": 0.81,
       "mrr": 0.642,
       "ndcg@5": 0.67,
-      "latency_ms_p50": 9.87,
+      "latency_ms_p50": 9.25,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -1321,7 +1321,7 @@
       "all@5": 0.81,
       "mrr": 0.813,
       "ndcg@5": 0.793,
-      "latency_ms_p50": 11.62,
+      "latency_ms_p50": 10.28,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -1387,7 +1387,7 @@
       "all@5": 0.929,
       "mrr": 0.859,
       "ndcg@5": 0.87,
-      "latency_ms_p50": 3312.72,
+      "latency_ms_p50": 2783.88,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,

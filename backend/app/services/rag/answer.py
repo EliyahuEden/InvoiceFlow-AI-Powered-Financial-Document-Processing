@@ -36,12 +36,12 @@ def screen_hits(hits: list[Hit]) -> tuple[list[Hit], list[dict]]:
     return safe, excluded
 
 PROMPT_VERSION = "rag-answer-v2"
-# Calibrated on the calibration questions only, including near-miss unanswerable ones
-# (eval/calibrate_abstention.py -> eval/results/abstention_calibration_latest.json), then scored on
-# the held-out set. The margin is thin: a cross-encoder scores topical relevance, not whether the
-# passage answers, so the offline answerer leans towards refusing. LLM mode decides answerability
-# itself and its citations are verified.
-RERANK_ABSTAIN_LOGIT = -0.326
+# Calibrated on the original 50 calibration questions (eval/calibrate_abstention.py). A stricter
+# value (-0.326) learned with added near-miss questions refused every unanswerable held-out question
+# but also half of the answerable ones (held-out correctness 0.76 -> 0.52), so it was not adopted:
+# a cross-encoder scores topical relevance, not answerability. LLM mode decides answerability itself
+# and its citations are verified; that is the intended fix for near-miss refusals.
+RERANK_ABSTAIN_LOGIT = -0.92
 
 SYSTEM = """You answer questions about a company's supplier agreements and purchasing policies.
 Use ONLY the numbered evidence passages provided. Do not use outside knowledge.

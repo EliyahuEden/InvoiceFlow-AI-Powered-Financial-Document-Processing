@@ -106,6 +106,10 @@ Offline extractive answers on the held-out set (hybrid + rerank): correctness 0.
 
 The bigger model helps whenever no reranker is used, and is a wash once the cross-encoder reranks. Switching would also need a pgvector dimension migration and re-indexing, so MiniLM stays the default. `multilingual-e5-large` was not tried: it needs `query:` / `passage:` prefixes that the embedder does not add, so it would be scored unfairly.
 
+**e5-large with query/passage prefixes** (`--embedding-model intfloat/multilingual-e5-large --out rag_e5`, 1024-d, 2.2 GB): dense MRR 0.879 on the calibration set (MiniLM 0.642) and held-out dense R@5 0.980 / MRR 0.875 (MiniLM 0.840 / 0.646); hybrid MRR 0.873 (0.813). With the reranker on, results are equal (held-out R@5 1.000, MRR 0.950). Not adopted yet: migration, re-indexing and a recalibrated no-reranker threshold are needed (with e5 the current dense-similarity threshold never refuses).
+
+**Near-miss refusal experiment (not adopted).** Sixteen calibration questions were added (`questions_calibration_extra.jsonl`: ten near-miss unanswerable, six answerable). On the expanded set the best reranker threshold was −0.326 (refusal balanced accuracy 0.83 vs 0.79 at −0.92). Scored on the held-out set it refused 10/10 unanswerable questions but also 10 answerable ones: abstention P 0.50 / R 1.00 and answer correctness 0.52 (vs 0.76 at −0.92). The calibration optimized refusals without counting lost answers, and a cross-encoder measures topical relevance rather than answerability, so production keeps −0.92; the held-out set has now been scored more than once and is no longer untouched. LLM answering with verified citations is the intended fix.
+
 **Findings**
 - Dense retrieval with a small multilingual model is the weakest on Hebrew, but it is needed for cross-lingual questions.
 - Reranking gives the best R@5 and nDCG at about 1 s of CPU latency per query.

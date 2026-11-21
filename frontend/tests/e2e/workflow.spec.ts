@@ -27,7 +27,7 @@ test("Hebrew-first RTL shell with offline-mode label and locale switch", async (
   await expect(page.getByText("מצב הדגמה לא מקוון")).toBeVisible();
   await page.getByRole("button", { name: "שפה" }).click();
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Review Center" })).toBeVisible();
   await page.getByRole("button", { name: "Language" }).click(); // back to Hebrew for other tests
 });
 

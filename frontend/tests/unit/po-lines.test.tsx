@@ -20,4 +20,14 @@ describe("purchase order delivery comparison", () => {
     expect(screen.queryByText(/not received/)).not.toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
   });
+  it("links each line to its recorded receipts and retains fractional unit prices", () => {
+    const receipt = { id: "receipt-a", gr_number: "GR-A", received_date: "2026-03-01", received_by: null,
+      lines: [{ po_line_id: line.id, quantity_received: "6" }] };
+    const other = { ...receipt, id: "receipt-b", gr_number: "GR-B", lines: [{ po_line_id: "other", quantity_received: "4" }] };
+    render(<I18nProvider initial="en"><PurchaseOrderLines lines={[{ ...line, unit_price: "0.4375" }]}
+      receipts={[receipt, other]} currency="ILS" /></I18nProvider>);
+    expect(screen.getByRole("link", { name: "GR-A" })).toHaveAttribute("href", "#receipt-receipt-a");
+    expect(screen.queryByRole("link", { name: "GR-B" })).not.toBeInTheDocument();
+    expect(screen.getByText("₪0.4375")).toBeVisible();
+  });
 });

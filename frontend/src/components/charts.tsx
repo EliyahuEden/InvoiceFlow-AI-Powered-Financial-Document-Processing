@@ -109,11 +109,11 @@ export function BarList({ items, format, max, color = "var(--series-1)" }: {
   return (
     <ul className="space-y-2.5">
       {items.map((i) => (
-        <li key={i.label} className="group grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_3.5rem] items-center gap-3" title={i.hint ?? `${i.label}: ${format ? format(i.value) : i.value}`}>
-          <span dir="auto" className="truncate text-sm text-ink-2">{i.label}</span>
-          <span className="relative h-2.5 rounded-e bg-sunken">
-            <span className="absolute inset-y-0 start-0 rounded-e transition-[filter] group-hover:brightness-110"
-              style={{ width: `${Math.max(2, (i.value / top) * 100)}%`, background: color }} />
+        <li key={i.label} className="group grid grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)_3.5rem] items-center gap-3" title={i.hint ?? `${i.label}: ${format ? format(i.value) : i.value}`}>
+          <span dir="auto" className="break-words text-sm text-ink-2 [overflow-wrap:anywhere]">{i.label}</span>
+          <span className="relative h-3 overflow-hidden rounded-full bg-sunken">
+            <span className="absolute inset-y-0 start-0 rounded-full transition-[filter] group-hover:brightness-110"
+              style={{ width: `${Math.max(0, Math.min(100, (i.value / top) * 100))}%`, background: color }} />
           </span>
           <span className="text-end text-sm font-medium text-ink num">{format ? format(i.value) : i.value}</span>
         </li>

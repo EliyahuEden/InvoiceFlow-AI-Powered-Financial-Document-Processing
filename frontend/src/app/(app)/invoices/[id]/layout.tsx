@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Bot, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
     { href: `/invoices/${id}/investigation`, label: t.invoice.tabs.investigation, ai: true },
     { href: `/invoices/${id}/history`, label: t.invoice.tabs.audit },
   ];
-  if (error) return <ErrorState message={error.status === 404 ? "Invoice not found" : t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
+  if (error) return <ErrorState message={error.status === 404 ? t.invoice.notFound : t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
 
   const rerun = async () => {
     try {
@@ -46,17 +46,20 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div>
-      <div className="mb-4">
-        <Link href="/invoices" className="text-sm text-ink-3 hover:text-accent">{t.nav.inbox}</Link>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+      <header className="command-hero mb-5 space-y-4">
+        <div className="flex min-w-0 items-center gap-2 text-sm text-ink-2">
+          <Link href="/invoices" className="inline-flex items-center gap-1 font-medium hover:text-accent"><ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />{t.nav.inbox}</Link>
+          {inv && <><ChevronRight className="h-3 w-3 rtl:rotate-180" aria-hidden /><bdi className="truncate">{inv.invoice_number ?? inv.filename}</bdi></>}
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
             {!inv ? <Skeleton className="h-8 w-64" /> : (
               <>
-                <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold">
-                  <span className="ltr font-mono">{inv.invoice_number ?? inv.filename}</span>
+                <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+                  <bdi className="min-w-0 break-words">{path.endsWith("/review") ? t.invoice.verifyTitle : inv.invoice_number ?? inv.filename}</bdi>
                   <StatusPill status={inv.status} />
                 </h1>
-                <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-ink-2">
+                <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
                   <span dir="auto" className={inv.supplier ? "" : "italic text-ink-3"}>{supplierLabel ?? t.common.unknown}</span>
                   <span className="text-line-strong" aria-hidden>|</span>
                   <span>{date(inv.invoice_date, locale)}</span>
@@ -77,14 +80,13 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
             )}
           </div>
         </div>
-      </div>
-      <nav className="mb-5 flex gap-1 overflow-x-auto border-b border-line" aria-label="Invoice sections">
+      <nav className="flex max-w-full flex-wrap items-center gap-1.5 border-t border-line pt-3" aria-label={t.invoice.sections}>
         {tabs.map((tab) => {
           const active = path === tab.href;
           return (
             <Link key={tab.href} href={tab.href} aria-current={active ? "page" : undefined}
-              className={cx("-mb-px inline-flex h-10 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-base transition-colors",
-                active ? "border-accent font-medium text-ink" : "border-transparent text-ink-2 hover:text-ink")}>
+              className={cx("inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm font-medium transition-colors",
+                active ? "border-line-strong bg-surface text-ink shadow-raise" : "border-transparent text-ink-2 hover:border-line hover:bg-surface")}>
               {tab.label}
               {tab.ai && <span className="rounded bg-ai-soft px-1 text-2xs font-semibold text-ai">AI</span>}
               {!!tab.badge && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-danger-soft px-1 text-2xs font-semibold text-danger num">{tab.badge}</span>}
@@ -92,6 +94,7 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
           );
         })}
       </nav>
+      </header>
       {inv?.status === "processing" && inv.job && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-info/25 bg-info-soft px-4 py-3 text-sm text-info">
           <Loader2 className="h-4 w-4 animate-spin" />

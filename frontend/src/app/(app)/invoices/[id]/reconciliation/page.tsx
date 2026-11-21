@@ -8,7 +8,7 @@ import { FindingTag, Pill, SeverityDot, StatusPill } from "@/components/domain";
 import { useSession } from "@/components/session";
 import { Button, cx, EmptyState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api } from "@/lib/api";
-import { dateTime, money, num } from "@/lib/format";
+import { dateTime, money, num, unitPrice } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
 import { findingMessage } from "@/lib/findings";
@@ -30,26 +30,24 @@ export default function ReconciliationPage() {
 
   return (
     <div className="space-y-5">
-      <Panel className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <span className="inline-flex items-center gap-2 text-sm text-ink-2"><Cpu className="h-4 w-4 text-ink-3" />{t.ai.deterministic}</span>
+      <Panel className="command-panel">
+        <PanelHeader title={<span className="inline-flex items-center gap-2"><Cpu className="h-5 w-5 text-accent-ink" />{t.ai.deterministic}</span>}
+          actions={can("reconcile:run") && <>
+            <Button size="sm" disabled={!!busy || inv.status === "processing"} loading={busy === "two_way"} onClick={() => rerun("two_way")}>{t.recon.two_way}</Button>
+            <Button size="sm" variant="primary" disabled={!!busy || inv.status === "processing"} loading={busy === "three_way"} onClick={() => rerun("three_way")}>{t.recon.three_way}</Button>
+          </>} />
         {run ? (
-          <>
-            <span className="text-sm">{t.recon.outcome}: <StatusPill status={run.outcome} /></span>
-            <span className="text-sm text-ink-2">{t.recon.mode}: <b className="font-medium text-ink">{(t.recon as Record<string, unknown>)[run.mode] as string}</b></span>
-            <span className="text-sm text-ink-2">{t.recon.engine}: <span className="font-mono text-xs">{run.engine_version}</span></span>
-            <span className="text-xs text-ink-3">{dateTime(run.created_at, locale)} · {run.triggered_by}</span>
-          </>
-        ) : <span className="text-sm text-ink-3">—</span>}
-        {can("reconcile:run") && (
-          <div className="ms-auto flex gap-2">
-            <Button size="sm" loading={busy === "two_way"} onClick={() => rerun("two_way")}>{t.recon.two_way}</Button>
-            <Button size="sm" variant="primary" loading={busy === "three_way"} onClick={() => rerun("three_way")}>{t.recon.three_way}</Button>
-          </div>
-        )}
+          <dl className="grid grid-cols-2 gap-4 p-4 text-sm sm:grid-cols-4 sm:p-5">
+            <div><dt className="mb-1 text-xs text-ink-3">{t.recon.outcome}</dt><dd><StatusPill status={run.outcome} /></dd></div>
+            <div><dt className="mb-1 text-xs text-ink-3">{t.recon.mode}</dt><dd className="font-medium">{(t.recon as Record<string, unknown>)[run.mode] as string}</dd></div>
+            <div><dt className="mb-1 text-xs text-ink-3">{t.recon.engine}</dt><dd><bdi className="font-mono">{run.engine_version}</bdi></dd></div>
+            <div><dt className="mb-1 text-xs text-ink-3">{t.common.created}</dt><dd>{dateTime(run.created_at, locale)} · <bdi>{run.triggered_by}</bdi></dd></div>
+          </dl>
+        ) : <p className="p-4 text-sm text-ink-3">{t.evaluation.notRun}</p>}
       </Panel>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-        <Panel>
+      <div className="command-layout grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+        <Panel className="command-panel min-w-0">
           <PanelHeader title={<span className="inline-flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-ink-3" />{t.recon.invoice} ↔ {t.recon.po}</span>}
             sub={inv.purchase_order ? <Link href={`/purchase-orders/${inv.purchase_order.id}`} className="ltr font-mono hover:text-accent">{inv.purchase_order.po_number} · {inv.purchase_order.currency}</Link> : t.recon.noPo} />
           <Table>
@@ -76,11 +74,11 @@ export default function ReconciliationPage() {
                 return (
                   <tr key={ln.id} className={lineFindings.length ? "bg-danger-soft/30" : ""}>
                     <Td className="max-w-[14rem]">
-                      <span dir="auto" className="block truncate">{ln.description}</span>
+                      <span dir="auto" className="block min-w-24">{ln.description}</span>
                       <span className="ltr font-mono text-2xs text-ink-3">{ln.sku}</span>
                     </Td>
                     <Td className={cx("text-end num", qtyBad && "font-semibold text-danger")}>{num(ln.quantity)}</Td>
-                    <Td className={cx("border-e border-line text-end", priceBad && "font-semibold text-danger")}><span className="ltr">{money(ln.unit_price)}</span></Td>
+                    <Td className={cx("border-e border-line text-end", priceBad && "font-semibold text-danger")}><span className="ltr">{unitPrice(ln.unit_price)}</span></Td>
                     <Td className="text-center">
                       {m ? <Pill tone={m.method === "sku" ? "ok" : m.method === "description" ? "accent" : m.method === "ambiguous" ? "warn" : "danger"}>
                         {(t.recon.lineMatch as Record<string, string>)[m.method]}{m.method === "description" && ` ${Math.round(m.score * 100)}%`}
@@ -88,17 +86,17 @@ export default function ReconciliationPage() {
                     </Td>
                     {pl ? (
                       <>
-                        <Td className="max-w-[14rem] border-s border-line"><span dir="auto" className="block truncate">{pl.description}</span>
+                        <Td className="max-w-[14rem] border-s border-line"><span dir="auto" className="block min-w-24">{pl.description}</span>
                           <span className="ltr font-mono text-2xs text-ink-3">{pl.sku}</span></Td>
                         <Td className="text-end num">{num(pl.quantity)}</Td>
                         <Td className={cx("text-end num", qtyBad && "font-semibold text-ok")}>{num(pl.received)}</Td>
-                        <Td className={cx("text-end", priceBad && "font-semibold text-ok")}><span className="ltr">{money(pl.unit_price)}</span></Td>
+                        <Td className={cx("text-end", priceBad && "font-semibold text-ok")}><span className="ltr">{unitPrice(pl.unit_price)}</span></Td>
                       </>
                     ) : (
                       <Td colSpan={4} className="border-s border-line text-sm text-ink-3">
                         {m?.method === "ambiguous" ? (
                           <span className="space-y-0.5">{m.candidates.slice(0, 2).map((c) => (
-                            <span key={c.po_line_id} dir="auto" className="block">{c.description} · <span className="ltr">{money(c.unit_price)}</span> · {Math.round(c.score * 100)}%</span>
+                            <span key={c.po_line_id} dir="auto" className="block">{c.description} · <span className="ltr">{unitPrice(c.unit_price)}</span> · {Math.round(c.score * 100)}%</span>
                           ))}</span>
                         ) : t.recon.lineMatch.none}
                       </Td>
@@ -120,10 +118,10 @@ export default function ReconciliationPage() {
           )}
         </Panel>
 
-        <div className="space-y-5">
-          <Panel>
+        <div className="min-w-0 space-y-4">
+          <Panel className="command-aside">
             <PanelHeader title={t.recon.findings} />
-            {findings.length === 0 ? <EmptyState icon={<CheckCircle2 className="h-7 w-7 text-ok" />} title={t.recon.allClear} /> : (
+            {findings.length === 0 ? <EmptyState icon={run ? <CheckCircle2 className="h-7 w-7 text-ok" /> : undefined} title={run ? t.recon.allClear : t.evaluation.notRun} /> : (
               <ul className="divide-y divide-line">
                 {findings.map((f) => (
                   <li key={f.id} className="px-4 py-3">
@@ -144,11 +142,11 @@ export default function ReconciliationPage() {
           </Panel>
           {run && (
             <Panel>
-              <PanelHeader title={t.recon.checks} />
+              <PanelHeader title={t.recon.checks} actions={<span className="text-sm text-ink-2 num">{run.checks.filter((c) => c.passed).length} / {run.checks.length}</span>} />
               <ul className="divide-y divide-line">
                 {run.checks.map((c) => (
                   <li key={c.check} className="flex items-center gap-2 px-4 py-2 text-sm">
-                    {c.passed ? <CheckCircle2 className="h-4 w-4 text-ok" aria-label="passed" /> : <CircleX className="h-4 w-4 text-danger" aria-label="failed" />}
+                    {c.passed ? <CheckCircle2 className="h-4 w-4 shrink-0 text-ok" aria-label={t.status.succeeded} /> : <CircleX className="h-4 w-4 shrink-0 text-danger" aria-label={t.status.failed} />}
                     <span className="font-mono text-xs text-ink-2">{c.check}</span>
                     {c.detail && <span className="ms-auto text-xs text-ink-3">{c.detail}</span>}
                   </li>

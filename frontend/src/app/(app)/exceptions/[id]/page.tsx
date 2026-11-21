@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Bot, CheckCircle2, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, CheckCircle2, FileText, MessageSquare, ScanLine, Scale } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,7 +11,6 @@ import { DiscrepancyTable } from "@/components/discrepancy-table";
 import { DocumentViewer, type Highlight } from "@/components/document-viewer";
 import { FindingTag, PriorityBadge, ReasonText, StatusPill } from "@/components/domain";
 import { useSession, type Me } from "@/components/session";
-import { PageHeader } from "@/components/shell";
 import { Button, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Textarea } from "@/components/ui";
 import { api, ApiError, qs, useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
@@ -139,63 +138,94 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
     id: line.id, page: line.source.page ?? 1, bbox: line.source.bbox!,
     tone: invoice.discrepancies.some((finding) => finding.status === "open" && finding.invoice_line_id === line.id && finding.severity === "critical") ? "finding" : "field", label: line.description,
   })) ?? [];
-  return <div className="space-y-5">
-    <PageHeader back={{ href: "/exceptions", label: t.review.backToQueue }}
-      title={<span className="flex flex-wrap items-center gap-3"><span dir="ltr">{e.invoice_number ?? e.title}</span><StatusPill status={e.status} /></span>}
-      sub={<span className="flex flex-wrap items-center gap-2">
-        {current && <><PriorityBadge level={current.priority.level} /><span className="text-sm text-ink-3">
-          {t.review.position} {current.priority.rank} {t.review.of} {inReviewQueue ? summary?.needs_review : queue?.total}</span></>}
-        {e.discrepancy_types.map((type) => <FindingTag key={type} type={type} />)}
-      </span>}
-      actions={<><Button className="xl:hidden" onClick={() => document.getElementById("review-decision")?.scrollIntoView({ block: "start" })}>{t.exceptions.decide}</Button>
-        <Button onClick={skip} loading={busy === "next"} disabled={!!busy}>{t.review.skip}<ArrowLeft className="h-4 w-4 ltr:rotate-180" aria-hidden /></Button></>} />
-    {current && <div className="flex flex-wrap gap-x-5 gap-y-1 border-y border-line py-3 text-sm text-ink-2">
-      {current.priority.reasons.map((reason, index) => <ReasonText key={`${reason.code}:${index}`} reason={reason} currency={invoice?.currency} />)}
-    </div>}
-    <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-      <div id="review-document" className="min-w-0 scroll-mt-20 space-y-3 xl:sticky xl:top-20">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">{t.review.document}</h2>
-          <Link href={`/invoices/${e.invoice_id}/review`} className="text-sm text-accent underline underline-offset-4">{t.review.correctedFields}</Link></div>
-        {invoiceError ? <ErrorState message={t.common.error} onRetry={() => retryInvoice()} retryLabel={t.common.retry} />
-          : !invoice ? <Skeleton className="h-[32rem] w-full" />
-          : invoice.document ? <DocumentViewer key={invoice.document.id} documentId={invoice.document.id}
-            pageCount={invoice.document.page_count ?? 1} filename={invoice.filename ?? undefined} highlights={highlights}
-            activeId={activeLine} className="max-h-[35vh] xl:max-h-[80vh]" />
-          : <Panel><p className="p-4 text-sm text-ink-2">{t.review.noDocument}</p></Panel>}
+  const titleFinding = e.discrepancy_types[0];
+  const supplierName = (locale === "en" && (invoice?.supplier_name_en || current?.supplier_name_en))
+    || invoice?.supplier_name || current?.supplier_name || invoice?.supplier_name_raw;
+  const positionTotal = inReviewQueue ? summary?.needs_review : queue?.total;
+  function jumpTo(id: "review-document" | "review-decision") {
+    const zone = document.getElementById(id);
+    zone?.focus({ preventScroll: true });
+    zone?.scrollIntoView({ block: "start" });
+  }
+
+  return <div className="min-w-0 space-y-4">
+    <header className="command-hero min-w-0 space-y-3 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+        <Link href="/exceptions" className="inline-flex items-center gap-1 font-medium hover:underline"><ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden />{t.review.backToQueue}</Link>
+        {e.invoice_number && <><span aria-hidden>/</span><bdi>{e.invoice_number}</bdi></>}
       </div>
-      <div className="min-w-0 space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 flex-[1_1_18rem]">
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+            <bdi>{supplierName || e.invoice_number || e.title}</bdi>{titleFinding && <> · {(t.finding as Record<string, string>)[titleFinding] ?? titleFinding}</>}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {current && <PriorityBadge level={current.priority.level} />}
+            <StatusPill status={e.status} />
+            {current && positionTotal !== undefined && <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-ink-2">
+              {t.review.position} <bdi className="num">{current.priority.rank}</bdi> {t.review.of} <bdi className="num">{positionTotal}</bdi></span>}
+            {e.discrepancy_types.slice(1).map((type) => <FindingTag key={type} type={type} />)}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="xl:hidden" onClick={() => jumpTo("review-decision")}><Scale className="h-4 w-4" aria-hidden />{open ? t.agent.decision : t.review.viewDecision}</Button>
+          {open && <Button onClick={skip} loading={busy === "next"} disabled={!!busy}>{t.review.skip}<ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden /></Button>}
+        </div>
+      </div>
+    </header>
+    <div className="workspace-layout">
+      <section id="review-document" tabIndex={-1} aria-labelledby="review-document-title" className="workspace-evidence command-panel min-w-0 scroll-mt-24">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <h2 id="review-document-title" className="inline-flex items-center gap-2 text-lg font-semibold"><FileText className="h-5 w-5 text-accent" aria-hidden />{t.review.document}</h2>
+          <Link href={`/invoices/${e.invoice_id}/review`} className="text-sm font-medium text-accent underline underline-offset-4">{t.review.correctedFields}</Link>
+        </div>
+        {invoiceError ? <div className="p-4"><ErrorState message={t.common.error} onRetry={() => retryInvoice()} retryLabel={t.common.retry} /></div>
+          : !invoice ? <div className="p-4"><Skeleton className="h-[32rem] w-full" /></div>
+          : invoice.document ? <DocumentViewer key={invoice.document.id} documentId={invoice.document.id}
+            pageCount={invoice.document.page_count ?? 1} filename={invoice.filename || invoice.document.filename} highlights={highlights}
+            activeId={activeLine} className="mx-2 mb-2 max-h-[60vh] sm:mx-3 sm:mb-3 xl:max-h-[calc(100dvh-10rem)]" />
+          : <p className="p-4 text-sm text-ink-2">{t.review.noDocument}</p>}
+      </section>
+      <div className="workspace-findings min-w-0 space-y-4">
         {invoice && <DiscrepancyTable invoice={invoice} onSelectLine={(lineId) => {
           setActiveLine(lineId);
-          if (window.matchMedia("(max-width: 1279px)").matches) document.getElementById("review-document")?.scrollIntoView({ block: "start" });
+          if (window.matchMedia("(max-width: 1279px)").matches) jumpTo("review-document");
         }} />}
-        {open ? <DecisionPanel proposedAction={e.proposed_action} detail={e.proposed_action_detail} allowedActions={e.allowed_actions}
-          note={draft.note} override={draft.override} target={draft.target} onNote={(value) => change("note", value)}
-          onOverride={(value) => change("override", value)} onTarget={(value) => change("target", value)} onDecide={decide}
-          busy={busy} canDecide={can("exception:decide")} canRequestInfo={can("exception:comment") && !restricted} restricted={restricted} />
-          : <Panel><div className="space-y-2 p-4"><p className="font-medium text-ok">{t.exceptions.decided}</p>
-            {e.decided_at && <p className="text-sm text-ink-2">{e.decided_by?.full_name} · {dateTime(e.decided_at, locale)}</p>}
-            {e.decision_note && <p className="text-sm" dir="auto">{e.decision_note}</p>}
-            {draft.note.trim() && <div className="border-t border-line pt-3">
-              <p className="text-xs text-warn">{t.review.savedDraft}</p>
-              <p className="mt-1 whitespace-pre-wrap text-sm" dir="auto">{draft.note}</p>
-            </div>}
-            <Button onClick={skip} disabled={!!busy}>{t.review.reviewNext}</Button></div></Panel>}
-        {e.ai_summary ? <AiSummaryView s={e.ai_summary} /> : <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}
+        {e.ai_summary ? <AiSummaryView s={e.ai_summary} currency={invoice?.currency ?? current?.currency} /> : <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}
           action={can("agent:run") && <Button variant="ai" onClick={runAgent} loading={busy === "agent"}>{t.exceptions.runAgent}</Button>} /></Panel>}
+        {e.agent_run && <Button asChild className="h-auto w-full whitespace-normal py-2" variant="ai"><Link href={`/investigations/${e.agent_run.id}`}>
+          <Bot className="h-4 w-4 shrink-0" aria-hidden />{t.agent.trace}<StatusPill status={e.agent_run.status} />
+        </Link></Button>}
+        {current && <Panel><PanelHeader title={t.review.reason} /><ul className="space-y-1.5 px-4 py-3 text-sm text-ink-2">
+          {current.priority.reasons.map((reason, index) => <li key={`${reason.code}:${index}`}><ReasonText reason={reason} currency={current.currency} /></li>)}
+        </ul></Panel>}
         <Panel><PanelHeader title={<span className="inline-flex items-center gap-2"><MessageSquare className="h-4 w-4" aria-hidden />{t.exceptions.comments}</span>} />
           <ul className="divide-y divide-line">{e.comments.map((comment) => <li key={comment.id} className="px-4 py-3">
-            <p className="text-xs text-ink-3">{comment.author?.full_name} · {dateTime(comment.created_at, locale)}</p><p className="mt-1 text-sm" dir="auto">{comment.body}</p>
+            <p className="text-xs text-ink-3"><bdi>{comment.author?.full_name}</bdi> · <bdi>{dateTime(comment.created_at, locale)}</bdi></p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm" dir="auto">{comment.body}</p>
           </li>)}</ul>
-          {can("exception:comment") && <div className="flex flex-wrap gap-2 border-t border-line p-3">
-            <Textarea value={draft.comment} onChange={(event) => change("comment", event.target.value)} className="min-h-10 flex-1"
+          {can("exception:comment") && <div className="space-y-2 p-3">
+            <Textarea dir="auto" value={draft.comment} onChange={(event) => change("comment", event.target.value)} className="min-h-12"
               aria-label={t.exceptions.addNote} placeholder={t.exceptions.addNote} maxLength={4000} disabled={!!busy} />
             <Button onClick={addComment} loading={busy === "comment"} disabled={!!busy || !draft.comment.trim()}>{t.exceptions.addNote}</Button>
           </div>}
         </Panel>
-        {e.agent_run && <Link href={`/investigations/${e.agent_run.id}`} className="flex items-center justify-between border-t border-line py-3 text-sm text-ai">
-          <span className="inline-flex items-center gap-2"><Bot className="h-4 w-4" aria-hidden />{t.agent.trace}</span><StatusPill status={e.agent_run.status} />
-        </Link>}
       </div>
+      <aside id="review-decision" tabIndex={-1} aria-label={t.agent.decision} className="workspace-decision min-w-0 scroll-mt-24 space-y-2">
+        <Button className="xl:hidden" onClick={() => jumpTo("review-document")}><ScanLine className="h-4 w-4" aria-hidden />{t.review.returnEvidence}</Button>
+        {open ? <DecisionPanel proposedAction={e.proposed_action} detail={e.proposed_action_detail} allowedActions={e.allowed_actions}
+          note={draft.note} override={draft.override} target={draft.target} onNote={(value) => change("note", value)}
+          onOverride={(value) => change("override", value)} onTarget={(value) => change("target", value)} onDecide={decide}
+          busy={busy} canDecide={can("exception:decide")} canRequestInfo={can("exception:comment") && !restricted} restricted={restricted} />
+          : <Panel><PanelHeader title={t.agent.decision} /><div className="space-y-3 p-4"><p className="inline-flex items-center gap-2 font-medium text-ok"><CheckCircle2 className="h-4 w-4" aria-hidden />{t.exceptions.decided}</p>
+            {e.decided_at && <p className="text-sm text-ink-2"><bdi>{e.decided_by?.full_name}</bdi> · <bdi>{dateTime(e.decided_at, locale)}</bdi></p>}
+            {e.decision_note && <p className="whitespace-pre-wrap break-words text-sm" dir="auto">{e.decision_note}</p>}
+            {draft.note.trim() && <div className="border-t border-line pt-3">
+              <p className="text-xs text-warn">{t.review.savedDraft}</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm" dir="auto">{draft.note}</p>
+            </div>}
+            <Button variant="primary" onClick={skip} disabled={!!busy}>{t.review.reviewNext}<ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden /></Button></div></Panel>}
+      </aside>
     </div>
   </div>;
 }

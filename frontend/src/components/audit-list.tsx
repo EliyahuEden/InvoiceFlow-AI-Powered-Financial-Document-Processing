@@ -22,9 +22,9 @@ function Diff({ before, after }: { before: Record<string, unknown> | null; after
       <tbody>
         {rows.map((k) => (
           <tr key={k} className="align-top">
-            <td className="w-36 py-0.5 pe-2 font-mono text-ink-3">{k}</td>
-            {before && <td className="py-0.5 pe-2 text-danger line-through decoration-danger/40"><span dir="auto" className="break-all">{fmt(before?.[k])}</span></td>}
-            <td className="py-0.5 text-ok"><span dir="auto" className="break-all">{fmt(after?.[k])}</span></td>
+            <td className="max-w-28 break-all py-0.5 pe-2 font-mono text-ink-3">{k}</td>
+            {before && <td className="py-0.5 pe-2 text-ink-3 line-through decoration-line-strong"><span dir="auto" className="break-all">{fmt(before?.[k])}</span></td>}
+            <td className="py-0.5 font-medium text-ink"><span dir="auto" className="break-all">{fmt(after?.[k])}</span></td>
           </tr>
         ))}
       </tbody>
@@ -54,12 +54,12 @@ export function AuditList({ items }: { items: AuditEntry[] }) {
               <ChevronDown className={cx("h-4 w-4 text-ink-3 transition-transform", expanded && "rotate-180")} />
             </button>
             {expanded && (
-              <div className="px-4 pb-3 ps-14">
+              <div className="min-w-0 bg-sunken/40 px-4 py-3 sm:ps-14">
                 <Diff before={a.before} after={a.after} />
                 {Object.keys(a.meta ?? {}).length > 0 && (
                   <pre className="mt-2 overflow-x-auto rounded bg-sunken p-2 font-mono text-2xs text-ink-2" dir="ltr">{JSON.stringify(a.meta, null, 2)}</pre>
                 )}
-                <p className="mt-2 font-mono text-2xs text-ink-3" dir="ltr">sha256 {a.hash.slice(0, 24)}… ← {a.prev_hash ? `${a.prev_hash.slice(0, 12)}…` : "genesis"}</p>
+                <p className="mt-2 break-all font-mono text-2xs text-ink-3" dir="ltr">sha256 {a.hash} ← {a.prev_hash ?? "genesis"}</p>
               </div>
             )}
           </li>

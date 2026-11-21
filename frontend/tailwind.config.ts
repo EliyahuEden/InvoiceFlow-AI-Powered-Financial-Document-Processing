@@ -9,6 +9,8 @@ export default {
     extend: {
       colors: {
         bg: v("bg"),
+        primary: { DEFAULT: v("primary"), hover: v("primary-hover"), ink: v("primary-ink"), line: v("primary-line") },
+        hero: { DEFAULT: v("hero"), wave: v("hero-wave") },
         surface: v("surface"),
         sunken: v("sunken"),
         rail: { DEFAULT: v("rail"), ink: v("rail-ink"), "ink-2": v("rail-ink-2"), line: v("rail-line"), active: v("rail-active") },
@@ -36,13 +38,13 @@ export default {
         md: ["1.0625rem", { lineHeight: "1.55rem" }],
         lg: ["1.25rem", { lineHeight: "1.7rem" }],
         xl: ["1.5rem", { lineHeight: "1.9rem" }],
-        "2xl": ["1.8rem", { lineHeight: "2.2rem" }],
-        figure: ["2.125rem", { lineHeight: "2.4rem", letterSpacing: "-0.02em" }],
+        "2xl": ["2rem", { lineHeight: "2.4rem" }],
+        figure: ["2.5rem", { lineHeight: "2.8rem", letterSpacing: "-0.03em" }],
       },
-      borderRadius: { sm: "6px", DEFAULT: "8px", md: "10px", lg: "12px" },
+      borderRadius: { sm: "10px", DEFAULT: "var(--radius-control)", md: "18px", lg: "var(--radius-panel)", xl: "var(--radius-hero)" },
       boxShadow: {
-        raise: "0 1px 2px rgb(17 25 43 / 0.06), 0 3px 10px -4px rgb(17 25 43 / 0.08)",
-        pop: "0 12px 36px -10px rgb(17 25 43 / 0.28), 0 2px 6px rgb(17 25 43 / 0.08)",
+        raise: "var(--shadow-panel)",
+        pop: "var(--shadow-pop)",
       },
       keyframes: {
         shimmer: { "0%": { backgroundPosition: "-400px 0" }, "100%": { backgroundPosition: "400px 0" } },

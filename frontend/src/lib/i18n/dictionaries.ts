@@ -3,6 +3,8 @@ export type Locale = "he" | "en";
 const en = {
   app: { name: "InvoiceFlow", tagline: "Supplier invoices, reconciled and explained" },
   nav: {
+    "allDestinations": "All destinations", "skipContent": "Skip to content", "navigation": "Navigation",
+
     overview: "Overview", inbox: "Invoice inbox", upload: "Upload", exceptions: "Exceptions & approvals",
     suppliers: "Suppliers", purchaseOrders: "Purchase orders", knowledge: "Agreements & knowledge",
     investigations: "AI investigations", evaluation: "Evaluation", observability: "AI observability",
@@ -10,6 +12,8 @@ const en = {
     admin: "Administration",
   },
   common: {
+    "close": "Close", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "downloadOriginal": "Download original",
+
     search: "Search", loading: "Loading…", retry: "Retry", save: "Save changes", cancel: "Cancel", back: "Back",
     view: "View", open: "Open", all: "All", none: "None", yes: "Yes", no: "No", page: "Page", of: "of",
     previous: "Previous", next: "Next", noResults: "No results match these filters.", error: "Something went wrong",
@@ -84,6 +88,8 @@ const en = {
     rateLimited: "Too many attempts. Wait a minute and try again.",
   },
   review: {
+    "health": "Queue health", "returnEvidence": "Back to evidence", "highestFirst": "Highest priority first", "dashboardTitle": "Review Center", "exposure": "Financial exposure", "filters": "Filters", "billedQuantity": "Cumulative billed quantity",
+
     title: "Review workspace", subtitle: "Exceptions first. Every decision backed by evidence.", queue: "Priority queue", reviewNext: "Review next priority",
     needsReview: "Needs review", valueUnderReview: "Value under review", atRisk: "Money at risk", readyForApproval: "Ready for approval", awaitingInfo: "Awaiting information",
     critical: "Critical", high: "High", normal: "Normal", priority: "Priority", rank: "Rank", reason: "Why this needs you", due: "Due date", overdue: "Overdue", dueSoon: "Due within 3 days", later: "Later or undated", undated: "Not stated",
@@ -93,7 +99,7 @@ const en = {
     decisionRecorded: "Decision recorded", escalate: "Escalate", target: "Send request to", procurement: "Procurement", supplier: "Supplier",
     escalationRestricted: "Only another administrator can decide an escalated item.", document: "Source document", discrepancyTable: "Invoice against records", invoice: "Invoice", purchaseOrder: "Purchase order", received: "Received (qty)", difference: "Difference",
     noDocument: "No source document is available.", noDiscrepancies: "No open discrepancies.", savedDraft: "Draft restored", position: "Position", of: "of", correctedFields: "Correct extraction", correction: "Correct extraction",
-    processing: "Invoices processing", openQueue: "Open full queue", reviewedThisSession: "Reviewed this session", current: "Current item", nextAction: "Next action", investigate: "Investigate", viewDecision: "View decision", allStatuses: "All statuses", filterFinding: "Finding type", filterSupplier: "Supplier", clearFilters: "Clear filters", escalated: "Escalated", pendingApprovals: "Awaiting payment approval", amountNote: "Totals are reported in each invoice currency; currencies are not converted.",
+    processing: "Invoices processing", openQueue: "Open full queue", reviewedThisSession: "Reviewed this session", current: "Current item", nextAction: "Next action", investigate: "Investigate", viewDecision: "View decision", allStatuses: "All statuses", filterFinding: "Finding type", filterSupplier: "Supplier", clearFilters: "Clear filters", escalated: "Escalated", pendingApprovals: "Awaiting payment approval", plusCurrencies: "+{n} other currencies, not converted", amountNote: "Totals are reported in each invoice currency; currencies are not converted.",
     reasons: { blocking: "Blocked: {finding}", amount_at_risk: "{amount} could not be confirmed", unconfirmed_delivery: "Delivery has not been confirmed", suspicious_content: "Suspicious instructions in the document", overdue: "Overdue by {days} days", due_soon: "Due in {days} days", escalated: "An administrator must review", review_needed: "Reviewer judgment needed" },
   },
   overview: {
@@ -104,10 +110,14 @@ const en = {
     atRiskHint: "Amounts the reconciliation engine could not confirm on open discrepancies (over-billing, unreceived goods, wrong currency).",
   },
   inbox: {
+    "subtitle": "Track supplier invoices from upload to payment approval.", "statusBreakdown": "Invoices by status",
+
     title: "Invoice inbox", upload: "Upload invoices", filterAll: "All", empty: "No invoices yet. Upload a PDF or image to start.",
     number: "Invoice #", received: "Received", method: "Text", po: "PO",
   },
   upload: {
+    "restricted": "Your role does not allow invoice uploads.",
+
     title: "Upload invoices", drop: "Drop PDF, PNG or JPEG files here", or: "or", browse: "Choose files",
     limits: "Up to 20 MB and 50 pages per file. Hebrew, English and mixed documents; scanned files are OCR'd.",
     samples: "Try a sample", samplesHint: "Synthetic invoices in data/demo/upload_samples (not pre-loaded).",
@@ -116,6 +126,8 @@ const en = {
     pipeline: ["Validate file", "Store securely", "Text layer or OCR", "Extract fields", "Verify against document", "Reconcile"],
   },
   invoice: {
+    "corrected": "Corrected", "unsaved": "Unsaved change", "recorded": "Saved value", "addLine": "Add line", "removeLine": "Remove line", "sections": "Invoice sections", "notFound": "Invoice not found", "verifyTitle": "Verify extracted invoice data", "auditRestricted": "Your role cannot read the audit trail.",
+
     tabs: { overview: "Document", review: "Extraction review", reconciliation: "Reconciliation", investigation: "AI investigation", audit: "History" },
     fields: "Extracted fields", lineItems: "Line items", sourceLine: "Source", missing: "Missing", unverified: "Not found in document",
     invoiceNumber: "Invoice number", invoiceDate: "Invoice date", dueDate: "Due date", currency: "Currency", poReference: "PO reference",
@@ -144,8 +156,12 @@ const en = {
     noAi: "No AI summary yet.", runAgent: "Run investigation",
   },
   suppliers: { title: "Suppliers", taxId: "Tax ID", terms: "Payment terms", invoices: "Invoices", openPos: "Open POs", aliases: "Also known as", new: "New supplier" },
-  pos: { invoiced: "Invoiced", open: "Open delivery", notReceived: "not received", shortfall: "Delivery shortfall", title: "Purchase orders", number: "PO #", ordered: "Ordered", lines: "Lines", receipts: "Goods receipts", linkedInvoices: "Linked invoices", grNumber: "GR #" },
+  pos: {
+    "orderedValue": "Ordered value", "receiptDate": "Receipt date", "receivedBy": "Received by", "noInvoices": "No linked invoices", "orderedReceived": "Ordered vs received",
+ invoiced: "Invoiced", open: "Open delivery", notReceived: "not received", shortfall: "Delivery shortfall", title: "Purchase orders", number: "PO #", ordered: "Ordered", lines: "Lines", receipts: "Goods receipts", linkedInvoices: "Linked invoices", grNumber: "GR #" },
   knowledge: {
+    "hero": "Ask your company policies", "subtitle": "Search supplier agreements and purchasing rules with document citations.", "examples": "Example questions", "evidenceHint": "Ask a question to see the ranked source passages.", "titleField": "Document title", "typeField": "Document type", "empty": "No knowledge documents yet", "file": "PDF or image",
+
     title: "Agreements & knowledge", ask: "Ask the knowledge base", askPlaceholder: "למשל: מהי סטיית המחיר המותרת? / What are BlueWave's payment terms?",
     askCta: "Ask", documents: "Documents", type: { supplier_agreement: "Supplier agreement", purchasing_policy: "Purchasing policy", procedure: "Procedure", reference: "Reference" },
     chunks: "Chunks", effective: "Effective", version: "Version", retrieval: "Retrieved passages", mode: "Retrieval",
@@ -153,13 +169,15 @@ const en = {
   },
   agent: { title: "AI investigations", trace: "Tool-call trace", path: "Workflow path", tools: "Tool calls", rejectedCalls: "Rejected calls", proposed: "Proposed action", decision: "Human decision" },
   evaluation: {
+    "hero": "AI quality, measured", "methodology": "Methodology & limitations", "baseline": "Offline benchmark", "fieldAccuracy": "Field accuracy", "retrievalComparison": "Retrieval comparison", "byInput": "Extraction by input", "inputNames": {"native": "Native PDF", "scanned": "Scanned PDF", "photo": "Phone photo"}, "precision": "End-to-end finding precision", "evaluatedDocs": "documents evaluated", "answerable": "answerable questions", "controlled": "controlled cases", "runs": "Benchmark reports", "report": "Report", "sample": "Sample", "result": "Result", "generated": "Generated", "detail": "Detailed results", "findings": "predicted findings", "dataset": "Labelled synthetic datasets", "paidLimit": "Paid language models were not scored in these runs.", "questions": "questions", "cases": "cases", "documents": "documents", "byLayout": "By layout",
+
     title: "Evaluation", subtitle: "Measured offline on the labelled synthetic datasets in /eval. Re-run with the commands shown.",
     extraction: "Document extraction", rag: "Retrieval & answers", reconciliation: "Reconciliation", notRun: "Not run yet",
     command: "Reproduce", field: "Field", accuracy: "Accuracy", byLanguage: "By language", config: "Configuration",
   },
   observability: { title: "AI observability", calls: "Model calls", latency: "Latency", tokens: "Tokens", cost: "Est. cost", errors: "Errors", noPricing: "No price table configured — costs are not estimated." },
   audit: { title: "Audit trail", verify: "Verify chain", valid: "Hash chain intact", broken: "Hash chain broken", actor: "Actor", action: "Action", entity: "Entity", change: "Change" },
-  settings: {
+  settings: { criticalAmount: "Critical from money at risk of", criticalHint: "Cases at or above this amount are ranked critical.", sessionIdleHours: "Sign out after inactivity (hours)", sessionMaxDays: "Maximum session length (days)",
     title: "Organization settings", tolerances: "Matching tolerances", approval: "Approval policy", members: "Members", permissions: "Role permissions",
     price_pct: "Unit price tolerance (%)", price_abs: "Unit price tolerance (absolute)", quantity_abs: "Quantity tolerance (units)",
     total_abs: "Header total tolerance", line_total_abs: "Line total tolerance", duplicate_window_days: "Duplicate window (days)",
@@ -174,12 +192,16 @@ type Dict = typeof en;
 const he: Dict = {
   app: { name: "InvoiceFlow", tagline: "חשבוניות ספקים, מותאמות ומוסברות" },
   nav: {
+    "allDestinations": "כל העמודים", "skipContent": "דילוג לתוכן", "navigation": "ניווט",
+
     overview: "סקירה", inbox: "תיבת חשבוניות", upload: "העלאה", exceptions: "חריגות ואישורים", suppliers: "ספקים",
     purchaseOrders: "הזמנות רכש", knowledge: "הסכמים ומאגר ידע", investigations: "חקירות AI", evaluation: "הערכה",
     observability: "ניטור AI", audit: "יומן ביקורת", settings: "הגדרות ארגון", work: "עבודה", records: "רשומות",
     quality: "איכות", admin: "ניהול",
   },
   common: {
+    "close": "סגירה", "zoomIn": "הגדלה", "zoomOut": "הקטנה", "downloadOriginal": "הורדת המקור",
+
     search: "חיפוש", loading: "טוען…", retry: "נסה שוב", save: "שמירת שינויים", cancel: "ביטול", back: "חזרה", view: "צפייה",
     open: "פתיחה", all: "הכול", none: "אין", yes: "כן", no: "לא", page: "עמוד", of: "מתוך", previous: "הקודם", next: "הבא",
     noResults: "אין תוצאות התואמות לסינון.", error: "משהו השתבש", total: "סה\"כ", status: "סטטוס", date: "תאריך",
@@ -250,6 +272,8 @@ const he: Dict = {
     rateLimited: "יותר מדי ניסיונות. המתינו דקה ונסו שוב.",
   },
   review: {
+    "health": "מצב התור", "returnEvidence": "חזרה לראיות", "highestFirst": "לפי סדר עדיפות", "dashboardTitle": "מרכז הבקרה", "exposure": "חשיפה כספית", "filters": "מסננים", "billedQuantity": "כמות מצטברת שחויבה",
+
     title: "סביבת בדיקת חשבוניות", subtitle: "החריגות תחילה. כל החלטה מגובה בראיות.", queue: "תור לפי עדיפות", reviewNext: "לבדיקת החשבונית הבאה",
     needsReview: "ממתינות לבדיקה", valueUnderReview: "שווי חשבוניות בבדיקה", atRisk: "סכום בסיכון", readyForApproval: "מוכנות לאישור", awaitingInfo: "ממתינות למידע",
     critical: "קריטית", high: "גבוהה", normal: "רגילה", priority: "עדיפות", rank: "דירוג", reason: "למה נדרשת בדיקה", due: "מועד תשלום", overdue: "באיחור", dueSoon: "לתשלום בתוך 3 ימים", later: "בהמשך או ללא תאריך", undated: "לא צוין",
@@ -259,7 +283,7 @@ const he: Dict = {
     decisionRecorded: "ההחלטה נרשמה", escalate: "העברה למנהל", target: "שליחת הבקשה אל", procurement: "רכש", supplier: "ספק",
     escalationRestricted: "רק מנהל אחר יכול להכריע בחריגה שהועברה למנהל.", document: "מסמך מקור", discrepancyTable: "חשבונית מול הרשומות", invoice: "חשבונית", purchaseOrder: "הזמנת רכש", received: "התקבל (כמות)", difference: "הפרש",
     noDocument: "אין מסמך מקור זמין.", noDiscrepancies: "אין פערים פתוחים.", savedDraft: "הטיוטה שוחזרה", position: "מיקום", of: "מתוך", correctedFields: "תיקון חילוץ", correction: "תיקון חילוץ",
-    processing: "חשבוניות בעיבוד", openQueue: "לכל התור", reviewedThisSession: "נבדקו בביקור הנוכחי", current: "הפריט הנוכחי", nextAction: "הפעולה הבאה", investigate: "בדיקה", viewDecision: "צפייה בהחלטה", allStatuses: "כל המצבים", filterFinding: "סוג ממצא", filterSupplier: "ספק", clearFilters: "ניקוי מסננים", escalated: "הועברו למנהל", pendingApprovals: "ממתינות לאישור תשלום", amountNote: "הסכומים מוצגים במטבע החשבונית; לא מתבצעת המרת מטבע.",
+    processing: "חשבוניות בעיבוד", openQueue: "לכל התור", reviewedThisSession: "נבדקו בביקור הנוכחי", current: "הפריט הנוכחי", nextAction: "הפעולה הבאה", investigate: "בדיקה", viewDecision: "צפייה בהחלטה", allStatuses: "כל המצבים", filterFinding: "סוג ממצא", filterSupplier: "ספק", clearFilters: "ניקוי מסננים", escalated: "הועברו למנהל", pendingApprovals: "ממתינות לאישור תשלום", plusCurrencies: "+{n} מטבעות נוספים, ללא המרה", amountNote: "הסכומים מוצגים במטבע החשבונית; לא מתבצעת המרת מטבע.",
     reasons: { blocking: "חסימה: {finding}", amount_at_risk: "לא אומת סכום של {amount}", unconfirmed_delivery: "האספקה טרם אושרה", suspicious_content: "הוראות חשודות במסמך", overdue: "באיחור של {days} ימים", due_soon: "לתשלום בעוד {days} ימים", escalated: "נדרשת בדיקת מנהל", review_needed: "נדרש שיקול דעת של סוקר" },
   },
   overview: {
@@ -270,10 +294,14 @@ const he: Dict = {
     atRiskHint: "סכומים שמנוע ההתאמות לא הצליח לאשר בפערים פתוחים (חיוב עודף, סחורה שלא התקבלה, מטבע שגוי).",
   },
   inbox: {
+    "subtitle": "מעקב אחר חשבוניות ספקים מההעלאה ועד לאישור לתשלום.", "statusBreakdown": "חשבוניות לפי מצב",
+
     title: "תיבת חשבוניות", upload: "העלאת חשבוניות", filterAll: "הכול", empty: "אין עדיין חשבוניות. העלו PDF או תמונה כדי להתחיל.",
     number: "מס' חשבונית", received: "התקבלה", method: "טקסט", po: "הזמנה",
   },
   upload: {
+    "restricted": "אין לתפקיד שלך הרשאה להעלות חשבוניות.",
+
     title: "העלאת חשבוניות", drop: "גררו לכאן קובצי PDF, PNG או JPEG", or: "או", browse: "בחירת קבצים",
     limits: "עד 20MB ו-50 עמודים לקובץ. מסמכים בעברית, באנגלית ומעורבים; קבצים סרוקים עוברים OCR.",
     samples: "נסו קובץ לדוגמה", samplesHint: "חשבוניות סינתטיות בתיקייה data/demo/upload_samples (לא נטענו מראש).",
@@ -282,6 +310,8 @@ const he: Dict = {
     pipeline: ["בדיקת הקובץ", "אחסון מאובטח", "שכבת טקסט או OCR", "חילוץ שדות", "אימות מול המסמך", "התאמה"],
   },
   invoice: {
+    "corrected": "תוקן", "unsaved": "שינוי שטרם נשמר", "recorded": "ערך שמור", "addLine": "הוספת שורה", "removeLine": "הסרת שורה", "sections": "אזורי החשבונית", "notFound": "החשבונית לא נמצאה", "verifyTitle": "אימות הנתונים שחולצו מהחשבונית", "auditRestricted": "אין לתפקיד שלך הרשאה לצפות ביומן הביקורת.",
+
     tabs: { overview: "מסמך", review: "בדיקת חילוץ", reconciliation: "התאמה", investigation: "חקירת AI", audit: "היסטוריה" },
     fields: "שדות שחולצו", lineItems: "שורות", sourceLine: "מקור", missing: "חסר", unverified: "לא נמצא במסמך",
     invoiceNumber: "מספר חשבונית", invoiceDate: "תאריך חשבונית", dueDate: "תאריך פירעון", currency: "מטבע",
@@ -310,8 +340,12 @@ const he: Dict = {
     changeAction: "בחירת פתרון אחר", noAi: "אין עדיין סיכום AI.", runAgent: "הפעלת חקירה",
   },
   suppliers: { title: "ספקים", taxId: "ח.פ.", terms: "תנאי תשלום", invoices: "חשבוניות", openPos: "הזמנות פתוחות", aliases: "שמות נוספים", new: "ספק חדש" },
-  pos: { invoiced: "חויב", open: "טרם התקבל", notReceived: "לא התקבלו", shortfall: "פער אספקה", title: "הזמנות רכש", number: "מס' הזמנה", ordered: "הוזמן", lines: "שורות", receipts: "תעודות קבלת טובין", linkedInvoices: "חשבוניות מקושרות", grNumber: "מס' תעודה" },
+  pos: {
+    "orderedValue": "שווי ההזמנה", "receiptDate": "תאריך קבלה", "receivedBy": "התקבל על ידי", "noInvoices": "אין חשבוניות מקושרות", "orderedReceived": "הוזמן לעומת התקבל",
+ invoiced: "חויב", open: "טרם התקבל", notReceived: "לא התקבלו", shortfall: "פער אספקה", title: "הזמנות רכש", number: "מס' הזמנה", ordered: "הוזמן", lines: "שורות", receipts: "תעודות קבלת טובין", linkedInvoices: "חשבוניות מקושרות", grNumber: "מס' תעודה" },
   knowledge: {
+    "hero": "שאלו את הנהלים שלכם", "subtitle": "חיפוש בהסכמי ספקים ובנהלי רכש עם הפניות למסמכי המקור.", "examples": "שאלות לדוגמה", "evidenceHint": "שאלו שאלה להצגת קטעי המקור המדורגים.", "titleField": "כותרת המסמך", "typeField": "סוג המסמך", "empty": "עדיין אין מסמכים במאגר הידע", "file": "PDF או תמונה",
+
     title: "הסכמים ומאגר ידע", ask: "שאלו את מאגר הידע", askPlaceholder: "למשל: מהי סטיית המחיר המותרת? / What are BlueWave's payment terms?",
     askCta: "שאלה", documents: "מסמכים", type: { supplier_agreement: "הסכם ספק", purchasing_policy: "נוהל רכש", procedure: "נוהל", reference: "עיון" },
     chunks: "קטעים", effective: "בתוקף מ", version: "גרסה", retrieval: "קטעים שאוחזרו", mode: "אחזור",
@@ -319,13 +353,15 @@ const he: Dict = {
   },
   agent: { title: "חקירות AI", trace: "מעקב קריאות כלים", path: "מסלול התהליך", tools: "קריאות כלים", rejectedCalls: "קריאות שנדחו", proposed: "פעולה מוצעת", decision: "החלטה אנושית" },
   evaluation: {
+    "hero": "איכות AI, עם מדידה", "methodology": "שיטת המדידה ומגבלות", "baseline": "מדד ייחוס לא מקוון", "fieldAccuracy": "דיוק השדות", "retrievalComparison": "השוואת אחזור", "byInput": "חילוץ לפי סוג קלט", "inputNames": {"native": "PDF מקורי", "scanned": "PDF סרוק", "photo": "צילום בטלפון"}, "precision": "דיוק הממצאים מקצה לקצה", "evaluatedDocs": "מסמכים שנבדקו", "answerable": "שאלות שניתן לענות עליהן", "controlled": "מקרים מבוקרים", "runs": "דוחות הערכה", "report": "דוח", "sample": "מדגם", "result": "תוצאה", "generated": "נוצר", "detail": "תוצאות מפורטות", "findings": "ממצאים חזויים", "dataset": "מערכי נתונים סינתטיים מתויגים", "paidLimit": "מודלי שפה בתשלום לא נמדדו בהרצות אלה.", "questions": "שאלות", "cases": "מקרים", "documents": "מסמכים", "byLayout": "לפי פריסה",
+
     title: "הערכה", subtitle: "נמדד באופן לא מקוון על מערכי הנתונים הסינתטיים המתויגים בתיקייה /eval. ניתן לשחזר בפקודות המוצגות.",
     extraction: "חילוץ ממסמכים", rag: "אחזור ותשובות", reconciliation: "התאמה", notRun: "טרם הורץ", command: "שחזור",
     field: "שדה", accuracy: "דיוק", byLanguage: "לפי שפה", config: "תצורה",
   },
   observability: { title: "ניטור AI", calls: "קריאות למודל", latency: "זמן תגובה", tokens: "טוקנים", cost: "עלות משוערת", errors: "שגיאות", noPricing: "לא הוגדרה טבלת מחירים — העלויות אינן מוערכות." },
   audit: { title: "יומן ביקורת", verify: "אימות שרשרת", valid: "שרשרת הגיבוב תקינה", broken: "שרשרת הגיבוב פגומה", actor: "מבצע", action: "פעולה", entity: "ישות", change: "שינוי" },
-  settings: {
+  settings: { criticalAmount: "קריטי מסכום בסיכון של", criticalHint: "מקרים בסכום זה ומעלה מדורגים כקריטיים.", sessionIdleHours: "ניתוק לאחר חוסר פעילות (שעות)", sessionMaxDays: "משך חיבור מרבי (ימים)",
     title: "הגדרות ארגון", tolerances: "סבולות התאמה", approval: "מדיניות אישורים", members: "משתמשים", permissions: "הרשאות לפי תפקיד",
     price_pct: "סבולת מחיר יחידה (%)", price_abs: "סבולת מחיר יחידה (מוחלטת)", quantity_abs: "סבולת כמות (יחידות)",
     total_abs: "סבולת סה\"כ חשבונית", line_total_abs: "סבולת סה\"כ שורה", duplicate_window_days: "חלון כפילויות (ימים)",

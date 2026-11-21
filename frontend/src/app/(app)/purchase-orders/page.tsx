@@ -7,7 +7,7 @@ import { useCallback, useState } from "react";
 import { StatusPill } from "@/components/domain";
 import { Pager, RowsSkeleton, SearchBox, Segmented, type Page } from "@/components/list";
 import { PageHeader } from "@/components/shell";
-import { EmptyState, Panel, Table, Td, Th } from "@/components/ui";
+import { EmptyState, ErrorState, Panel, Table, Td, Th } from "@/components/ui";
 import { qs, useApi } from "@/lib/api";
 import { date, money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -21,13 +21,14 @@ export default function POsPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useApi<Page<PO>>(`/api/purchase-orders${qs({ q, status, page, page_size: 25 })}`);
+  const { data, isLoading, error, mutate } = useApi<Page<PO>>(`/api/purchase-orders${qs({ q, status, page, page_size: 25 })}`);
   const onQ = useCallback((v: string) => { setQ(v); setPage(1); }, []);
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader title={t.pos.title} />
+      {error && <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />}
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
           <Segmented value={status} onChange={(v) => { setStatus(v); setPage(1); }}
             options={["", "open", "partially_received", "received"].map((s) => ({ value: s, label: s ? (t.status as Record<string, string>)[s] : t.common.all }))} />
           <SearchBox value={q} onChange={onQ} placeholder={`${t.common.search}: ${t.pos.number}, ${t.common.supplier}`} />
@@ -38,7 +39,7 @@ export default function POsPage() {
           <tbody>
             {isLoading && !data ? <RowsSkeleton cols={6} /> : data?.items.map((p) => (
               <tr key={p.id} className="cursor-pointer hover:bg-sunken/70" onClick={() => router.push(`/purchase-orders/${p.id}`)}>
-                <Td><Link href={`/purchase-orders/${p.id}`} className="ltr font-mono text-sm font-medium hover:text-accent" onClick={(e) => e.stopPropagation()}>{p.po_number}</Link></Td>
+                <Td><Link href={`/purchase-orders/${p.id}`} className="ltr font-mono text-sm font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{p.po_number}</Link></Td>
                 <Td dir="auto">{locale === "en" && p.supplier_name_en ? p.supplier_name_en : p.supplier_name}</Td>
                 <Td className="text-ink-2">{date(p.order_date, locale)}</Td>
                 <Td className="text-end num">{p.line_count}</Td>

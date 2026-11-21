@@ -7,7 +7,7 @@ import { useState } from "react";
 import { AiSummaryView } from "@/components/ai-summary";
 import { ActionLabel, Pill, StatusPill } from "@/components/domain";
 import { PageHeader } from "@/components/shell";
-import { cx, Panel, PanelHeader, Skeleton } from "@/components/ui";
+import { cx, ErrorState, Panel, PanelHeader, Skeleton } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -23,8 +23,9 @@ const NODES = ["load_context", "reconcile", "investigate", "explain", "draft_exc
 export default function RunDetail() {
   const { t, locale } = useI18n();
   const { id } = useParams<{ id: string }>();
-  const { data: r } = useApi<Run>(`/api/agent/runs/${id}`, { refreshInterval: (d) => (d && ["queued", "running"].includes(d.status) ? 2000 : 0) });
+  const { data: r, error, mutate } = useApi<Run>(`/api/agent/runs/${id}`, { refreshInterval: (d) => (d && ["queued", "running"].includes(d.status) ? 2000 : 0) });
   const [open, setOpen] = useState<number | null>(null);
+  if (error) return <ErrorState message={t.common.error} retryLabel={t.common.retry} onRetry={() => mutate()} />;
   if (!r) return <Skeleton className="h-96 w-full" />;
   const path = r.result?.path ?? [];
   const visited = (n: string) => path.some((p) => p.startsWith(n));
@@ -32,14 +33,14 @@ export default function RunDetail() {
     <div className="space-y-5">
       <PageHeader back={{ href: "/investigations", label: t.agent.title }}
         title={<span className="flex flex-wrap items-center gap-3">{t.agent.title} <Link href={`/invoices/${r.invoice_id}`} className="ltr font-mono text-xl text-ink-2 hover:text-accent">{r.invoice_number}</Link><StatusPill status={r.status} /></span>}
-        sub={<span className="font-mono text-xs">{r.mode} · {r.prompt_version} · thread {r.thread_id}</span>} />
+        sub={<span className="break-all font-mono text-xs" dir="ltr">{r.mode} · {r.prompt_version} · thread {r.thread_id}</span>} />
       <Panel className="overflow-x-auto p-4">
         <p className="mb-3 text-sm font-semibold">{t.agent.path} <span className="font-normal text-ink-3">· LangGraph · PostgreSQL checkpoints</span></p>
         <ol className="flex min-w-max items-center gap-2">
           {NODES.map((n, i) => (
             <li key={n} className="flex items-center gap-2">
               <span className={cx("rounded-md border px-2.5 py-1.5 font-mono text-xs",
-                visited(n) ? (n === "human_review" && r.status === "awaiting_approval" ? "border-ai bg-ai-soft text-ai" : "border-accent/40 bg-accent-soft text-accent-ink") : "border-line text-ink-3")}>
+                visited(n) ? (n === "human_review" && r.status === "awaiting_approval" ? "border-warn/30 bg-warn-soft text-warn" : "border-accent/40 bg-accent-soft text-accent-ink") : "border-line text-ink-3")}>
                 {n}{n === "human_review" && r.status === "awaiting_approval" && <Pause className="ms-1 inline h-3 w-3" aria-label="paused" />}
               </span>
               {i < NODES.length - 1 && <span className="h-px w-5 bg-line-strong" aria-hidden />}
@@ -52,15 +53,15 @@ export default function RunDetail() {
         )}
       </Panel>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div>{r.result?.report ? <AiSummaryView s={r.result.report} /> : <Skeleton className="h-64 w-full" />}</div>
-        <Panel className="self-start">
+        <div className="min-w-0">{r.result?.report ? <AiSummaryView s={r.result.report} /> : ["running", "queued"].includes(r.status) ? <Skeleton className="h-64 w-full" /> : <Panel className="p-5 text-ink-2">{t.exceptions.noAi}</Panel>}</div>
+        <Panel className="min-w-0 self-start">
           <PanelHeader title={t.agent.trace} sub={<span>{r.steps.length} {t.agent.tools} · {t.agent.proposed}: <ActionLabel action={r.result?.proposed_action} /></span>} />
           <ol className="divide-y divide-line">
             {r.steps.map((s, i) => (
               <li key={i}>
-                <button className="flex w-full items-center gap-2.5 px-4 py-2 text-start hover:bg-sunken/60" onClick={() => setOpen(open === i ? null : i)}>
+                <button aria-expanded={open === i} className="flex w-full items-center gap-2.5 px-4 py-3 text-start hover:bg-sunken/60" onClick={() => setOpen(open === i ? null : i)}>
                   {s.status === "ok" ? <CheckCircle2 className="h-4 w-4 text-ok" /> : s.status === "rejected" ? <CircleX className="h-4 w-4 text-danger" /> : <Wrench className="h-4 w-4 text-ink-3" />}
-                  <span className="font-mono text-sm text-ink">{s.tool}</span>
+                  <span className="min-w-0 break-all font-mono text-sm text-ink">{s.tool}</span>
                   <Pill tone={s.source === "llm" ? "ai" : "neutral"}>{s.source}</Pill>
                   <span className="ms-auto text-xs text-ink-3 num">{s.latency_ms} ms</span>
                 </button>

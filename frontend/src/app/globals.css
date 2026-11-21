@@ -2,93 +2,108 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
-  InvoiceFlow: "Ledger & Red Pen", modernized.
-  A calm cool-neutral ground, an ink-navy shell rail and ink figures in tabular numerals.
-  Colour is a state vocabulary, never decoration:
-    danger (auditor red)  only genuine high-risk discrepancies and critical issues
-    warn   (amber)        warnings and items that need attention
-    ok     (green)        verified, matched, completed
-    ai     (violet)       AI-generated text only, so it is never mistaken for a verified record
-  Totals carry a double rule; a wrong figure is struck through with the expected one beside it.
-*/
+/* Modern Financial Command Center. Business colors are independent of brand atmosphere. */
 :root {
-  --bg: 245 247 249;
-  --surface: 255 255 255;
-  --sunken: 240 243 246;
-  --ink: 17 25 43;
-  --ink-2: 65 76 97;
-  --ink-3: 98 108 128;
-  --line: 224 229 234;
-  --line-strong: 199 207 216;
-  --rule: 207 220 216;
-  --accent: 30 52 112;
-  --accent-soft: 233 238 249;
-  --accent-ink: 20 37 84;
-  --ok: 22 122 64;
-  --ok-soft: 230 244 235;
-  --warn: 172 84 10;
-  --warn-soft: 253 242 225;
-  --danger: 185 32 26;
-  --danger-soft: 253 236 234;
-  --info: 70 88 130;
-  --info-soft: 236 240 247;
-  --ai: 104 64 196;
-  --ai-soft: 243 239 252;
-  --ai-line: 214 200 245;
-  --highlight: 244 191 38;
-  /* the shell rail is ink in both themes */
-  --rail: 19 30 58;
-  --rail-ink: 232 237 247;
-  --rail-ink-2: 158 172 200;
-  --rail-line: 39 54 90;
-  --rail-active: 33 50 92;
-  /* data-viz categorical slots (fixed order) */
-  --series-1: #2a5bd7;
-  --series-2: #d9822b;
-  --series-3: #1f9a6a;
-  --series-4: #8c6bd8;
-  --chart-grid: #e3e8ee;
-  --chart-axis: #626c80;
+  --bg: 228 236 255;
+  --surface: 252 253 255;
+  --sunken: 237 242 253;
+  --ink: 17 24 39;
+  --ink-2: 57 73 100;
+  --ink-3: 85 102 132;
+  --line: 206 217 240;
+  --line-strong: 134 153 184;
+  --rule: 206 217 240;
+  --accent: 44 65 126;
+  --accent-soft: 226 234 255;
+  --accent-ink: 25 43 94;
+  --primary: 17 19 25;
+  --primary-hover: 38 44 58;
+  --primary-ink: 255 255 255;
+  --primary-line: 17 19 25;
+  --ok: 17 113 81;
+  --ok-soft: 220 245 234;
+  --warn: 149 75 15;
+  --warn-soft: 255 239 212;
+  --danger: 167 39 39;
+  --danger-soft: 255 228 225;
+  --info: 48 75 133;
+  --info-soft: 229 237 255;
+  --ai: 100 61 164;
+  --ai-soft: 242 235 255;
+  --ai-line: 206 188 239;
+  --highlight: 219 162 16;
+  --rail: 237 243 255;
+  --rail-ink: 21 31 51;
+  --rail-ink-2: 66 84 118;
+  --rail-line: 200 213 240;
+  --rail-active: 255 255 255;
+  --atmosphere-a: 179 197 250;
+  --atmosphere-b: 218 230 255;
+  --hero: 241 246 255;
+  --hero-wave: 141 164 241;
+  --series-1: #4369bb;
+  --series-2: #b27625;
+  --series-3: #21856b;
+  --series-4: #697e9f;
+  --chart-grid: #d9e3f4;
+  --chart-axis: #556684;
+  --radius-control: 14px;
+  --radius-panel: 24px;
+  --radius-hero: 28px;
+  --shadow-panel: 0 10px 32px -22px rgb(42 65 122 / .24);
+  --shadow-pop: 0 22px 64px -20px rgb(31 47 88 / .28);
+  --motion-fast: 160ms;
+  --motion-ease: cubic-bezier(.16, 1, .3, 1);
   color-scheme: light;
 }
 
 [data-theme="dark"] {
-  --bg: 13 17 26;
-  --surface: 20 25 37;
-  --sunken: 16 21 31;
-  --ink: 229 234 242;
-  --ink-2: 178 188 204;
-  --ink-3: 139 151 170;
-  --line: 37 45 61;
-  --line-strong: 55 66 87;
-  --rule: 52 70 72;
-  --accent: 138 164 236;
-  --accent-soft: 29 39 68;
-  --accent-ink: 178 197 246;
-  --ok: 88 196 132;
-  --ok-soft: 18 46 33;
-  --warn: 232 164 82;
-  --warn-soft: 56 38 16;
-  --danger: 240 112 100;
-  --danger-soft: 62 24 23;
-  --info: 150 168 210;
-  --info-soft: 28 36 56;
-  --ai: 178 152 245;
-  --ai-soft: 38 31 64;
-  --ai-line: 74 61 118;
-  --highlight: 244 191 38;
-  --rail: 9 13 22;
-  --rail-ink: 226 232 244;
-  --rail-ink-2: 140 154 182;
-  --rail-line: 30 40 64;
-  --rail-active: 28 40 70;
-  --series-1: #6f93f0;
-  --series-2: #e09a52;
-  --series-3: #3bb886;
-  --series-4: #a68be6;
-  --chart-grid: #263044;
-  --chart-axis: #8b97aa;
+  --bg: 15 22 39;
+  --surface: 25 34 54;
+  --sunken: 31 43 67;
+  --ink: 237 242 255;
+  --ink-2: 188 202 227;
+  --ink-3: 157 175 205;
+  --line: 57 75 108;
+  --line-strong: 107 128 165;
+  --rule: 57 75 108;
+  --accent: 169 193 255;
+  --accent-soft: 39 55 89;
+  --accent-ink: 202 217 255;
+  /* in dark the primary pill inverts to a light pill so the single main action stays obvious */
+  --primary: 233 239 252;
+  --primary-hover: 203 214 240;
+  --primary-ink: 13 19 33;
+  --primary-line: 233 239 252;
+  --ok: 116 220 175;
+  --ok-soft: 23 57 48;
+  --warn: 246 193 120;
+  --warn-soft: 66 48 29;
+  --danger: 255 159 148;
+  --danger-soft: 73 38 42;
+  --info: 167 195 255;
+  --info-soft: 38 55 89;
+  --ai: 205 177 255;
+  --ai-soft: 49 37 76;
+  --ai-line: 112 86 155;
+  --highlight: 245 193 68;
+  --rail: 20 30 51;
+  --rail-ink: 232 239 255;
+  --rail-ink-2: 168 187 219;
+  --rail-line: 57 75 108;
+  --rail-active: 45 63 97;
+  --atmosphere-a: 36 56 101;
+  --atmosphere-b: 23 38 70;
+  --hero: 34 48 77;
+  --hero-wave: 83 110 176;
+  --series-1: #9bbaff;
+  --series-2: #e2b06c;
+  --series-3: #79ceb0;
+  --series-4: #b0bfd9;
+  --chart-grid: #354969;
+  --chart-axis: #9dafcd;
+  --shadow-panel: 0 12px 36px -24px rgb(0 0 0 / .55);
+  --shadow-pop: 0 24px 68px -20px rgb(0 0 0 / .6);
   color-scheme: dark;
 }
 
@@ -98,6 +113,8 @@
   }
   body {
     @apply bg-bg text-ink font-sans text-base antialiased;
+    background-image: radial-gradient(ellipse at 2% 0%, rgb(var(--atmosphere-a) / .72), transparent 48%), radial-gradient(ellipse at 100% 8%, rgb(var(--atmosphere-b) / .9), transparent 60%);
+    background-attachment: fixed;
     font-feature-settings: "kern", "liga", "calt";
   }
   ::selection {
@@ -132,7 +149,7 @@
   h2,
   h3 {
     text-wrap: balance;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.025em;
   }
   ::placeholder {
     color: rgb(var(--ink-3));
@@ -141,6 +158,83 @@
 }
 
 @layer components {
+  .command-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgb(var(--surface) / .75);
+    border-radius: var(--radius-hero);
+    background: linear-gradient(115deg, rgb(var(--hero) / .78), rgb(var(--surface) / .42));
+    padding: 28px 32px;
+    box-shadow: var(--shadow-panel);
+  }
+  .command-hero::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    /* a feathered glow at the inline end that fades out fully inside the hero: never a hard shape behind figures */
+    background: radial-gradient(ellipse 45% 85% at 92% 110%, rgb(var(--hero-wave) / .24), transparent 100%);
+    pointer-events: none;
+  }
+  .command-hero::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 68%;
+    height: 170%;
+    inset-inline-end: -20%;
+    inset-block-start: -115%;
+    border: 1px solid rgb(var(--surface) / .65);
+    border-radius: 50%;
+    transform: rotate(-9deg);
+    pointer-events: none;
+  }
+  [dir="rtl"] .command-hero::after { transform: rotate(9deg); }
+  [dir="rtl"] .command-hero::before { background: radial-gradient(ellipse 45% 85% at 8% 110%, rgb(var(--hero-wave) / .24), transparent 100%); }
+  .command-metric {
+    min-width: 0;
+    border: 1px solid rgb(var(--surface) / .78);
+    border-radius: 20px;
+    background: rgb(var(--surface) / .67);
+    padding: 20px;
+  }
+  .command-panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgb(var(--line) / .9);
+    border-radius: var(--radius-panel);
+    background: rgb(var(--surface));
+    box-shadow: var(--shadow-panel);
+  }
+  .command-aside { min-width: 0; align-self: start; }
+  .command-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+  .workspace-evidence, .workspace-findings, .workspace-decision { min-width: 0; }
+  .workspace-decision { scroll-margin-top: 100px; }
+  .command-table { overflow-x: auto; }
+  .command-table table { border-collapse: separate; border-spacing: 0; }
+  .command-table tbody tr { transition: background-color var(--motion-fast) var(--motion-ease); }
+  .command-table tbody tr:hover { background: rgb(var(--sunken) / .6); }
+  .command-table tbody tr:last-child td { border-bottom: 0; }
+  .command-table td { font-variant-numeric: tabular-nums; }
+  .command-nav-link { transition: background-color var(--motion-fast), box-shadow var(--motion-fast), color var(--motion-fast); }
+  .command-nav-link:active { transform: translateY(1px); }
+  .command-skip { position: fixed; inset-inline-start: 20px; top: -80px; z-index: 100; border-radius: 999px; background: rgb(var(--primary)); color: rgb(var(--primary-ink)); padding: 12px 20px; }
+  .command-skip:focus { top: 12px; }
+  @media (min-width: 1280px) {
+    .command-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); }
+    .workspace-layout { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.05fr) minmax(260px, .85fr); }
+    .workspace-evidence, .workspace-decision { position: sticky; top: 96px; }
+    .workspace-decision { max-height: calc(100vh - 112px); overflow-y: auto; scrollbar-gutter: stable; }
+  }
+  @media (max-width: 639px) {
+    .command-hero { padding: 22px 20px; border-radius: 22px; }
+    .command-hero::before, .command-hero::after { display: none; }
+    .command-metric { padding: 16px; border-radius: 18px; }
+    .command-layout { gap: 20px; }
+  }
+
   /* An LTR island inside RTL text: amounts, SKUs, PO numbers, emails. */
   .ltr {
     direction: ltr;
@@ -164,7 +258,7 @@
   }
   .if-toast {
     font-family: var(--font-sans), system-ui, sans-serif;
-    border-radius: 10px !important;
+    border-radius: 16px !important;
     border: 1px solid rgb(var(--line)) !important;
     background: rgb(var(--surface)) !important;
     color: rgb(var(--ink)) !important;

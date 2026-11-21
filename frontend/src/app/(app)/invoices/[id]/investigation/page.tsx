@@ -19,18 +19,19 @@ export default function InvestigationPage() {
   );
   if (!inv) return <Skeleton className="h-[400px] w-full" />;
   return (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <div>
+    <div className="command-layout grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="min-w-0">
         {exc?.ai_summary ? <AiSummaryView s={exc.ai_summary} currency={inv.currency} /> : (
-          <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}
-            body={inv.discrepancies.length === 0 ? t.recon.allClear : undefined} /></Panel>
+          <Panel className="command-panel border-ai-line"><PanelHeader title={t.exceptions.summary} sub={t.ai.advisory} />
+            <EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}
+              body={inv.reconciliation && inv.discrepancies.length === 0 ? t.recon.allClear : undefined} /></Panel>
         )}
       </div>
-      <div className="space-y-5">
+      <div className="min-w-0 space-y-4">
         {inv.exception && (
-          <Panel className="p-4">
-            <p className="text-sm text-ink-2">{t.exceptions.decide}</p>
-            <p className="mt-1 font-medium" dir="auto">
+          <Panel className="command-aside p-5">
+            <h2 className="text-lg font-semibold tracking-tight">{t.exceptions.decide}</h2>
+            <p className="mt-2 font-medium" dir="auto">
               {(t.finding as Record<string, string>)[inv.discrepancies.find((d) => d.severity !== "info")?.type ?? ""] ?? inv.exception.title}
             </p>
             <div className="mt-3 flex items-center justify-between">
@@ -39,7 +40,7 @@ export default function InvestigationPage() {
             </div>
           </Panel>
         )}
-        <Panel>
+        <Panel className="command-panel">
           <PanelHeader title={t.agent.title} />
           <ul className="divide-y divide-line">
             {inv.agent_runs.length === 0 && <li className="px-4 py-3 text-sm text-ink-3">—</li>}

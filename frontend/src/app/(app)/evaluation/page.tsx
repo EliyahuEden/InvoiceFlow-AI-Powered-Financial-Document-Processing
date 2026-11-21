@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, Terminal } from "lucide-react";
+import { ArrowDown, BookOpenCheck, ChevronDown, FileCheck2, FlaskConical, ListOrdered, Search, Terminal, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { BarList, Bars } from "@/components/charts";
+import { BarList } from "@/components/charts";
 import { Pill } from "@/components/domain";
 import { Segmented } from "@/components/list";
 import { PageHeader } from "@/components/shell";
-import { cx, EmptyState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
+import { cx, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -38,12 +38,13 @@ function Meta({ r }: { r: any }) {
 }
 
 function Notes({ notes }: { notes?: string[] }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   if (!notes?.length) return null;
   return (
     <div className="border-t border-line">
-      <button className="flex w-full items-center gap-1.5 px-4 py-2 text-xs font-medium text-ink-2 hover:text-ink" onClick={() => setOpen(!open)}>
-        <ChevronDown className={cx("h-3.5 w-3.5 transition-transform", open && "rotate-180")} /> Methodology & limitations ({notes.length})
+      <button className="flex w-full items-center gap-1.5 px-4 py-2 text-xs font-medium text-ink-2 hover:text-ink" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ChevronDown className={cx("h-3.5 w-3.5 transition-transform", open && "rotate-180")} /> {t.evaluation.methodology} ({notes.length})
       </button>
       {open && <ul className="list-disc space-y-1 px-4 pb-3 ps-8 text-xs text-ink-2" dir="ltr">{notes.map((n) => <li key={n}>{n}</li>)}</ul>}
     </div>
@@ -56,19 +57,18 @@ function Extraction({ r }: { r: any }) {
   const groups = Object.entries(sys.groups as Record<string, { field_accuracy: number; n: number }>);
   const pick = (prefix: string) => groups.filter(([k]) => k.startsWith(prefix)).map(([k, v]) => ({ label: `${k.split(":")[1]} (n=${v.n})`, value: v.field_accuracy }));
   return (
-    <Panel>
+    <Panel id="report-extraction" className="scroll-mt-24">
       <PanelHeader title={t.evaluation.extraction} sub={`${r.dataset.evaluated}/${r.dataset.documents} documents · ${r.dataset.ocr} · system: rule-based baseline`}
         actions={<Pill tone="neutral">LLM: {r.systems.llm?.skipped ? "not run" : "run"}</Pill>} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
-        <Stat label="Field accuracy" value={pct(sys.overall_field_accuracy)} />
+        <Stat label={t.evaluation.evaluatedDocs} value={String(r.dataset.evaluated)} hint={r.dataset.ocr} />
         <Stat label="Line items F1" value={pct(sys.line_items.f1)} hint={`P ${pct(sys.line_items.precision)} · R ${pct(sys.line_items.recall)}`} />
         <Stat label="Documents fully correct" value={pct(sys.documents_fully_correct)} />
         <Stat label="Latency p50" value={`${sys.latency_ms_p50} ms`} hint="text/OCR + extraction" />
       </div>
-      <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-3">
-        <div><h3 className="mb-3 text-sm font-semibold">By rendering</h3><BarList items={pick("render")} format={(v) => pct(v)} max={1} /></div>
+      <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-2">
         <div><h3 className="mb-3 text-sm font-semibold">{t.evaluation.byLanguage}</h3><BarList items={pick("language")} format={(v) => pct(v)} max={1} color="var(--series-2)" /></div>
-        <div><h3 className="mb-3 text-sm font-semibold">Layout (seen vs held-out)</h3><BarList items={pick("layout")} format={(v) => pct(v)} max={1} color="var(--series-3)" /></div>
+        <div><h3 className="mb-3 text-sm font-semibold">{t.evaluation.byLayout}</h3><BarList items={pick("layout")} format={(v) => pct(v)} max={1} color="var(--series-3)" /></div>
       </div>
       <Table>
         <thead><tr><Th>{t.evaluation.field}</Th><Th className="text-end">{t.evaluation.accuracy}</Th><Th className="text-end">Precision</Th>
@@ -102,21 +102,16 @@ function Rag({ r }: { r: any }) {
   const rows = r.configs.filter((c: any) => c.chunking === strategy);
   const cats = ["he", "en", "mixed", "cross_lingual", "multi_doc", "conflicting"];
   return (
-    <Panel>
+    <Panel id="report-rag" className="scroll-mt-24">
       <PanelHeader title={t.evaluation.rag}
         sub={`${r.dataset.questions} hand-written questions (${r.dataset.answerable} answerable) · ${r.dataset.documents} documents · ${r.models.embedding}${r.models.reranker ? ` + ${r.models.reranker}` : ""}`}
         actions={<Segmented value={strategy} onChange={setStrategy} options={strategies.map((s) => ({ value: s, label: s }))} />} />
-      <div className="p-4">
-        <Bars xKey="name" height={260} data={rows.map((c: any) => ({ name: c.name, mrr: c.mrr, r1: c["recall@1"], r5: c["recall@5"], ndcg: c["ndcg@5"] }))}
-          series={[{ key: "r1", label: "Recall@1" }, { key: "r5", label: "Recall@5" }, { key: "mrr", label: "MRR" }, { key: "ndcg", label: "nDCG@5" }]}
-          domain={[0, 1]} format={(v) => v.toFixed(2)} />
-      </div>
       <Table>
         <thead><tr><Th>{t.evaluation.config}</Th><Th className="text-end">chunks</Th><Th className="text-end">R@1</Th><Th className="text-end">R@3</Th><Th className="text-end">R@5</Th>
           <Th className="text-end">MRR</Th><Th className="text-end">nDCG@5</Th><Th className="text-end">all@5</Th>
           {cats.map((c) => <Th key={c} className="text-end">MRR·{c}</Th>)}<Th className="text-end">p50</Th></tr></thead>
-        <tbody>{r.configs.map((c: any) => (
-          <tr key={c.chunking + c.name} className={c.chunking === strategy ? "" : "text-ink-3"}>
+        <tbody>{rows.map((c: any) => (
+          <tr key={c.chunking + c.name}>
             <Td className="whitespace-nowrap font-mono text-xs">{c.chunking}/{c.name}{r.best_config.name === c.name && r.best_config.chunking === c.chunking && <Pill tone="ok" className="ms-2">best</Pill>}</Td>
             <Td className="text-end num">{c.n_chunks}</Td>
             {["recall@1", "recall@3", "recall@5", "mrr", "ndcg@5", "all@5"].map((k) => <Td key={k} className="text-end num">{c[k].toFixed(3)}</Td>)}
@@ -178,7 +173,7 @@ function Recon({ r }: { r: any }) {
   const c = r.controlled;
   const e = r.end_to_end;
   return (
-    <Panel>
+    <Panel id="report-reconciliation" className="scroll-mt-24">
       <PanelHeader title={t.evaluation.reconciliation} sub={`${c.cases} controlled cases · engine ${r.engine_version}`} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
         <Stat label="Exact finding-set match" value={pct(c.exact_finding_set_match)} />
@@ -208,14 +203,109 @@ function Recon({ r }: { r: any }) {
   );
 }
 
-export default function EvaluationPage() {
+type RetrievalRow = { name: string; chunking: string; mrr: number; "recall@5": number };
+
+function Metric({ icon: Icon, label, value, hint, href }: {
+  icon: LucideIcon; label: React.ReactNode; value: string; hint: React.ReactNode; href: string;
+}) {
+  return (
+    <a href={href} className="command-metric flex min-w-0 items-start gap-3 p-4 text-ink hover:border-line-strong">
+      <Icon className="mt-1 h-5 w-5 shrink-0 text-accent" aria-hidden />
+      <div className="min-w-0">
+        <p className="text-3xl font-semibold tracking-tight num"><bdi>{value}</bdi></p>
+        <p className="mt-1 font-medium">{label}</p>
+        <p className="mt-1 text-xs text-ink-2">{hint}</p>
+      </div>
+    </a>
+  );
+}
+
+function InputChart({ groups }: { groups: Record<string, { n: number; field_accuracy: number }> }) {
   const { t } = useI18n();
-  const { data } = useApi<Results>("/api/evaluation/results");
+  const keys = Object.keys(t.evaluation.inputNames) as (keyof typeof t.evaluation.inputNames)[];
+  return (
+    <Panel>
+      <PanelHeader title={t.evaluation.byInput} sub={t.evaluation.baseline} />
+      <div className="flex items-end gap-2 p-5">
+        <div className="mb-12 flex h-32 flex-col justify-between text-xs text-ink-3 num" aria-hidden><bdi>100%</bdi><bdi>50%</bdi><bdi>0%</bdi></div>
+        <ul className="grid min-w-0 flex-1 grid-cols-3 gap-2 sm:gap-4">
+          {keys.map((k) => {
+            const g = groups[`render:${k}`];
+            if (!g) return null;
+            return <li key={k} className="min-w-0 text-center">
+              <div className="flex h-32 items-end justify-center border-b border-line-strong bg-sunken/40">
+                <div className="relative w-3/5 max-w-24 rounded-t-md" style={{ height: `${g.field_accuracy * 100}%`, background: "var(--series-1)" }}>
+                  <span className="absolute bottom-full start-1/2 mb-1 -translate-x-1/2 font-medium text-ink num rtl:translate-x-1/2"><bdi>{pct(g.field_accuracy)}</bdi></span>
+                </div>
+              </div>
+              <p className="mt-2 text-sm font-medium">{t.evaluation.inputNames[k]}</p>
+              <bdi className="text-xs text-ink-3">n = {g.n}</bdi>
+            </li>;
+          })}
+        </ul>
+      </div>
+    </Panel>
+  );
+}
+
+export default function EvaluationPage() {
+  const { t, locale } = useI18n();
+  const { data, error, mutate } = useApi<Results>("/api/evaluation/results");
+  if (error) return <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
   if (!data) return <Skeleton className="h-96 w-full" />;
   const a = data.available;
+  const clauseRows = (a.rag?.configs as RetrievalRow[] | undefined)?.filter((c) => c.chunking === "clause") ?? [];
+  const rerank = clauseRows.find((c) => c.name === "hybrid_rerank");
+  const bm25 = clauseRows.find((c) => c.name === "bm25_plain");
+  const endToEnd = a.reconciliation?.end_to_end;
+  const retrievalSample = a.rag && `${a.rag.dataset.answerable} ${t.evaluation.answerable}`;
+  const reports = [
+    a.extraction && { key: "extraction", name: t.evaluation.extraction, sample: `${a.extraction.dataset.evaluated} ${t.evaluation.documents}`, source: a.extraction.dataset.source },
+    a.rag && { key: "rag", name: t.evaluation.rag, sample: `${a.rag.dataset.questions} ${t.evaluation.questions}`, source: a.rag.dataset.source },
+    a.reconciliation && { key: "reconciliation", name: t.evaluation.reconciliation, sample: `${a.reconciliation.controlled.cases} ${t.evaluation.controlled}`, source: a.reconciliation.engine_version },
+  ].filter(Boolean);
   return (
     <div className="space-y-5">
-      <PageHeader title={t.evaluation.title} sub={t.evaluation.subtitle} />
+      <PageHeader title={t.evaluation.hero} sub={t.evaluation.subtitle}
+        actions={reports.length > 0 && <a className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium hover:bg-sunken" href="#benchmark-reports">
+          <FlaskConical className="h-4 w-4" aria-hidden />{t.evaluation.methodology}<ArrowDown className="h-4 w-4" aria-hidden />
+        </a>} />
+      {reports.length > 0 && <>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {a.extraction && <Metric icon={FileCheck2} href="#report-extraction"
+            label={<>{t.evaluation.fieldAccuracy}{locale === "he" && <small className="ms-1 text-xs text-ink-2" lang="en">Field accuracy</small>}</>}
+            value={pct(a.extraction.systems.rule_based.overall_field_accuracy)}
+            hint={<>{a.extraction.dataset.evaluated} {t.evaluation.documents} × {a.extraction.fields.length} {t.invoice.fields.toLocaleLowerCase()}</>} />}
+          {rerank && <Metric icon={Search} href="#report-rag" label="Recall@5" value={pct(rerank["recall@5"])}
+            hint={<><bdi>{rerank.chunking}/{rerank.name}</bdi> · {retrievalSample}</>} />}
+          {bm25 && <Metric icon={ListOrdered} href="#report-rag" label="MRR · BM25" value={bm25.mrr.toFixed(3)}
+            hint={<><bdi>{bm25.chunking}/{bm25.name}</bdi> · {retrievalSample}</>} />}
+          {endToEnd && <Metric icon={BookOpenCheck} href="#report-reconciliation" label={t.evaluation.precision} value={pct(endToEnd.precision)}
+            hint={<>{endToEnd.tp} / {endToEnd.tp + endToEnd.fp} {t.evaluation.findings} · {endToEnd.documents} {t.evaluation.documents}</>} />}
+        </div>
+        <div className="grid items-stretch gap-4 lg:grid-cols-2">
+          {a.extraction && <InputChart groups={a.extraction.systems.rule_based.groups} />}
+          {clauseRows.length > 0 && <Panel>
+            <PanelHeader title={t.evaluation.retrievalComparison} sub={<><bdi>Recall@5 · clause</bdi> · {retrievalSample}</>} />
+            <div className="p-5"><BarList max={1} items={clauseRows.map((c) => ({ label: c.name, value: c["recall@5"] }))} format={pct} /></div>
+          </Panel>}
+        </div>
+        <div id="benchmark-reports" className="grid scroll-mt-24 items-start gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <Panel><PanelHeader title={t.evaluation.runs} />
+            <Table><thead><tr><Th>{t.evaluation.report}</Th><Th>{t.evaluation.sample}</Th><Th>{t.evaluation.generated}</Th></tr></thead>
+              <tbody>{reports.map((r) => <tr key={r.key}><Td><a className="font-medium text-accent hover:underline" href={`#report-${r.key}`}>{r.name}</a></Td>
+                <Td>{r.sample}</Td><Td><time dateTime={a[r.key].generated_at}>{new Date(a[r.key].generated_at).toLocaleString(locale === "he" ? "he-IL" : "en-GB", {dateStyle: "medium", timeStyle: "short"})}</time></Td></tr>)}</tbody>
+            </Table>
+          </Panel>
+          <Panel><PanelHeader title={t.evaluation.methodology} />
+            <div className="space-y-2 px-5 py-4 text-sm text-ink-2">
+              <p>{t.evaluation.dataset} · {t.evaluation.baseline}</p>
+              {a.extraction?.systems.llm?.skipped && String(a.rag?.llm_answers).startsWith("not run") && <p>{t.evaluation.paidLimit}</p>}
+              {reports.map((r) => <p key={r.key} className="break-words"><a href={`#report-${r.key}`} className="underline underline-offset-2">{r.name}</a> · <bdi>{r.source}</bdi></p>)}
+            </div>
+          </Panel>
+        </div>
+      </>}
       {Object.keys(a).length === 0 && <Panel><EmptyState title={t.evaluation.notRun} body="python eval/run_rag_eval.py · run_extraction_eval.py · run_reconciliation_eval.py" /></Panel>}
       {a.extraction && <Extraction r={a.extraction} />}
       {a.rag && <Rag r={a.rag} />}

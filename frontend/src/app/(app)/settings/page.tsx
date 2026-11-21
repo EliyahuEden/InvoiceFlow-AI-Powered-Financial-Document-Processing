@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/components/session";
 import { PageHeader } from "@/components/shell";
-import { Button, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, Th } from "@/components/ui";
+import { Button, ErrorState, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
-type Org = { id: string; name: string; settings: { tolerances: Record<string, string | number>; approval: Record<string, string>; auto_investigate?: boolean };
+type Org = { id: string; name: string; settings: { tolerances: Record<string, string | number>; approval: Record<string, string>; auto_investigate?: boolean;
+  priority?: { critical_amount?: string }; security?: { session_idle_hours?: number; session_max_days?: number } };
   ai_mode: string; roles: Record<string, string[]> };
 type Member = { id: string; email: string; full_name: string; role: string; is_active: boolean };
 
@@ -17,23 +18,32 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const { can, me } = useSession();
   const admin = can("org:manage");
-  const { data: org, mutate } = useApi<Org>("/api/org");
+  const { data: org, error, mutate } = useApi<Org>("/api/org");
   const { data: members, mutate: mutateMembers } = useApi<{ items: Member[] }>("/api/org/members");
   const [tol, setTol] = useState<Record<string, string>>({});
   const [appr, setAppr] = useState<Record<string, string>>({});
   const [auto, setAuto] = useState(true);
+  const [critical, setCritical] = useState("5000");
+  const [idleHours, setIdleHours] = useState("8");
+  const [maxDays, setMaxDays] = useState("7");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!org) return;
     setTol(Object.fromEntries(Object.entries(org.settings.tolerances).map(([k, v]) => [k, String(v)])));
     setAppr({ ...org.settings.approval });
     setAuto(org.settings.auto_investigate ?? true);
+    setCritical(String(org.settings.priority?.critical_amount ?? "5000"));
+    setIdleHours(String(org.settings.security?.session_idle_hours ?? 8));
+    setMaxDays(String(org.settings.security?.session_max_days ?? 7));
   }, [org]);
+  if (error) return <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
   if (!org) return <Skeleton className="h-96 w-full" />;
 
   const save = async () => {
     setBusy(true);
-    try { await api.patch("/api/org/settings", { tolerances: tol, approval: appr, auto_investigate: auto }); toast.success(t.common.save); mutate(); }
+    try { await api.patch("/api/org/settings", { tolerances: tol, approval: appr, auto_investigate: auto,
+      priority: { critical_amount: critical },
+      security: { session_idle_hours: Number(idleHours), session_max_days: Number(maxDays) } }); toast.success(t.common.save); mutate(); }
     catch (e) { toast.error(e instanceof ApiError ? String(e.message) : t.common.error); } finally { setBusy(false); }
   };
   const changeRole = async (id: string, role: string) => {
@@ -44,7 +54,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t.settings.title} sub={!admin ? t.settings.adminOnly : undefined} />
+      <PageHeader title={t.settings.title} sub={<><bdi>{org.name}</bdi>{!admin && <> · {t.settings.adminOnly}</>}</>} />
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <Panel>
           <PanelHeader title={t.settings.tolerances} sub={t.ai.deterministic} />
@@ -69,6 +79,17 @@ export default function SettingsPage() {
             </label>
             <p className="text-xs text-ink-3">AI: <span className="font-mono">{org.ai_mode}</span></p>
           </div>
+          <div className="grid grid-cols-1 gap-4 border-t border-line p-4 sm:grid-cols-3">
+            <Field label={`${t.settings.criticalAmount} (${me?.organization.base_currency ?? "ILS"})`} hint={t.settings.criticalHint} htmlFor="critical">
+              <Input id="critical" dir="ltr" inputMode="decimal" value={critical} disabled={!admin} onChange={(e) => setCritical(e.target.value)} />
+            </Field>
+            <Field label={t.settings.sessionIdleHours} hint="1–72" htmlFor="idle">
+              <Input id="idle" dir="ltr" type="number" min={1} max={72} value={idleHours} disabled={!admin} onChange={(e) => setIdleHours(e.target.value)} />
+            </Field>
+            <Field label={t.settings.sessionMaxDays} hint="1–30" htmlFor="maxdays">
+              <Input id="maxdays" dir="ltr" type="number" min={1} max={30} value={maxDays} disabled={!admin} onChange={(e) => setMaxDays(e.target.value)} />
+            </Field>
+          </div>
           {admin && <div className="border-t border-line p-4"><Button variant="primary" loading={busy} onClick={save}>{t.common.save}</Button></div>}
         </Panel>
       </div>
@@ -81,7 +102,7 @@ export default function SettingsPage() {
               <Td className="font-medium">{m.full_name}</Td>
               <Td><span className="ltr font-mono text-sm">{m.email}</span></Td>
               <Td>{admin && m.id !== me?.user.id ? (
-                <Select value={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
+                <Select aria-label={`${t.common.role} · ${m.full_name}`} value={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
                   {Object.keys(org.roles).map((r) => <option key={r} value={r}>{(t.roles as Record<string, string>)[r]}</option>)}
                 </Select>) : (t.roles as Record<string, string>)[m.role]}</Td>
             </tr>))}</tbody>
@@ -95,7 +116,7 @@ export default function SettingsPage() {
             <tr key={p}>
               <Td className="font-mono text-xs">{p}</Td>
               {Object.entries(org.roles).map(([r, perms]) => (
-                <Td key={r} className="text-center">{perms.includes(p) ? <Check className="mx-auto h-4 w-4 text-ok" aria-label="yes" /> : <Minus className="mx-auto h-4 w-4 text-line-strong" aria-label="no" />}</Td>
+                <Td key={r} className="text-center">{perms.includes(p) ? <Check className="mx-auto h-4 w-4 text-ok" aria-label={t.common.yes} /> : <Minus className="mx-auto h-4 w-4 text-line-strong" aria-label={t.common.no} />}</Td>
               ))}
             </tr>))}</tbody>
         </Table>
