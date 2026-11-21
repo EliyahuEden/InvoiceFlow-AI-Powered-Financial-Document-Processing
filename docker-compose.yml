@@ -23,6 +23,7 @@ x-backend-env: &backend-env
   MODEL_CACHE_DIR: /models
   EVAL_RESULTS_DIR: /srv/eval/results
   ENVIRONMENT: ${ENVIRONMENT:-development}
+  RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-10}   # raised only for parallel E2E runs
 
 services:
   postgres:

@@ -150,6 +150,15 @@ Assistant (Hebrew + Latin, 400–700) for everything; JetBrains Mono only for co
 - **Page:** max width 1560px, gutters 16 / 24 / 32px, 8px spacing rhythm, generous space between groups and tight rows inside tables.
 - **Layouts:** `.command-layout` (content + 280–320px aside at ≥1280px) for dashboard-style pages; `.workspace-layout` for the investigation workspace — evidence (sticky), findings, decision (sticky, own scroll) — collapsing to a stack with the decision kept reachable on narrow screens.
 
+- **Login:** a split screen on wide screens: an `.aurora` brand panel (product promise, three capability points, a synthetic-data note) beside the sign-in form and demo accounts. On phones the panel is hidden and the form keeps the tagline.
+
+## Navigation and keyboard
+- **Command palette** (`command-palette.tsx`, cmdk inside a Radix dialog): Ctrl/⌘+K or the top-bar search pill. It searches invoices, suppliers and purchase orders through the existing list APIs (so tenant scoping and permissions come from the backend), offers *Review next priority*, theme and language actions, and every permitted destination with its key hint.
+- **Shortcuts** (`shortcuts.tsx`, `?` opens the list): `G` then `D`/`Q`/`I`/`U`/`S`/`P`/`K` to navigate; in the workspace `N` next item (through the unsaved-work guard), `E` evidence, `D` decision. Keys are ignored while typing. No approve, reject or other financial decision has a single-key shortcut.
+
+## Motion
+Motion (`motion/react`, LazyMotion) gives each page a 180ms fade-and-rise; queue rows rise in with a 24ms stagger capped at eight rows; dialogs fade and scale in; the login aurora drifts over 22s. Figures never animate, and `prefers-reduced-motion` turns all of it off.
+
 ## Elevation & Depth
 Two shadows only: `--shadow-panel` (resting panels, soft and offset) and `--shadow-pop` (drawers, tooltips, menus). Panels declare elevation once: a thin border plus the panel shadow; no ghost cards, no nested glass. Frosting (translucent surface) is used for `.command-hero` and `.command-metric` only.
 

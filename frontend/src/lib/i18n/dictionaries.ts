@@ -83,6 +83,9 @@ const en = {
     correct_extraction: "Correct extraction",
   },
   login: {
+    heroTitle: "Supplier invoices, reconciled and explained.", pointRead: "Reads Hebrew and English invoices, scans and photos",
+    pointMatch: "Matches every line against purchase orders and goods receipts", pointExplain: "Explains each exception with cited evidence, and people decide",
+    synthetic: "Demo environment with synthetic data.",
     title: "Sign in to InvoiceFlow", email: "Work email", password: "Password", submit: "Sign in", failed: "Email or password is incorrect.",
     demoTitle: "Demo accounts", demoHint: "Fictional organization “Kinneret Hospitality”. All demo accounts share the password shown in the README.",
     rateLimited: "Too many attempts. Wait a minute and try again.",
@@ -169,7 +172,7 @@ const en = {
   },
   agent: { title: "AI investigations", trace: "Tool-call trace", path: "Workflow path", tools: "Tool calls", rejectedCalls: "Rejected calls", proposed: "Proposed action", decision: "Human decision" },
   evaluation: {
-    "hero": "AI quality, measured", "methodology": "Methodology & limitations", "baseline": "Offline benchmark", "fieldAccuracy": "Field accuracy", "retrievalComparison": "Retrieval comparison", "byInput": "Extraction by input", "inputNames": {"native": "Native PDF", "scanned": "Scanned PDF", "photo": "Phone photo"}, "precision": "End-to-end finding precision", "evaluatedDocs": "documents evaluated", "answerable": "answerable questions", "controlled": "controlled cases", "runs": "Benchmark reports", "report": "Report", "sample": "Sample", "result": "Result", "generated": "Generated", "detail": "Detailed results", "findings": "predicted findings", "dataset": "Labelled synthetic datasets", "paidLimit": "Paid language models were not scored in these runs.", "questions": "questions", "cases": "cases", "documents": "documents", "byLayout": "By layout",
+    "hero": "AI quality, measured", "methodology": "Methodology & limitations", "baseline": "Offline benchmark", "fieldAccuracy": "Field accuracy", "retrievalComparison": "Retrieval comparison", "byInput": "Extraction by input", "inputNames": {"native": "Native PDF", "scanned": "Scanned PDF", "photo": "Phone photo"}, "precision": "End-to-end finding precision", "evaluatedDocs": "documents evaluated", "answerable": "answerable questions", "controlled": "controlled cases", "runs": "Benchmark reports", "report": "Report", "sample": "Sample", "result": "Result", "generated": "Generated", "detail": "Detailed results", "findings": "predicted findings", "dataset": "Labelled synthetic datasets", "paidLimit": "Paid language models were not scored in these runs.", "questions": "questions", "cases": "cases", "documents": "documents", "byLayout": "By layout", "rulesFirst": {"title": "Rules first, model only when needed", "sub": "The free rules read every invoice. A model is asked only for fields that are missing or do not add up, and its answer is kept only if it leaves fewer problems.", "sent": "Invoices sent to a model", "sentHint": "{share} of invoices; the rest cost nothing", "wrong": "Of those, rules were wrong", "wrongHint": "{n} invoices had any error under the rules", "accuracy": "Field accuracy", "accuracyHint": "rules only → rules first", "tokens": "Tokens per model call", "failed": "{n} failed", "pending": "Not measured with a model yet (run the benchmark with --llm)", "why": "Why invoices were sent"},
 
     title: "Evaluation", subtitle: "Measured offline on the labelled synthetic datasets in /eval. Re-run with the commands shown.",
     extraction: "Document extraction", rag: "Retrieval & answers", reconciliation: "Reconciliation", notRun: "Not run yet",
@@ -177,6 +180,19 @@ const en = {
   },
   observability: { title: "AI observability", calls: "Model calls", latency: "Latency", tokens: "Tokens", cost: "Est. cost", errors: "Errors", noPricing: "No price table configured — costs are not estimated." },
   audit: { title: "Audit trail", verify: "Verify chain", valid: "Hash chain intact", broken: "Hash chain broken", actor: "Actor", action: "Action", entity: "Entity", change: "Change" },
+  palette: {
+    title: "Command palette", trigger: "Search or jump to…", placeholder: "Search invoices, suppliers, purchase orders, or go to a page…",
+    navigate: "Go to", actions: "Actions", invoices: "Invoices", suppliers: "Suppliers", purchaseOrders: "Purchase orders",
+    empty: "No matches. Try an invoice number, a supplier or a PO number.", searching: "Searching…",
+    toggleTheme: "Switch light / dark theme", switchLanguage: "Switch to עברית / English", move: "move", open: "open",
+  },
+  shortcuts: {
+    title: "Keyboard shortcuts", general: "General", navigation: "Navigation", workspace: "Investigation workspace",
+    open: "Open the command palette", help: "Show keyboard shortcuts", gotoDashboard: "Review center", gotoQueue: "Priority queue",
+    gotoInbox: "Invoice inbox", nextItem: "Skip to the next priority item", evidence: "Jump to the source document",
+    decision: "Jump to the decision panel",
+    safety: "Approvals, rejections and escalations always need a deliberate click: no decision has a single-key shortcut.",
+  },
   settings: { criticalAmount: "Critical from money at risk of", criticalHint: "Cases at or above this amount are ranked critical.", sessionIdleHours: "Sign out after inactivity (hours)", sessionMaxDays: "Maximum session length (days)",
     title: "Organization settings", tolerances: "Matching tolerances", approval: "Approval policy", members: "Members", permissions: "Role permissions",
     price_pct: "Unit price tolerance (%)", price_abs: "Unit price tolerance (absolute)", quantity_abs: "Quantity tolerance (units)",
@@ -267,6 +283,9 @@ const he: Dict = {
     correct_extraction: "תיקון החילוץ",
   },
   login: {
+    heroTitle: "חשבוניות ספקים, מותאמות ומוסברות.", pointRead: "קוראת חשבוניות בעברית ובאנגלית, סריקות וצילומים",
+    pointMatch: "מתאימה כל שורה מול הזמנות רכש ותעודות קבלת טובין", pointExplain: "מסבירה כל חריגה עם ראיות מצוטטות, והאדם מחליט",
+    synthetic: "סביבת הדגמה עם נתונים סינתטיים.",
     title: "כניסה ל-InvoiceFlow", email: "דוא\"ל עבודה", password: "סיסמה", submit: "כניסה", failed: "הדוא\"ל או הסיסמה שגויים.",
     demoTitle: "חשבונות הדגמה", demoHint: "ארגון בדיוני \"כנרת אירוח\". לכל חשבונות ההדגמה אותה סיסמה, המופיעה ב-README.",
     rateLimited: "יותר מדי ניסיונות. המתינו דקה ונסו שוב.",
@@ -353,7 +372,7 @@ const he: Dict = {
   },
   agent: { title: "חקירות AI", trace: "מעקב קריאות כלים", path: "מסלול התהליך", tools: "קריאות כלים", rejectedCalls: "קריאות שנדחו", proposed: "פעולה מוצעת", decision: "החלטה אנושית" },
   evaluation: {
-    "hero": "איכות AI, עם מדידה", "methodology": "שיטת המדידה ומגבלות", "baseline": "מדד ייחוס לא מקוון", "fieldAccuracy": "דיוק השדות", "retrievalComparison": "השוואת אחזור", "byInput": "חילוץ לפי סוג קלט", "inputNames": {"native": "PDF מקורי", "scanned": "PDF סרוק", "photo": "צילום בטלפון"}, "precision": "דיוק הממצאים מקצה לקצה", "evaluatedDocs": "מסמכים שנבדקו", "answerable": "שאלות שניתן לענות עליהן", "controlled": "מקרים מבוקרים", "runs": "דוחות הערכה", "report": "דוח", "sample": "מדגם", "result": "תוצאה", "generated": "נוצר", "detail": "תוצאות מפורטות", "findings": "ממצאים חזויים", "dataset": "מערכי נתונים סינתטיים מתויגים", "paidLimit": "מודלי שפה בתשלום לא נמדדו בהרצות אלה.", "questions": "שאלות", "cases": "מקרים", "documents": "מסמכים", "byLayout": "לפי פריסה",
+    "hero": "איכות AI, עם מדידה", "methodology": "שיטת המדידה ומגבלות", "baseline": "מדד ייחוס לא מקוון", "fieldAccuracy": "דיוק השדות", "retrievalComparison": "השוואת אחזור", "byInput": "חילוץ לפי סוג קלט", "inputNames": {"native": "PDF מקורי", "scanned": "PDF סרוק", "photo": "צילום בטלפון"}, "precision": "דיוק הממצאים מקצה לקצה", "evaluatedDocs": "מסמכים שנבדקו", "answerable": "שאלות שניתן לענות עליהן", "controlled": "מקרים מבוקרים", "runs": "דוחות הערכה", "report": "דוח", "sample": "מדגם", "result": "תוצאה", "generated": "נוצר", "detail": "תוצאות מפורטות", "findings": "ממצאים חזויים", "dataset": "מערכי נתונים סינתטיים מתויגים", "paidLimit": "מודלי שפה בתשלום לא נמדדו בהרצות אלה.", "questions": "שאלות", "cases": "מקרים", "documents": "מסמכים", "byLayout": "לפי פריסה", "rulesFirst": {"title": "קודם כללים, מודל רק כשצריך", "sub": "הכללים החינמיים קוראים כל חשבונית. מודל נשאל רק על שדות חסרים או שאינם מסתדרים בחשבון, ותשובתו נשמרת רק אם היא משאירה פחות בעיות.", "sent": "חשבוניות שנשלחו למודל", "sentHint": "{share} מהחשבוניות; השאר בלי עלות", "wrong": "מתוכן, הכללים טעו ב־", "wrongHint": "ב־{n} חשבוניות הייתה טעות כלשהי לפי הכללים", "accuracy": "דיוק השדות", "accuracyHint": "כללים בלבד ← קודם כללים", "tokens": "טוקנים לכל קריאה למודל", "failed": "{n} נכשלו", "pending": "עדיין לא נמדד עם מודל (יש להריץ את המדד עם ‎--llm)", "why": "למה חשבוניות נשלחו"},
 
     title: "הערכה", subtitle: "נמדד באופן לא מקוון על מערכי הנתונים הסינתטיים המתויגים בתיקייה /eval. ניתן לשחזר בפקודות המוצגות.",
     extraction: "חילוץ ממסמכים", rag: "אחזור ותשובות", reconciliation: "התאמה", notRun: "טרם הורץ", command: "שחזור",
@@ -361,6 +380,19 @@ const he: Dict = {
   },
   observability: { title: "ניטור AI", calls: "קריאות למודל", latency: "זמן תגובה", tokens: "טוקנים", cost: "עלות משוערת", errors: "שגיאות", noPricing: "לא הוגדרה טבלת מחירים — העלויות אינן מוערכות." },
   audit: { title: "יומן ביקורת", verify: "אימות שרשרת", valid: "שרשרת הגיבוב תקינה", broken: "שרשרת הגיבוב פגומה", actor: "מבצע", action: "פעולה", entity: "ישות", change: "שינוי" },
+  palette: {
+    title: "לוח פקודות", trigger: "חיפוש או מעבר אל…", placeholder: "חיפוש חשבונית, ספק, הזמנת רכש או מעבר לעמוד…",
+    navigate: "מעבר אל", actions: "פעולות", invoices: "חשבוניות", suppliers: "ספקים", purchaseOrders: "הזמנות רכש",
+    empty: "לא נמצאו תוצאות. נסו מספר חשבונית, ספק או מספר הזמנה.", searching: "מחפש…",
+    toggleTheme: "החלפת ערכת צבע בהירה / כהה", switchLanguage: "מעבר ל-English / עברית", move: "מעבר", open: "פתיחה",
+  },
+  shortcuts: {
+    title: "קיצורי מקלדת", general: "כללי", navigation: "ניווט", workspace: "סביבת החקירה",
+    open: "פתיחת לוח הפקודות", help: "הצגת קיצורי המקלדת", gotoDashboard: "מרכז הבקרה", gotoQueue: "תור העדיפויות",
+    gotoInbox: "תיבת החשבוניות", nextItem: "דילוג לפריט הבא בעדיפות", evidence: "מעבר למסמך המקור",
+    decision: "מעבר לפאנל ההחלטה",
+    safety: "אישור, דחייה והעברה למנהל דורשים תמיד לחיצה מכוונת: לאף החלטה אין קיצור של מקש אחד.",
+  },
   settings: { criticalAmount: "קריטי מסכום בסיכון של", criticalHint: "מקרים בסכום זה ומעלה מדורגים כקריטיים.", sessionIdleHours: "ניתוק לאחר חוסר פעילות (שעות)", sessionMaxDays: "משך חיבור מרבי (ימים)",
     title: "הגדרות ארגון", tolerances: "סבולות התאמה", approval: "מדיניות אישורים", members: "משתמשים", permissions: "הרשאות לפי תפקיד",
     price_pct: "סבולת מחיר יחידה (%)", price_abs: "סבולת מחיר יחידה (מוחלטת)", quantity_abs: "סבולת כמות (יחידות)",

@@ -10,6 +10,9 @@ import { date, money } from "@/lib/format";
 import { reviewedIds } from "@/lib/review";
 import type { ReviewQueueItem } from "@/lib/types";
 
+/** A short first-render stagger (capped), so a long queue still appears almost at once. */
+const stagger = (index: number): React.CSSProperties => ({ animationDelay: `${Math.min(index, 8) * 24}ms` });
+
 function Rank({ priority }: Pick<ReviewQueueItem, "priority">) {
   const { t } = useI18n();
   return <span className={cx("inline-grid h-8 min-w-8 shrink-0 place-items-center rounded-full px-1.5 text-sm font-semibold num",
@@ -44,7 +47,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
   }));
 
   if (compact) return <ol className="divide-y divide-line">
-    {rows.map(({ item, href, done, current: active, supplier, amount }) => <li key={item.exception_id}>
+    {rows.map(({ item, href, done, current: active, supplier, amount }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
       <Link href={href} aria-current={active || undefined} className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-4 py-4 hover:bg-sunken/70 sm:px-5">
         <Rank priority={item.priority} />
         <div className="min-w-0 space-y-1.5">
@@ -61,7 +64,8 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
 
   return <>
     <ol data-testid="mobile-review-queue" className="divide-y divide-line lg:hidden">
-      {rows.map(({ item, href, done, current: active, supplier, amount, due, action }) => <li key={item.exception_id} className="space-y-3 p-4" aria-current={active || undefined}>
+      {rows.map(({ item, href, done, current: active, supplier, amount, due, action }, index) => <li key={item.exception_id} style={stagger(index)}
+        className="animate-rise space-y-3 p-4 [animation-fill-mode:both]" aria-current={active || undefined}>
         <div className="flex items-start gap-3">
           <Rank priority={item.priority} />
           <div className="min-w-0 flex-1"><p dir="auto" className="break-words font-semibold text-ink">{supplier}</p>
@@ -83,7 +87,8 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
     <div className="hidden lg:block"><Table>
       <thead><tr><Th>{t.review.rank}</Th><Th>{t.review.priority}</Th><Th>{t.common.supplier} / {t.recon.invoice}</Th>
         <Th>{t.review.reason}</Th><Th className="text-end">{t.review.atRisk}</Th><Th>{t.review.due}</Th><Th>{t.common.status}</Th><Th>{t.review.nextAction}</Th></tr></thead>
-      <tbody>{rows.map(({ item, href, done, current: active, supplier, amount, due, action }) => <tr key={item.exception_id} className={active ? "bg-accent-soft/50" : "hover:bg-sunken/60"} aria-current={active || undefined}>
+      <tbody>{rows.map(({ item, href, done, current: active, supplier, amount, due, action }, index) => <tr key={item.exception_id} style={stagger(index)}
+        className={cx("animate-rise [animation-fill-mode:both]", active ? "bg-accent-soft/50" : "hover:bg-sunken/60")} aria-current={active || undefined}>
         <Td><Rank priority={item.priority} /></Td>
         <Td><PriorityBadge level={item.priority.level} /></Td>
         <Td><div className="min-w-24 space-y-1"><p dir="auto" className="break-words font-semibold leading-snug">{supplier}</p>

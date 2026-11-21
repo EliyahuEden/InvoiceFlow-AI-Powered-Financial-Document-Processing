@@ -13,11 +13,14 @@ import io
 
 from pydantic import ValidationError
 
+from app.core.config import get_settings
+
 from app.services.documents.text_extraction import PageText
 from app.services.extraction.schema import InvoiceExtraction
 from app.services.llm.provider import LLMOutputInvalid, LLMResult
 
 PROMPT_VERSION = "extract-v3"
+FALLBACK_PROMPT_VERSION = "extract-v3-fields"
 
 SYSTEM_PROMPT = """You are a meticulous accounts-payable document parser for Hebrew and English invoices.
 
@@ -68,15 +71,38 @@ def page_images_for_ocr_pages(pages: list[PageText], data: bytes, mime: str, max
     return out
 
 
-def extract_with_llm(llm, pages: list[PageText], images=None) -> tuple[InvoiceExtraction, LLMResult, int]:  # noqa: ANN001
-    """Return (extraction, last_result, retries). Retries once on schema-invalid output."""
-    content = build_content(pages, images)
+def field_schema(fields: list[str] | None = None) -> dict:
+    """The extraction JSON schema, optionally narrowed to some fields (a shorter answer is
+    faster and cheaper; the rest of the document is still sent for context)."""
     schema = InvoiceExtraction.model_json_schema()
+    if fields:
+        schema["properties"] = {k: v for k, v in schema["properties"].items() if k in fields}
+        schema.pop("required", None)
+    return schema
+
+
+def extract_with_llm(llm, pages: list[PageText], images=None,  # noqa: ANN001
+                     fields: list[str] | None = None) -> tuple[InvoiceExtraction, LLMResult, int]:
+    """Return (extraction, last_result, retries). Retries once on schema-invalid output.
+    With ``fields``, only those fields are requested (rules-first fallback)."""
+    content = build_content(pages, images)
+    if fields:
+        content.append({"type": "text", "text": "Only these fields are needed (the others were already read): "
+                                                + ", ".join(fields) + "."})
+    schema = field_schema(fields)
     retries = 0
     last_err = None
     for attempt in range(2):
-        result = llm.structured(system=SYSTEM_PROMPT, content=content, schema_name="invoice_extraction",
-                                schema=schema, max_tokens=8000)
+        try:
+            result = llm.structured(system=SYSTEM_PROMPT, content=content, schema_name="invoice_extraction",
+                                    schema=schema, max_tokens=get_settings().llm_max_output_tokens)
+        except Exception as exc:
+            # Some OpenAI-compatible servers (e.g. Groq) reject output that breaks the schema with an
+            # HTTP 400 "json_validate_failed" instead of returning it: retry that once, like invalid output.
+            if "json_validate_failed" not in str(exc) or attempt == 1:
+                raise
+            last_err, retries = exc, retries + 1
+            continue
         try:
             return InvoiceExtraction.model_validate(result.data), result, retries
         except ValidationError as exc:

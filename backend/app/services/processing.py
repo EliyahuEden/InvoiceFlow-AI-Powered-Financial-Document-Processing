@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models import Document, DocumentPage, Invoice, InvoiceLine, Job, Organization, User
 from app.services import audit, events, jobs
@@ -17,8 +18,15 @@ from app.services.documents.text_extraction import OCRUnavailable, PageText, Wor
 from app.services.documents.validation import ValidatedFile, validate_upload
 from app.services.extraction import rule_based
 from app.services.extraction.injection import detect_injection
-from app.services.extraction.llm_extractor import PROMPT_VERSION, extract_with_llm, page_images_for_ocr_pages
+from app.services.extraction.hybrid import extract_rules_first
+from app.services.extraction.llm_extractor import (
+    FALLBACK_PROMPT_VERSION,
+    PROMPT_VERSION,
+    extract_with_llm,
+    page_images_for_ocr_pages,
+)
 from app.services.extraction.postprocess import normalize
+from app.services.extraction.schema import InvoiceExtraction
 from app.services.llm.provider import LLMOutputInvalid, get_llm
 from app.services.llm.telemetry import record_call
 from app.services.storage import get_storage, new_key
@@ -93,36 +101,61 @@ def load_pages(doc: Document) -> list[PageText]:
                      words=[Word(**w) for w in p.words], ocr_confidence=p.ocr_confidence) for p in doc.pages]
 
 
+def choose_extraction(llm, pages: list[PageText], data: bytes, mime: str, exclude: set[str],  # noqa: ANN001
+                      mode: str) -> tuple[InvoiceExtraction, str, list[dict]]:
+    """Run the configured extraction strategy. Returns (extraction, method, telemetry calls);
+    each call is the keyword arguments for ``record_call``."""
+    calls: list[dict] = []
+
+    def rules() -> InvoiceExtraction:
+        t1 = time.perf_counter()
+        ex = rule_based.extract([(p.page_no, p.text) for p in pages], exclude_tax_ids=exclude)
+        calls.append({"prompt_version": "rules-v2", "provider": "offline", "model": "rule-based-extractor",
+                      "latency_ms": int((time.perf_counter() - t1) * 1000), "meta": {"pages": len(pages)}})
+        return ex
+
+    if llm is None:
+        return rules(), "rule_based", calls
+    if mode == "rules_first":
+        rules_ex = rules()
+        t0 = time.perf_counter()
+        out = extract_rules_first(llm, pages, rules_ex, exclude_tax_ids=exclude)
+        meta = {"pages": len(pages), "gaps": out.gaps, "filled": out.filled}
+        if out.llm_result is not None:
+            calls.append({"prompt_version": FALLBACK_PROMPT_VERSION, "result": out.llm_result,
+                          "retries": out.retries, "meta": meta})
+        elif out.error is not None:
+            calls.append({"prompt_version": FALLBACK_PROMPT_VERSION, "provider": llm.name, "model": llm.model,
+                          "latency_ms": int((time.perf_counter() - t0) * 1000), "status": "error",
+                          "error": out.error, "meta": meta})
+            log.warning("llm_fallback_failed_kept_rules", error=out.error)
+        return out.extraction, out.method, calls
+    t0 = time.perf_counter()
+    try:
+        images = page_images_for_ocr_pages(pages, data, mime)
+        extraction, res, retries = extract_with_llm(llm, pages, images)
+        calls.append({"prompt_version": PROMPT_VERSION, "result": res, "retries": retries,
+                      "meta": {"pages": len(pages), "images": len(images)}})
+        return extraction, f"llm:{llm.model}", calls
+    except (LLMOutputInvalid, Exception) as exc:  # noqa: BLE001 - provider errors fall back, never crash
+        calls.append({"prompt_version": PROMPT_VERSION, "provider": llm.name, "model": llm.model,
+                      "latency_ms": int((time.perf_counter() - t0) * 1000), "status": "error", "error": str(exc)})
+        log.warning("llm_extraction_failed_fallback_rule_based", error=str(exc))
+    ex = rules()
+    calls[-1]["meta"] = {**calls[-1]["meta"], "fallback": True}
+    return ex, "rule_based", calls
+
+
 def run_extraction(session: Session, org: Organization, inv: Invoice, doc: Document, pages: list[PageText],
                    data: bytes) -> None:
-    """Extract fields with the LLM when configured, else the rule-based baseline; always verify."""
-    llm = get_llm()
+    """Extract fields (rules first, LLM only for open fields, by default); always verify."""
     exclude = {org.settings.get("tax_id")} - {None}
     all_pages = pages
     pages, duplicate_pages = drop_duplicate_pages(pages)  # a printed copy must not be billed twice
-    t0 = time.perf_counter()
-    extraction, method = None, "rule_based"
-    if llm is not None:
-        try:
-            images = page_images_for_ocr_pages(pages, data, doc.mime_type)
-            extraction, res, retries = extract_with_llm(llm, pages, images)
-            method = f"llm:{llm.model}"
-            record_call(session, org_id=org.id, kind="extraction", workflow="invoice.extract",
-                        prompt_version=PROMPT_VERSION, result=res, retries=retries, invoice_id=inv.id,
-                        meta={"pages": len(pages), "images": len(images)})
-        except (LLMOutputInvalid, Exception) as exc:  # noqa: BLE001 - provider errors fall back, never crash
-            record_call(session, org_id=org.id, kind="extraction", workflow="invoice.extract",
-                        prompt_version=PROMPT_VERSION, provider=llm.name, model=llm.model,
-                        latency_ms=int((time.perf_counter() - t0) * 1000), status="error", error=str(exc),
-                        invoice_id=inv.id)
-            log.warning("llm_extraction_failed_fallback_rule_based", invoice_id=str(inv.id), error=str(exc))
-    if extraction is None:
-        t1 = time.perf_counter()
-        extraction = rule_based.extract([(p.page_no, p.text) for p in pages], exclude_tax_ids=exclude)
-        record_call(session, org_id=org.id, kind="extraction", workflow="invoice.extract", prompt_version="rules-v2",
-                    provider="offline", model="rule-based-extractor",
-                    latency_ms=int((time.perf_counter() - t1) * 1000), invoice_id=inv.id,
-                    meta={"pages": len(pages), "fallback": llm is not None})
+    extraction, method, calls = choose_extraction(get_llm(), pages, data, doc.mime_type, exclude,
+                                                  get_settings().extraction_mode)
+    for call in calls:
+        record_call(session, org_id=org.id, kind="extraction", workflow="invoice.extract", invoice_id=inv.id, **call)
     norm = normalize(extraction, pages, method, language=doc.language)
     apply_normalized(session, inv, norm, extraction.model_dump())
     if duplicate_pages:

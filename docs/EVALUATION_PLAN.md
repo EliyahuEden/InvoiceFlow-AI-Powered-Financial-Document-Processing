@@ -51,7 +51,39 @@ On the original 57 documents the field accuracy moved from 0.837 to about 0.94 (
 - Payment terms whose label is printed in a different script direction than the value (bidi-reversed `Due:` lines).
 - On v2, accuracy is 0.833 (Hebrew `he_service`) and 0.818 (English `en_statement`): unfamiliar labels for some header fields still fall through.
 
-This is the case for the LLM extractor. Its results are **not reported**, because running it costs API money; `run_extraction_eval.py --llm` measures it once a provider is configured.
+This is the case for the LLM extractor. Its results are **not reported** yet; `run_extraction_eval.py --llm` measures both modes once a provider is configured (a paid API, a free-tier API such as Groq, or a local Ollama model).
+
+### Rules-first routing (free to measure)
+
+`EXTRACTION_MODE=rules_first` (the default) runs the free rule-based extractor on every invoice and asks the LLM only for **open fields**: required fields that are missing, a missing item table, values the document does not contain, figures that do not add up, and a total that nothing on the invoice confirms. Only those fields are requested, and the answer is merged only if it leaves fewer open problems; every value must still be printed in the document. `EXTRACTION_MODE=llm_first` sends every invoice to the model, as before.
+
+The router needs no model, so `run_extraction_eval.py` always reports it (`rules_first_router` in `extraction_latest.json`), on the same 73 documents:
+
+| | |
+|---|---|
+| Invoices the rules-first mode sends to a model | **12 of 73 (16%)** |
+| ... that the rules had actually got wrong | **12 of 12** (no correct invoice is sent) |
+| Invoices the rules got wrong (any field or line) | 29 |
+
+A missing currency alone does not call the model. The first version did, and sent 24 invoices: on 12 of them a missing currency was the only gap, and the model fixed none. The currency was either not printed at all or lost by OCR (the ₪ sign), and a text-only model cannot recover it. The currency is still reported to the reviewer as missing.
+
+**Measured with a model** (Groq free tier, `openai/gpt-oss-20b`, open-weight, `--llm --llm-systems rules_first --pace 25`, `LLM_MAX_OUTPUT_TOKENS=3000`):
+
+| | Rules only | Rules-first + gpt-oss-20b |
+|---|---|---|
+| Field accuracy (73 docs) | 0.920 | **0.924** |
+| Invoice date | 0.945 | **0.986** |
+| Held-out v2 layouts | 0.847 | **0.864** |
+| Native documents | 0.976 | **0.981** |
+| Line items F1 | 0.944 | 0.940 |
+| Wrong totals | 7 | 7 |
+| Model calls · tokens | 0 | 12 calls · 20.6K tokens (about 1.7K per call) · 1 failed call |
+
+What the model fixed: English statements where the rules took a phone number for the date. What it could not fix: totals on scans and photos. OCR reduced them to a single digit ("4", "8"), so the true number is not in the text, and the provenance check would reject any recovered value anyway. Those invoices are still flagged because their figures do not add up. Fixing them needs page images for a vision model, or better OCR. One call failed twice with Groq's `json_validate_failed`; the invoice kept its rules result. A full LLM run (every invoice to the model, about 3.9K tokens per call, around 285K tokens) does not fit one day of the free tier and has not been run.
+
+The router misses 8 invoices that only lack payment terms (many invoices legitimately omit them), plus wrong or missing supplier tax IDs on scans. In production a failed Israeli check digit would flag those, but the synthetic tax IDs do not have valid check digits, so that signal cannot be measured here yet.
+
+For free-tier providers use `--pace` (seconds between calls) and `LLM_MAX_OUTPUT_TOKENS`; `--llm-systems` picks `llm`, `rules_first` or both, and `--limit N` is a smoke run that saves nothing.
 
 ## B. RAG
 **Method**

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20T18:26:13+00:00",
+  "generated_at": "2026-11-21T12:14:46+00:00",
   "git_rev": null,
   "python": "3.12.16",
   "dataset": {
@@ -40,7 +40,7 @@
     "rule_based": {
       "documents_evaluated": 73,
       "documents_skipped": [],
-      "overall_field_accuracy": 0.917,
+      "overall_field_accuracy": 0.92,
       "documents_fully_correct": 0.603,
       "per_field": {
         "supplier_name": {
@@ -86,10 +86,10 @@
           "f1": 0.864
         },
         "subtotal": {
-          "accuracy": 0.932,
+          "accuracy": 0.973,
           "precision": 1.0,
-          "recall": 0.932,
-          "f1": 0.965
+          "recall": 0.973,
+          "f1": 0.986
         },
         "tax_rate": {
           "accuracy": 0.918,
@@ -105,9 +105,9 @@
         },
         "total": {
           "accuracy": 0.89,
-          "precision": 0.915,
+          "precision": 0.903,
           "recall": 0.89,
-          "f1": 0.903
+          "f1": 0.897
         }
       },
       "groups": {
@@ -116,7 +116,7 @@
           "n": 16
         },
         "language:he": {
-          "field_accuracy": 0.899,
+          "field_accuracy": 0.905,
           "n": 44
         },
         "language:mixed": {
@@ -128,7 +128,7 @@
           "n": 8
         },
         "layout:held_out_v2": {
-          "field_accuracy": 0.83,
+          "field_accuracy": 0.847,
           "n": 16
         },
         "layout:seen": {
@@ -144,7 +144,7 @@
           "n": 4
         },
         "render:scanned": {
-          "field_accuracy": 0.758,
+          "field_accuracy": 0.776,
           "n": 15
         },
         "template:en_classic": {
@@ -180,7 +180,7 @@
           "n": 5
         },
         "template:he_service": {
-          "field_accuracy": 0.833,
+          "field_accuracy": 0.856,
           "n": 12
         }
       },
@@ -209,10 +209,10 @@
         }
       },
       "numeric": {
-        "wrong_totals": 6,
+        "wrong_totals": 7,
         "median_abs_error_of_wrong_totals": "13262.28"
       },
-      "latency_ms_p50": 48.42,
+      "latency_ms_p50": 43.63,
       "error_examples": [
         {
           "file": "docs/04_duplicate_tavor_he.pdf",
@@ -414,11 +414,421 @@
           "render": "scanned",
           "template": "he_compact"
         }
-      ]
+      ],
+      "rules_first_router": {
+        "documents": 73,
+        "sent_to_llm": 12,
+        "with_errors": 29,
+        "errors_sent": 12,
+        "clean_sent": 0,
+        "share_sent_to_llm": 0.164,
+        "error_recall": 0.414,
+        "gap_counts": {
+          "total": 8,
+          "subtotal": 7,
+          "tax_amount": 6,
+          "line_items": 4,
+          "invoice_date": 4,
+          "tax_rate": 1
+        },
+        "note": "Free: no model is called. A document 'with errors' has any wrong field or line item under the rules; error_recall is the share of those the router would send to the model."
+      }
     },
     "llm": {
-      "skipped": "not requested (requires --llm and an API key)"
+      "skipped": "not selected in this run (--llm-systems)"
+    },
+    "rules_first": {
+      "documents_evaluated": 73,
+      "documents_skipped": [],
+      "overall_field_accuracy": 0.924,
+      "documents_fully_correct": 0.603,
+      "per_field": {
+        "supplier_name": {
+          "accuracy": 0.973,
+          "precision": 0.973,
+          "recall": 0.973,
+          "f1": 0.973
+        },
+        "supplier_tax_id": {
+          "accuracy": 0.808,
+          "precision": 0.962,
+          "recall": 0.785,
+          "f1": 0.864
+        },
+        "invoice_number": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "invoice_date": {
+          "accuracy": 0.986,
+          "precision": 1.0,
+          "recall": 0.986,
+          "f1": 0.993
+        },
+        "currency": {
+          "accuracy": 0.89,
+          "precision": 1.0,
+          "recall": 0.871,
+          "f1": 0.931
+        },
+        "po_reference": {
+          "accuracy": 0.986,
+          "precision": 1.0,
+          "recall": 0.983,
+          "f1": 0.991
+        },
+        "payment_terms": {
+          "accuracy": 0.836,
+          "precision": 1.0,
+          "recall": 0.76,
+          "f1": 0.864
+        },
+        "subtotal": {
+          "accuracy": 0.973,
+          "precision": 1.0,
+          "recall": 0.973,
+          "f1": 0.986
+        },
+        "tax_rate": {
+          "accuracy": 0.918,
+          "precision": 1.0,
+          "recall": 0.918,
+          "f1": 0.957
+        },
+        "tax_amount": {
+          "accuracy": 0.904,
+          "precision": 0.971,
+          "recall": 0.904,
+          "f1": 0.936
+        },
+        "total": {
+          "accuracy": 0.89,
+          "precision": 0.903,
+          "recall": 0.89,
+          "f1": 0.897
+        }
+      },
+      "groups": {
+        "language:en": {
+          "field_accuracy": 0.977,
+          "n": 16
+        },
+        "language:he": {
+          "field_accuracy": 0.905,
+          "n": 44
+        },
+        "language:mixed": {
+          "field_accuracy": 0.923,
+          "n": 13
+        },
+        "layout:held_out_v1": {
+          "field_accuracy": 0.92,
+          "n": 8
+        },
+        "layout:held_out_v2": {
+          "field_accuracy": 0.864,
+          "n": 16
+        },
+        "layout:seen": {
+          "field_accuracy": 0.944,
+          "n": 49
+        },
+        "render:native": {
+          "field_accuracy": 0.981,
+          "n": 54
+        },
+        "render:photo": {
+          "field_accuracy": 0.705,
+          "n": 4
+        },
+        "render:scanned": {
+          "field_accuracy": 0.776,
+          "n": 15
+        },
+        "template:en_classic": {
+          "field_accuracy": 1.0,
+          "n": 6
+        },
+        "template:en_minimal": {
+          "field_accuracy": 0.788,
+          "n": 3
+        },
+        "template:en_modern": {
+          "field_accuracy": 0.989,
+          "n": 8
+        },
+        "template:en_statement": {
+          "field_accuracy": 0.886,
+          "n": 4
+        },
+        "template:he_boxed": {
+          "field_accuracy": 0.939,
+          "n": 12
+        },
+        "template:he_classic": {
+          "field_accuracy": 0.894,
+          "n": 12
+        },
+        "template:he_compact": {
+          "field_accuracy": 0.942,
+          "n": 11
+        },
+        "template:he_receipt": {
+          "field_accuracy": 1.0,
+          "n": 5
+        },
+        "template:he_service": {
+          "field_accuracy": 0.856,
+          "n": 12
+        }
+      },
+      "line_items": {
+        "precision": 0.949,
+        "recall": 0.931,
+        "f1": 0.94,
+        "truth_lines": 218
+      },
+      "missing_field_handling": {
+        "supplier_tax_id": {
+          "absent_in_document": 8,
+          "correctly_null": 8
+        },
+        "currency": {
+          "absent_in_document": 11,
+          "correctly_null": 11
+        },
+        "po_reference": {
+          "absent_in_document": 15,
+          "correctly_null": 15
+        },
+        "payment_terms": {
+          "absent_in_document": 23,
+          "correctly_null": 23
+        }
+      },
+      "numeric": {
+        "wrong_totals": 7,
+        "median_abs_error_of_wrong_totals": "13262.28"
+      },
+      "latency_ms_p50": 53.14,
+      "error_examples": [
+        {
+          "file": "docs/04_duplicate_tavor_he.pdf",
+          "field": "supplier_tax_id",
+          "expected": "514000127",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_compact"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "supplier_tax_id",
+          "expected": "515000238",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/07_ocr_scan_hermon_he.pdf",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/13_photo_bluewave_en.png",
+          "field": "supplier_tax_id",
+          "expected": "516000349",
+          "predicted": "916000349",
+          "render": "photo",
+          "template": "en_modern"
+        },
+        {
+          "file": "docs/gen_001_hermon_he_classic_scanned.pdf",
+          "field": "supplier_tax_id",
+          "expected": "515000238",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_001_hermon_he_classic_scanned.pdf",
+          "field": "total",
+          "expected": "14712.24",
+          "predicted": "4",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "supplier_tax_id",
+          "expected": "513000451",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "tax_amount",
+          "expected": "64386.00",
+          "predicted": "0",
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_003_carmel_cleaning_he_boxed_photo.png",
+          "field": "total",
+          "expected": "422086.00",
+          "predicted": "0",
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "docs/gen_006_hermon_he_compact_scanned.pdf",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_compact"
+        },
+        {
+          "file": "docs/gen_006_hermon_he_compact_scanned.pdf",
+          "field": "tax_amount",
+          "expected": "1016.64",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_compact"
+        },
+        {
+          "file": "docs/gen_011_hermon_he_classic_scanned.pdf",
+          "field": "supplier_tax_id",
+          "expected": "515000238",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_011_hermon_he_classic_scanned.pdf",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_014_arava_en_minimal_photo.png",
+          "field": "supplier_tax_id",
+          "expected": "518000673",
+          "predicted": null,
+          "render": "photo",
+          "template": "en_minimal"
+        },
+        {
+          "file": "docs/gen_014_arava_en_minimal_photo.png",
+          "field": "subtotal",
+          "expected": "27.90",
+          "predicted": null,
+          "render": "photo",
+          "template": "en_minimal"
+        },
+        {
+          "file": "docs/gen_014_arava_en_minimal_photo.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "photo",
+          "template": "en_minimal"
+        },
+        {
+          "file": "docs/gen_014_arava_en_minimal_photo.png",
+          "field": "tax_amount",
+          "expected": "5.02",
+          "predicted": null,
+          "render": "photo",
+          "template": "en_minimal"
+        },
+        {
+          "file": "docs/gen_014_arava_en_minimal_photo.png",
+          "field": "total",
+          "expected": "32.92",
+          "predicted": "27.90",
+          "render": "photo",
+          "template": "en_minimal"
+        },
+        {
+          "file": "docs/gen_016_hermon_he_classic_scanned.pdf",
+          "field": "supplier_tax_id",
+          "expected": "515000238",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_016_hermon_he_classic_scanned.pdf",
+          "field": "subtotal",
+          "expected": "2558.00",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_016_hermon_he_classic_scanned.pdf",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_016_hermon_he_classic_scanned.pdf",
+          "field": "tax_amount",
+          "expected": "460.44",
+          "predicted": "2558.00",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_016_hermon_he_classic_scanned.pdf",
+          "field": "total",
+          "expected": "3018.44",
+          "predicted": "4",
+          "render": "scanned",
+          "template": "he_classic"
+        },
+        {
+          "file": "docs/gen_021_hermon_he_compact_scanned.pdf",
+          "field": "supplier_name",
+          "expected": "חרמון קלייה בע\"מ",
+          "predicted": "קלייה בע\"מ",
+          "render": "scanned",
+          "template": "he_compact"
+        }
+      ],
+      "llm_calls": 12,
+      "llm_errors": 1,
+      "tokens": {
+        "input": 11535,
+        "output": 9079,
+        "per_call": 1718
+      }
     }
+  },
+  "llm": {
+    "model": "openai/gpt-oss-20b",
+    "provider": "openai",
+    "endpoint": "api.groq.com",
+    "max_output_tokens": 3000
   },
   "command": "docker compose run --rm --no-deps -v ./eval:/srv/eval worker python /srv/eval/run_extraction_eval.py",
   "notes": [

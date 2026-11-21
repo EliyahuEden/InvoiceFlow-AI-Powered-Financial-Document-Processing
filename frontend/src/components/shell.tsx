@@ -1,54 +1,20 @@
 "use client";
 
 import * as Tooltip from "@radix-ui/react-tooltip";
-import {
-  Activity, ArrowLeft, BookOpenText, Bot, Building2, ClipboardCheck, FileStack, FlaskConical, Gauge, Inbox, Languages,
-  LayoutGrid, LogOut, Moon, ScrollText, Settings, ShoppingCart, Sun, Upload, X,
-} from "lucide-react";
+import { ArrowLeft, FileStack, Languages, LayoutGrid, LogOut, Moon, Search, Sun, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useLiveEvents } from "@/lib/events";
+import { isActive, isTyping, useNav } from "@/lib/nav";
+import { setTheme as applyTheme, type Theme } from "@/lib/theme";
+import { CommandPalette, Kbd } from "./command-palette";
+import { ShortcutsDialog } from "./shortcuts";
 import { ReviewNextButton } from "./review-next";
 import { SessionProvider, useSession } from "./session";
 import { Button, cx } from "./ui";
-
-type NavItem = { href: string; label: string; icon: React.ElementType; perm?: string };
-type NavGroup = { group: string; items: NavItem[] };
-
-function useNav(): NavGroup[] {
-  const { t } = useI18n();
-  const { can } = useSession();
-  const groups: NavGroup[] = [
-    { group: t.nav.work, items: [
-      { href: "/", label: t.nav.overview, icon: Gauge },
-      { href: "/exceptions", label: t.nav.exceptions, icon: ClipboardCheck },
-      { href: "/invoices", label: t.nav.inbox, icon: Inbox },
-      { href: "/invoices/upload", label: t.nav.upload, icon: Upload, perm: "invoice:upload" },
-      { href: "/investigations", label: t.nav.investigations, icon: Bot },
-    ]},
-    { group: t.nav.records, items: [
-      { href: "/suppliers", label: t.nav.suppliers, icon: Building2 },
-      { href: "/purchase-orders", label: t.nav.purchaseOrders, icon: ShoppingCart },
-      { href: "/knowledge", label: t.nav.knowledge, icon: BookOpenText },
-    ]},
-    { group: t.nav.quality, items: [
-      { href: "/evaluation", label: t.nav.evaluation, icon: FlaskConical },
-      { href: "/observability", label: t.nav.observability, icon: Activity },
-      { href: "/audit", label: t.nav.audit, icon: ScrollText, perm: "audit:read" },
-    ]},
-    { group: t.nav.admin, items: [{ href: "/settings", label: t.nav.settings, icon: Settings }] },
-  ];
-  return groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || can(i.perm)) })).filter((g) => g.items.length);
-}
-
-function isActive(path: string, href: string) {
-  if (href === "/") return path === "/";
-  if (href === "/invoices") return path === "/invoices" || (path.startsWith("/invoices/") && !path.startsWith("/invoices/upload"));
-  return path === href || path.startsWith(href + "/");
-}
 
 /** Narrow icon rail for wide screens. Every icon has an accessible name and a tooltip;
  *  "All destinations" opens the labelled drawer, so no page is hidden behind an icon. */
@@ -175,24 +141,24 @@ function useCurrentLabel(): string | null {
   return items.sort((a, b) => b.href.length - a.href.length)[0]?.label ?? null;
 }
 
-function TopBar({ onMenu }: { onMenu: () => void }) {
+function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void }) {
   const { me, can } = useSession();
   const { t, locale, setLocale } = useI18n();
   const current = useCurrentLabel();
   const path = usePathname();
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<Theme>("light");
+  const [mod, setMod] = useState("Ctrl");
   useEffect(() => {
-    let saved: "light" | "dark" = "light";
-    try { saved = (localStorage.getItem("if_theme") as "light" | "dark") ?? "light"; } catch { /* storage unavailable */ }
+    let saved: Theme = "light";
+    try { saved = (localStorage.getItem("if_theme") as Theme) ?? "light"; } catch { /* storage unavailable */ }
     setTheme(saved);
     document.documentElement.dataset.theme = saved;
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) setMod("⌘");
+    const onTheme = (e: Event) => setTheme((e as CustomEvent<Theme>).detail);
+    window.addEventListener("if:theme", onTheme);
+    return () => window.removeEventListener("if:theme", onTheme);
   }, []);
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem("if_theme", next); } catch { /* storage unavailable */ }
-  };
+  const toggleTheme = () => applyTheme(theme === "light" ? "dark" : "light");
   const logout = async () => {
     await api.post("/api/auth/logout");
     window.location.href = "/login";
@@ -207,6 +173,13 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         {current && <><span className="hidden text-ink-3 sm:inline" aria-hidden>/</span>
           <span className="truncate text-base text-ink-2">{current}</span></>}
       </div>
+      <button type="button" onClick={onSearch} aria-label={t.palette.trigger}
+        className="hidden h-10 min-w-[15rem] items-center gap-2.5 rounded-full border border-line bg-surface/80 pe-2 ps-4 text-sm text-ink-3 shadow-raise transition-colors hover:text-ink-2 md:flex">
+        <Search className="h-4 w-4" aria-hidden />
+        <span className="flex-1 text-start">{t.palette.trigger}</span>
+        <span className="flex gap-1" dir="ltr"><Kbd>{mod}</Kbd><Kbd>K</Kbd></span>
+      </button>
+      <Button variant="ghost" size="icon" className="md:hidden" onClick={onSearch} aria-label={t.palette.trigger}><Search className="h-4 w-4" /></Button>
       <AiModeBadge />
       {/* the dashboard and the workspace carry their own primary review action */}
       {me && can("exception:decide") && path !== "/" && !path.startsWith("/exceptions") &&
@@ -240,6 +213,51 @@ function LiveEvents() {
   return null;
 }
 
+/** Global keys: Ctrl/⌘+K palette, "?" help, "g" + letter to navigate. Ignored while typing;
+ *  no financial decision is ever bound to a key here. */
+function useGlobalKeys(nav: ReturnType<typeof useNav>, openPalette: () => void, openHelp: () => void) {
+  const router = useRouter();
+  useEffect(() => {
+    let pendingG = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(); return; }
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+      if (e.key === "?") { e.preventDefault(); openHelp(); return; }
+      if (pendingG) {
+        pendingG = false;
+        const item = nav.flatMap((g) => g.items).find((i) => i.key === e.key.toLowerCase());
+        if (item) { e.preventDefault(); router.push(item.href); }
+        return;
+      }
+      if (e.key.toLowerCase() === "g") { pendingG = true; clearTimeout(timer); timer = setTimeout(() => { pendingG = false; }, 1200); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); clearTimeout(timer); };
+  }, [nav, openPalette, openHelp, router]);
+}
+
+function KeyedShell({ children, open, setOpen }: { children: React.ReactNode; open: boolean; setOpen: (v: boolean) => void }) {
+  const nav = useNav();
+  const [palette, setPalette] = useState(false);
+  const [help, setHelp] = useState(false);
+  useGlobalKeys(nav, () => setPalette(true), () => setHelp(true));
+  return (
+    <div className="flex min-h-screen">
+      <aside className="sticky top-0 hidden h-screen w-[84px] shrink-0 lg:block">
+        <Rail onOpenAll={() => setOpen(true)} />
+      </aside>
+      {open && <NavDrawer onClose={() => setOpen(false)} />}
+      <CommandPalette open={palette} onOpenChange={setPalette} />
+      <ShortcutsDialog open={help} onOpenChange={setHelp} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar onMenu={() => setOpen(true)} onSearch={() => setPalette(true)} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -250,16 +268,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Tooltip.Provider>
         <LiveEvents />
         <a href="#main" className="command-skip">{t.nav.skipContent}</a>
-        <div className="flex min-h-screen">
-          <aside className="sticky top-0 hidden h-screen w-[84px] shrink-0 lg:block">
-            <Rail onOpenAll={() => setOpen(true)} />
-          </aside>
-          {open && <NavDrawer onClose={() => setOpen(false)} />}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <TopBar onMenu={() => setOpen(true)} />
-            <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1560px] flex-1 px-4 pb-10 pt-2 focus:outline-none sm:px-6 lg:px-8">{children}</main>
-          </div>
-        </div>
+        <KeyedShell open={open} setOpen={setOpen}>
+          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1560px] flex-1 px-4 pb-10 pt-2 focus:outline-none sm:px-6 lg:px-8">{children}</main>
+        </KeyedShell>
       </Tooltip.Provider>
     </SessionProvider>
   );

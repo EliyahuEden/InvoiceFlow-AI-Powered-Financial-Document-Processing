@@ -265,6 +265,32 @@
   }
 }
 
+/* Login brand panel: a slow, soft aurora drift in the brand atmosphere (frozen under reduced motion). */
+.aurora {
+  background:
+    radial-gradient(60% 55% at 20% 20%, rgb(var(--atmosphere-a) / .85), transparent 70%),
+    radial-gradient(55% 60% at 85% 75%, rgb(var(--hero-wave) / .35), transparent 70%),
+    radial-gradient(70% 60% at 60% 10%, rgb(var(--ai-soft) / .9), transparent 70%),
+    rgb(var(--hero));
+  background-size: 160% 160%, 160% 160%, 160% 160%, auto;
+  animation: aurora-drift 22s ease-in-out infinite alternate;
+}
+@keyframes aurora-drift {
+  from { background-position: 0% 0%, 100% 100%, 50% 0%, 0 0; }
+  to { background-position: 40% 30%, 60% 70%, 20% 40%, 0 0; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes palette-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+
+@layer components {
+  .palette-group [cmdk-group-heading] {
+    padding: 10px 12px 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(var(--ink-3));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

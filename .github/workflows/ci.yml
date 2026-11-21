@@ -73,6 +73,8 @@ jobs:
     needs: [backend, frontend]
     env:
       RERANKER_BACKEND: none   # keep CI downloads small; the benchmark documents the reranker separately
+      LLM_PROVIDER: offline    # never call a paid model from CI
+      RATE_LIMIT_LOGIN_PER_MINUTE: "300"   # parallel Playwright workers log in as the same demo users
     steps:
       - uses: actions/checkout@v4
       - name: Start the stack

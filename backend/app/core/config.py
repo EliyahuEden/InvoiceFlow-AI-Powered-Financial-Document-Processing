@@ -66,7 +66,13 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     openai_base_url: str | None = None  # e.g. http://localhost:11434/v1 for Ollama
+    # rules_first: the free rule-based extractor reads every invoice and the LLM is asked only for
+    # fields that are missing or do not add up. llm_first: every invoice goes to the LLM, rules as backup.
+    extraction_mode: Literal["rules_first", "llm_first"] = "rules_first"
     llm_timeout_seconds: float = 120.0
+    # Cap on answer tokens per extraction call. Lower it for providers whose free tier counts the
+    # requested maximum against a small tokens-per-minute budget (e.g. Groq: 3000).
+    llm_max_output_tokens: int = 8000
     llm_max_retries: int = 2
     # Optional price table for cost estimation, USD per 1M tokens:
     # {"model-id": {"input": 3.0, "output": 15.0}}. No prices are hard-coded: if a

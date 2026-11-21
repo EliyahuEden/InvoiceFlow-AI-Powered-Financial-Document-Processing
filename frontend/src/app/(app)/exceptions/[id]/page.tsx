@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, Bot, CheckCircle2, FileText, MessageSquare, ScanLine, Scale } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AiSummaryView } from "@/components/ai-summary";
 import { DecisionPanel, type Decision } from "@/components/decision-panel";
@@ -17,6 +17,7 @@ import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { markReviewed } from "@/lib/review";
 import type { AiSummary, InvoiceDetail, ReviewNext, ReviewQueueItem } from "@/lib/types";
+import { isTyping } from "@/lib/nav";
 import { useUnsavedWork } from "@/lib/use-unsaved-work";
 
 type Exc = {
@@ -93,6 +94,21 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
     setBusy("next");
     try { await next(); } catch { toast.error(t.common.error); } finally { setBusy(null); }
   };
+  // N skips to the next priority item (through the unsaved-work guard); E / D jump between zones.
+  // Decisions are deliberately not bound to keys.
+  const skipRef = useRef(skip);
+  skipRef.current = skip;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || isTyping(event.target) || busy) return;
+      const k = event.key.toLowerCase();
+      if (k === "n" && open) { event.preventDefault(); void skipRef.current(); }
+      else if (k === "e") { event.preventDefault(); jumpTo("review-document"); }
+      else if (k === "d") { event.preventDefault(); jumpTo("review-decision"); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, busy]);
   const decide = async (decision: Decision) => {
     setBusy(decision);
     try {

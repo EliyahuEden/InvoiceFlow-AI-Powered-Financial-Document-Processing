@@ -4,6 +4,7 @@ import { ArrowDown, BookOpenCheck, ChevronDown, FileCheck2, FlaskConical, ListOr
 import { useState } from "react";
 import { BarList } from "@/components/charts";
 import { Pill } from "@/components/domain";
+import { RulesFirstReport } from "@/components/rules-first";
 import { Segmented } from "@/components/list";
 import { PageHeader } from "@/components/shell";
 import { cx, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
@@ -59,7 +60,7 @@ function Extraction({ r }: { r: any }) {
   return (
     <Panel id="report-extraction" className="scroll-mt-24">
       <PanelHeader title={t.evaluation.extraction} sub={`${r.dataset.evaluated}/${r.dataset.documents} documents · ${r.dataset.ocr} · system: rule-based baseline`}
-        actions={<Pill tone="neutral">LLM: {r.systems.llm?.skipped ? "not run" : "run"}</Pill>} />
+        actions={<Pill tone="neutral">LLM (every invoice): {r.systems.llm?.skipped ? "not run" : "run"}</Pill>} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
         <Stat label={t.evaluation.evaluatedDocs} value={String(r.dataset.evaluated)} hint={r.dataset.ocr} />
         <Stat label="Line items F1" value={pct(sys.line_items.f1)} hint={`P ${pct(sys.line_items.precision)} · R ${pct(sys.line_items.recall)}`} />
@@ -308,6 +309,7 @@ export default function EvaluationPage() {
       </>}
       {Object.keys(a).length === 0 && <Panel><EmptyState title={t.evaluation.notRun} body="python eval/run_rag_eval.py · run_extraction_eval.py · run_reconciliation_eval.py" /></Panel>}
       {a.extraction && <Extraction r={a.extraction} />}
+      {a.extraction && <RulesFirstReport r={a.extraction} />}
       {a.rag && <Rag r={a.rag} />}
       {a.reconciliation && <Recon r={a.reconciliation} />}
     </div>

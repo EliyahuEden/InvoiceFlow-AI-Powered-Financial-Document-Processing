@@ -5,8 +5,11 @@
     # native-text documents only (no Tesseract available):
     backend/.venv/Scripts/python eval/run_extraction_eval.py --skip-ocr
 
-Systems: ``rule_based`` (always) and ``llm`` (only with --llm and a configured provider;
-never run implicitly because it incurs API cost).
+Systems: ``rule_based`` (always), and with --llm and a configured provider ``llm`` (every
+invoice sent to the model) and ``rules_first`` (rules, then the model only for open fields).
+Never run implicitly because a paid provider incurs API cost. ``rules_first_router`` is always
+reported and is free: how many invoices the rules-first mode would send to a model, and whether
+those are the ones the rules actually got wrong.
 """
 from __future__ import annotations
 
@@ -20,6 +23,7 @@ from common import ROOT, p50, prf, write_result
 
 from app.services.documents.text_extraction import OCRUnavailable, extract_pages, tesseract_available
 from app.services.extraction import rule_based
+from app.services.extraction.hybrid import extract_rules_first, find_gaps
 from app.services.extraction.postprocess import normalize
 from app.services.reconciliation.text_match import name_similarity, similarity
 
@@ -68,9 +72,9 @@ def match_lines(pred: list, truth: list) -> tuple[int, int]:
     return correct, len(pred)
 
 
-def run(system: str, rows: list, skip_ocr: bool) -> dict:
+def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
     llm = None
-    if system == "llm":
+    if system in ("llm", "rules_first"):
         from app.services.llm.provider import get_llm
 
         llm = get_llm()
@@ -82,6 +86,9 @@ def run(system: str, rows: list, skip_ocr: bool) -> dict:
     line_tp = line_pred = line_truth = 0
     total_errors, latencies, examples, skipped = [], [], [], []
     docs_all_correct = 0
+    router = {"documents": 0, "sent_to_llm": 0, "with_errors": 0, "errors_sent": 0, "clean_sent": 0}
+    gap_counts: dict[str, int] = defaultdict(int)
+    llm_calls = llm_errors = tokens_in = tokens_out = 0
     for r in rows:
         data = (DS / r["file"]).read_bytes()
         mime = "image/png" if r["file"].endswith(".png") else "application/pdf"
@@ -93,10 +100,30 @@ def run(system: str, rows: list, skip_ocr: bool) -> dict:
             continue
         if system == "rule_based":
             ex = rule_based.extract([(p.page_no, p.text) for p in pages], exclude_tax_ids={CUSTOMER_TAX_ID})
+        elif system == "rules_first":
+            rules_ex = rule_based.extract([(p.page_no, p.text) for p in pages], exclude_tax_ids={CUSTOMER_TAX_ID})
+            out = extract_rules_first(llm, pages, rules_ex, exclude_tax_ids={CUSTOMER_TAX_ID})
+            called = out.llm_result is not None or out.error is not None
+            ex, llm_calls, llm_errors = out.extraction, llm_calls + called, llm_errors + (out.error is not None)
+            if out.llm_result is not None:
+                tokens_in += out.llm_result.input_tokens or 0
+                tokens_out += out.llm_result.output_tokens or 0
+            if called and pace:
+                time.sleep(pace)
         else:
             from app.services.extraction.llm_extractor import extract_with_llm
+            from app.services.extraction.schema import InvoiceExtraction
 
-            ex, _, _ = extract_with_llm(llm, pages)
+            llm_calls += 1
+            try:
+                ex, res, _ = extract_with_llm(llm, pages)
+                tokens_in += res.input_tokens or 0
+                tokens_out += res.output_tokens or 0
+            except Exception as exc:  # noqa: BLE001 - a failed call scores as an empty extraction
+                print("llm error on", r["file"], str(exc)[:160])
+                ex, llm_errors = InvoiceExtraction(), llm_errors + 1
+            if pace:
+                time.sleep(pace)
         n = normalize(ex, pages, system)
         latencies.append((time.perf_counter() - t0) * 1000)
         pred, truth = pred_fields(n), r["truth"]
@@ -125,6 +152,16 @@ def run(system: str, rows: list, skip_ocr: bool) -> dict:
                     f"layout:{'held_out_' + r.get('held_out_set', 'v1') if r['held_out_template'] else 'seen'}"):
             groups[key].append(acc)
         ct, cp = match_lines(n.lines, truth["lines"])
+        if system == "rule_based":
+            gaps = find_gaps(n)
+            has_error = not all(doc_ok) or ct < len(truth["lines"]) or cp != len(truth["lines"])
+            router["documents"] += 1
+            router["sent_to_llm"] += bool(gaps)
+            router["with_errors"] += has_error
+            router["errors_sent"] += bool(gaps) and has_error
+            router["clean_sent"] += bool(gaps) and not has_error
+            for g in gaps:
+                gap_counts[g] += 1
         line_tp += ct
         line_pred += cp
         line_truth += len(truth["lines"])
@@ -150,26 +187,75 @@ def run(system: str, rows: list, skip_ocr: bool) -> dict:
         "numeric": {"wrong_totals": len(total_errors),
                     "median_abs_error_of_wrong_totals": str(sorted(total_errors)[len(total_errors) // 2]) if total_errors else None},
         "latency_ms_p50": p50(latencies), "error_examples": examples,
+        **({"llm_calls": llm_calls, "llm_errors": llm_errors,
+            "tokens": {"input": tokens_in, "output": tokens_out,
+                       "per_call": round((tokens_in + tokens_out) / llm_calls) if llm_calls else None}}
+           if system in ("llm", "rules_first") else {}),
+        **({"rules_first_router": {
+            **router,
+            "share_sent_to_llm": round(router["sent_to_llm"] / max(1, router["documents"]), 3),
+            "error_recall": round(router["errors_sent"] / max(1, router["with_errors"]), 3),
+            "gap_counts": dict(sorted(gap_counts.items(), key=lambda kv: -kv[1])),
+            "note": "Free: no model is called. A document 'with errors' has any wrong field or line item under "
+                    "the rules; error_recall is the share of those the router would send to the model.",
+        }} if system == "rule_based" else {}),
     }
+
+
+def llm_info(requested: bool) -> dict | None:
+    """Which model and endpoint produced the LLM numbers (never the key)."""
+    if not requested:
+        return None
+    from urllib.parse import urlparse
+
+    from app.core.config import get_settings
+    from app.services.llm.provider import get_llm
+
+    llm, s = get_llm(), get_settings()
+    return {"model": llm.model if llm else None, "provider": s.llm_provider,
+            "endpoint": urlparse(s.openai_base_url).hostname if s.openai_base_url else "provider default",
+            "max_output_tokens": s.llm_max_output_tokens}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-ocr", action="store_true")
     ap.add_argument("--llm", action="store_true", help="also evaluate the configured LLM extractor (incurs API cost)")
+    ap.add_argument("--pace", type=float, default=0.0, help="seconds to wait after each model call (free-tier rate limits)")
+    ap.add_argument("--llm-systems", default="llm,rules_first",
+                    help="with --llm: which model systems to score (llm = every invoice, rules_first = open fields only)")
+    ap.add_argument("--limit", type=int, default=0, help="smoke test on the first N documents; results are not saved")
     args = ap.parse_args()
     rows = [json.loads(x) for x in (DS / "labels.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+    if args.limit:
+        rows = rows[:args.limit]
     if args.skip_ocr or not tesseract_available():
         rows_eval = [r for r in rows if r["render"] == "native"]
         ocr_note = "OCR documents excluded (Tesseract unavailable or --skip-ocr)"
     else:
         rows_eval, ocr_note = rows, "all documents, Tesseract heb+eng"
     systems = {"rule_based": run("rule_based", rows_eval, args.skip_ocr)}
-    systems["llm"] = run("llm", rows_eval, args.skip_ocr) if args.llm else {"skipped": "not requested (requires --llm and an API key)"}
+    skipped_llm = {"skipped": "not requested (requires --llm and a configured provider)"}
+    chosen = {x.strip() for x in args.llm_systems.split(",")}
+    for name in ("llm", "rules_first"):
+        if not args.llm:
+            systems[name] = skipped_llm
+        elif name in chosen:
+            systems[name] = run(name, rows_eval, args.skip_ocr, args.pace)
+        else:
+            systems[name] = {"skipped": "not selected in this run (--llm-systems)"}
     for name, res in systems.items():
         if "overall_field_accuracy" in res:
             print(name, "field acc", res["overall_field_accuracy"], "lines F1", res["line_items"]["f1"],
                   {k: v["field_accuracy"] for k, v in res["groups"].items() if k.startswith(("render", "layout", "language"))})
+        if "rules_first_router" in res:
+            print("rules_first_router", {k: v for k, v in res["rules_first_router"].items() if k != "note"})
+        if "llm_calls" in res:
+            print(name, "llm calls", res["llm_calls"], "errors", res["llm_errors"], "tokens", res["tokens"],
+                  "p50 ms", res["latency_ms_p50"])
+    if args.limit:
+        print("smoke run (--limit): results not saved")
+        return
     write_result("extraction", {
         "dataset": {"documents": len(rows), "evaluated": len(rows_eval), "ocr": ocr_note,
                     "by_render": {k: sum(1 for r in rows if r["render"] == k) for k in ("native", "scanned", "photo")},
@@ -177,7 +263,7 @@ def main() -> None:
                     "held_out_layouts": sum(1 for r in rows if r["held_out_template"]),
                     "held_out_by_set": {k: sum(1 for r in rows if r.get("held_out_set") == k) for k in ("v1", "v2")},
                     "source": "eval/datasets/extraction (synthetic, labels exact by construction)"},
-        "fields": FIELDS, "systems": systems,
+        "fields": FIELDS, "systems": systems, "llm": llm_info(args.llm),
         "command": "docker compose run --rm --no-deps -v ./eval:/srv/eval worker python /srv/eval/run_extraction_eval.py",
         "notes": [
             "Labels are the structured specs the PDFs were rendered from (exact by construction).",

@@ -16,3 +16,6 @@ frontend/playwright-report/
 .env
 .env.*
 !.env.example
+
+# real invoices used for local testing only (personal/business data): never commit
+example invocies/

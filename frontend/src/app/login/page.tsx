@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, FileStack, Languages } from "lucide-react";
+import { ArrowRight, Check, FileStack, Languages } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Button, Field, Input, Panel } from "@/components/ui";
@@ -39,20 +39,39 @@ function LoginForm() {
   };
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-6 px-4 py-6 sm:px-8">
+    <main className="grid min-h-svh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <section className="aurora relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12" aria-label={t.app.name}>
+        <span className="flex items-center gap-3 text-xl font-semibold text-ink">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-ink shadow-raise"><FileStack className="h-5 w-5" aria-hidden /></span>
+          {t.app.name}
+        </span>
+        <div className="max-w-xl">
+          <h2 className="text-5xl font-semibold leading-[1.05] tracking-tight text-ink">{t.login.heroTitle}</h2>
+          <ul className="mt-8 space-y-4">
+            {[t.login.pointRead, t.login.pointMatch, t.login.pointExplain].map((point) => (
+              <li key={point} className="flex items-start gap-3 text-lg text-ink-2">
+                <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface/80 text-ok shadow-raise"><Check className="h-3.5 w-3.5" aria-hidden /></span>
+                {point}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="text-sm text-ink-3">{t.login.synthetic}</p>
+      </section>
+      <div className="mx-auto flex w-full max-w-xl flex-col justify-center gap-6 px-4 py-8 sm:px-8">
       <header className="flex items-center justify-between gap-4">
-        <span className="flex items-center gap-2.5 text-lg font-semibold">
+        <span className="flex items-center gap-2.5 text-lg font-semibold lg:invisible">
           <FileStack className="h-6 w-6" aria-hidden />{t.app.name}
         </span>
         <Button variant="secondary" size="sm" onClick={() => setLocale(locale === "he" ? "en" : "he")}>
           <Languages className="h-4 w-4" aria-hidden /> {locale === "he" ? "English" : "עברית"}
         </Button>
       </header>
-      <div className="command-hero px-5 py-7 sm:px-8 sm:py-10">
+      <div>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t.login.title}</h1>
-        <p className="mt-1 text-base text-ink-2">{t.app.tagline}</p>
+        <p className="mt-1.5 text-base text-ink-2 lg:hidden">{t.app.tagline}</p>
       </div>
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-4">
         <Panel className="p-5 sm:p-7">
           <form onSubmit={submit} className="space-y-5" noValidate>
           <Field label={t.login.email} htmlFor="email">
@@ -83,6 +102,7 @@ function LoginForm() {
             </li>)}
           </ul>
         </Panel>
+      </div>
       </div>
     </main>
   );
