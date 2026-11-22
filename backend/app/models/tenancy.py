@@ -95,3 +95,16 @@ class AuthSession(UUIDPk, Timestamps, Base):
     revoked_reason: Mapped[str | None] = mapped_column(String(40))
     ip: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(300))
+
+
+class AuthToken(UUIDPk, Timestamps, Base):
+    """A single-use emailed link: ``password_reset`` or ``invite``. Only the SHA-256 of the token is stored."""
+
+    __tablename__ = "auth_tokens"
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
+    purpose: Mapped[str] = mapped_column(String(20))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

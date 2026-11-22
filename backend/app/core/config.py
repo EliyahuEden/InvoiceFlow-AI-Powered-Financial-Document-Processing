@@ -57,6 +57,18 @@ class Settings(BaseSettings):
     # Model-backed requests (policy answers, Copilot, investigations) per user per minute.
     rate_limit_ai_per_minute: int = 20
     rate_limit_signup_per_hour: int = 10
+    rate_limit_password_reset_per_hour: int = 5
+    # --- email (password reset, invitations). auto = SMTP when SMTP_HOST is set, otherwise log only.
+    email_backend: Literal["auto", "smtp", "console", "memory"] = "auto"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    email_from: str = "InvoiceFlow <no-reply@invoiceflow.local>"
+    app_base_url: str = "http://localhost:3000"  # the web app's public address, used in emailed links
+    password_reset_ttl_minutes: int = 60
+    invite_ttl_hours: int = 72
     cookie_secure: bool = False
 
     # --- storage ---
@@ -157,6 +169,8 @@ class Settings(BaseSettings):
         problems = []
         if self.jwt_secret.get_secret_value().startswith("dev-only"):
             problems.append("JWT_SECRET is the development placeholder")
+        if self.effective_email_backend == "smtp" and not self.app_base_url.startswith("https://"):
+            problems.append("APP_BASE_URL must be the public https:// address (it is used in emailed links)")
         if not self.cookie_secure:
             problems.append("COOKIE_SECURE must be true (cookies only over HTTPS)")
         if self.storage_backend == "local":
@@ -179,6 +193,17 @@ class Settings(BaseSettings):
             return json.loads(self.llm_pricing_json or "{}")
         except json.JSONDecodeError:
             return {}
+
+    @property
+    def effective_email_backend(self) -> str:
+        if self.email_backend != "auto":
+            return self.email_backend
+        return "smtp" if self.smtp_host else "console"
+
+    @property
+    def email_enabled(self) -> bool:
+        """True when emails actually reach people (or the test outbox), so links can replace shown passwords."""
+        return self.effective_email_backend in ("smtp", "memory")
 
     @property
     def signup_enabled(self) -> bool:

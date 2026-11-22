@@ -38,7 +38,7 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 - **Agent with guard-rails:** LangGraph with typed, RBAC-checked tools; tenant and supplier scope enforced by code; PostgreSQL checkpoints with crash recovery; a human-approval interrupt; no payment tools.
 - **Multi-tenant SaaS foundations:**
   - RBAC (4 roles), tenant isolation in the app **and** in PostgreSQL row-level security;
-  - self-service organization sign-up, team management and workspace switching;
+  - self-service organization sign-up, team management and workspace switching, with emailed invitations and password-reset links (single use, hashed at rest, sign-out everywhere);
   - Israel's invoice allocation number (מספר הקצאה): read from the invoice and checked against the threshold on the invoice date (NIS 5,000 before VAT from June 2026), with the deductible VAT at risk ranked in the review queue;
   - revocable server-side sessions: 15-minute access tokens, rotating refresh tokens with reuse detection, single-use SSE tickets;
   - segregated two-step approvals;
@@ -80,6 +80,8 @@ docker compose up -d --build                         # postgres, redis, s3, api 
 docker compose exec api python -m app.cli seed --reset   # fictional demo org + documents, processed end-to-end
 ```
 Then open http://localhost:3000.
+
+Emails (password resets, invitations) go to a local Mailpit inbox at http://localhost:8025, so nothing leaves your machine. For real delivery set the `SMTP_*`, `EMAIL_FROM` and `APP_BASE_URL` values in `.env` (any SMTP provider works).
 
 On the first run the worker downloads multilingual-e5-large, a roughly 2.1 GB embedding model. The reranker downloads separately on first use. Set `RERANKER_BACKEND=none` to skip the reranker.
 

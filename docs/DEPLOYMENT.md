@@ -23,7 +23,8 @@ docker compose exec api python -m app.cli seed --reset
 5. **Workers:** at least 2 replicas. Set `JOB_LOCK_TIMEOUT_SECONDS` above your longest OCR job. Workers must have Tesseract with `heb` data (the Dockerfile installs it).
 6. **Models:** pre-pull the ONNX models into a persistent volume (`MODEL_CACHE_DIR`), or bake them into the image. Without the reranker, set `RERANKER_BACKEND=none` and `RETRIEVAL_MODE=hybrid`.
 7. **Observability:** ship the JSON logs; alert on `/health/ready`, on failed jobs (`jobs.status='failed'`) and on `ai_calls.status != 'ok'`. Set `LLM_PRICING_JSON` to get cost estimates.
-8. **Backups:** point-in-time recovery for PostgreSQL (it holds the queue, checkpoints and audit). Enable versioning on the bucket. Periodically run `python -m app.cli verify-audit`.
+8. **Email:** set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY` (`starttls` or `ssl`), `SMTP_USERNAME`, `SMTP_PASSWORD` and `EMAIL_FROM` for your provider, and `APP_BASE_URL` to the public https address (startup refuses a non-https address in production when SMTP is on). Authenticate the sending domain (SPF, DKIM, DMARC) so resets and invitations are not filed as spam.
+9. **Backups:** point-in-time recovery for PostgreSQL (it holds the queue, checkpoints and audit). Enable versioning on the bucket. Periodically run `python -m app.cli verify-audit`.
 
 ## Configuration reference
 All settings are environment variables; see `backend/app/core/config.py`. The most relevant ones:

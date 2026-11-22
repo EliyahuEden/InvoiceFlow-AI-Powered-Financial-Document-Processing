@@ -3,7 +3,9 @@ from __future__ import annotations
 import uuid
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from datetime import timedelta
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -12,7 +14,8 @@ from app.core.config import get_settings
 from app.core.db import new_session, set_session_org
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import AuthSession, Membership, Organization, Role, User
-from app.services import audit, auth_sessions
+from app.services import audit, auth_sessions, auth_tokens
+from app.services import email as mail
 from app.services.llm.provider import mode_label
 from app.services.ratelimit import check_rate_limit
 from app.services.rbac import permissions_for
@@ -172,6 +175,7 @@ def change_password(body: PasswordIn, request: Request, p: Principal = Depends(g
         if not verify_password(body.current_password, user.password_hash):
             raise HTTPException(400, "The current password is not correct.")
         user.password_hash = hash_password(body.new_password)
+        auth_tokens.revoke_all(s, user.id, purposes=(auth_tokens.PASSWORD_RESET,))  # an emailed link must not outlive it
         current = _session_id_from_request(request)
         others = [a for a in auth_sessions.active_sessions(s, user.id) if a.id != current]
         for a in others:
@@ -181,6 +185,71 @@ def change_password(body: PasswordIn, request: Request, p: Principal = Depends(g
                      actor_id=user.id, actor_label=user.email, meta={"other_sessions_signed_out": len(others)})
         s.commit()
         return {"ok": True, "other_sessions_signed_out": len(others)}
+    finally:
+        s.close()
+
+
+class ForgotIn(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+$")
+
+
+class ResetIn(BaseModel):
+    token: str = Field(..., min_length=10, max_length=200)
+    password: str = Field(..., min_length=12, max_length=200)
+
+
+@router.get("/options")
+def options() -> dict:
+    """Public switches the sign-in pages need (no secrets)."""
+    s = get_settings()
+    return {"email_enabled": s.email_enabled, "signup_enabled": s.signup_enabled}
+
+
+@router.post("/forgot-password", status_code=202)
+def forgot_password(body: ForgotIn, request: Request, background: BackgroundTasks) -> dict:
+    """Email a single-use reset link. The answer is the same whether or not the address has an account, and the
+    email is sent after the response, so neither the body nor the timing reveals who is registered."""
+    _require_csrf(request)
+    cfg = get_settings()
+    email = body.email.strip().lower()
+    check_rate_limit(f"pwreset:{email}", cfg.rate_limit_password_reset_per_hour, window_seconds=3600)
+    check_rate_limit(f"pwreset-ip:{_ip(request)}", cfg.rate_limit_password_reset_per_hour * 5, window_seconds=3600)
+    s = new_session()
+    try:
+        user = s.scalars(select(User).where(User.email == email, User.is_active.is_(True))).first()
+        if user is not None:
+            token = auth_tokens.issue(s, user_id=user.id, purpose=auth_tokens.PASSWORD_RESET,
+                                      ttl=timedelta(minutes=cfg.password_reset_ttl_minutes))
+            s.commit()
+            background.add_task(mail.send, mail.password_reset(user.email, user.full_name, token, user.locale))
+    finally:
+        s.close()
+    return {"ok": True, "detail": "If this address has an account, a reset link is on its way."}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetIn, request: Request) -> dict:
+    """Set a new password from an emailed link (a reset or an invitation). Every signed-in device is signed out."""
+    _require_csrf(request)
+    check_rate_limit(f"pwreset-use:{_ip(request)}", get_settings().rate_limit_login_per_minute)
+    s = new_session()
+    try:
+        token = auth_tokens.consume(s, body.token)
+        user = s.get(User, token.user_id) if token else None
+        if token is None or user is None or not user.is_active:
+            raise HTTPException(400, "This link is invalid or has expired. Ask for a new one.")
+        user.password_hash = hash_password(body.password)
+        auth_tokens.revoke_all(s, user.id)
+        signed_out = auth_sessions.revoke_all(s, user.id, "password_reset")
+        org_id = token.organization_id or s.scalar(select(Membership.organization_id)
+                                                   .where(Membership.user_id == user.id).limit(1))
+        if org_id is not None:
+            set_session_org(s, org_id)
+            audit.record(s, org_id=org_id, action="auth.invite_accepted" if token.purpose == auth_tokens.INVITE
+                         else "auth.password_reset", entity_type="user", entity_id=user.id, actor_id=user.id,
+                         actor_label=user.email, meta={"sessions_signed_out": signed_out})
+        s.commit()
+        return {"ok": True, "email": user.email}
     finally:
         s.close()
 

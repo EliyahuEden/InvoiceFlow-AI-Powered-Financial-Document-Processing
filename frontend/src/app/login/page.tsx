@@ -57,6 +57,7 @@ function LoginForm() {
           <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy} disabled={!email || !password}>
             {t.login.submit}
           </Button>
+          <p className="text-center text-sm"><Link href="/forgot-password" className="text-ink-2 underline-offset-4 hover:text-ink hover:underline">{t.recover.forgotLink}</Link></p>
           </form>
         </Panel>
         <Panel className="p-5 sm:p-7">

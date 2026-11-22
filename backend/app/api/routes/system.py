@@ -5,10 +5,10 @@ import asyncio
 import json
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
@@ -19,7 +19,9 @@ from app.api.deps import Principal, get_db, get_principal, principal_from_claims
 from app.core.db import new_session
 from app.core.security import hash_password
 from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, Job, Membership, Organization, Role, User
-from app.services import audit, sse_tickets
+from app.core.config import get_settings
+from app.services import audit, auth_tokens, sse_tickets
+from app.services import email as mail
 from app.services.events import channel, get_redis
 from app.services.llm.provider import mode_label
 from app.services.rbac import ROLE_PERMISSIONS, Perm
@@ -91,16 +93,26 @@ class MemberIn(BaseModel):
     email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+$", max_length=320)
     full_name: str = Field(..., min_length=2, max_length=200)
     role: Role
-    password: str = Field(..., min_length=12, max_length=200)
+    # Optional when email is configured: the new teammate then gets an invitation link and chooses a password.
+    password: str | None = Field(None, min_length=12, max_length=200)
+
+
+UNUSABLE_PASSWORD = "!invited"  # not an argon2 hash, so no password matches until the invitation is accepted
 
 
 @router.post("/api/org/members", status_code=201)
-def add_member(body: MemberIn, p: Principal = Depends(require(Perm.ORG_MANAGE))) -> dict:
+def add_member(body: MemberIn, background: BackgroundTasks, p: Principal = Depends(require(Perm.ORG_MANAGE))) -> dict:
+    email_on = get_settings().email_enabled
+    if body.password is None and not email_on:
+        raise HTTPException(422, "Email is not configured, so give the new teammate an initial password.")
     s = new_session(p.org_id)
     try:
         user = s.scalars(select(User).where(User.email == body.email.lower())).first()
-        if user is None:
-            user = User(email=body.email.lower(), full_name=body.full_name, password_hash=hash_password(body.password))
+        is_new = user is None
+        if is_new:
+            user = User(email=body.email.lower(), full_name=body.full_name,
+                        password_hash=hash_password(body.password) if body.password else UNUSABLE_PASSWORD,
+                        locale=p.user.locale or "he")
             s.add(user)
             s.flush()
         s.add(Membership(user_id=user.id, organization_id=p.org_id, role=body.role))
@@ -108,10 +120,22 @@ def add_member(body: MemberIn, p: Principal = Depends(require(Perm.ORG_MANAGE)))
             s.flush()
         except IntegrityError as exc:
             raise HTTPException(409, "User is already a member") from exc
+        org_name = s.get(Organization, p.org_id).name
+        invited = is_new and body.password is None
+        message = None
+        if invited:
+            token = auth_tokens.issue(s, user_id=user.id, purpose=auth_tokens.INVITE, org_id=p.org_id,
+                                      ttl=timedelta(hours=get_settings().invite_ttl_hours))
+            message = mail.invite(user.email, user.full_name, org_name, p.user.full_name, token, user.locale)
+        elif not is_new and email_on:  # an existing account: tell them, but never touch their password
+            message = mail.added_to_organization(user.email, user.full_name, org_name, p.user.full_name, user.locale)
         audit.record(s, org_id=p.org_id, action="member.added", entity_type="user", entity_id=user.id,
-                     actor_id=p.user.id, actor_label=p.user.email, after={"email": user.email, "role": body.role.value})
+                     actor_id=p.user.id, actor_label=p.user.email,
+                     after={"email": user.email, "role": body.role.value, "invited_by_email": invited})
         s.commit()
-        return {"id": str(user.id)}
+        if message is not None:
+            background.add_task(mail.send, message)
+        return {"id": str(user.id), "invited": invited}
     finally:
         s.close()
 

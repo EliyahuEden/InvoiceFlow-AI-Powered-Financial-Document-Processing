@@ -28,16 +28,19 @@ export function TeamPanel() {
   const { data, mutate } = useApi<{ items: Member[] }>("/api/org/members");
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ email: "", full_name: "", role: "finance_reviewer", password: "" });
-  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+  const [created, setCreated] = useState<{ email: string; password: string | null } | null>(null);
+  const { data: options } = useApi<{ email_enabled: boolean }>("/api/auth/options");
+  const emailOn = !!options?.email_enabled;
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const add = async () => {
     setBusy(true);
-    const password = form.password || generatePassword();
+    // With email on, an empty password means "send an invitation"; without it, a one-time password is generated.
+    const password = form.password || (emailOn ? null : generatePassword());
     try {
-      await api.post("/api/org/members", { ...form, password });
-      setCreated({ email: form.email, password });
+      const r = await api.post<{ invited: boolean }>("/api/org/members", { ...form, password });
+      setCreated({ email: form.email, password: r?.invited ? null : password });
       setForm({ email: "", full_name: "", role: "finance_reviewer", password: "" });
       setAdding(false);
       mutate();
@@ -62,12 +65,14 @@ export function TeamPanel() {
         actions={admin && !adding ? <Button size="sm" onClick={() => setAdding(true)}><UserPlus className="h-4 w-4" aria-hidden />{tm.add}</Button> : undefined} />
       {created && (
         <div role="status" className="m-4 rounded-2xl border border-ok/30 bg-ok-soft p-4 text-sm">
-          <p className="font-semibold text-ink">{tm.createdTitle.replace("{email}", created.email)}</p>
-          <p className="mt-1 text-ink-2">{tm.createdHint}</p>
+          <p className="font-semibold text-ink">{(created.password ? tm.createdTitle : tm.invitedTitle).replace("{email}", created.email)}</p>
+          <p className="mt-1 text-ink-2">{created.password ? tm.createdHint : tm.invitedHint}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <code dir="ltr" className="rounded-lg bg-surface px-3 py-1.5 font-mono text-ink">{created.password}</code>
-            <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard?.writeText(created.password); toast.success(tm.copied); }}>
-              <Copy className="h-4 w-4" aria-hidden />{tm.copy}</Button>
+            {created.password && <>
+              <code dir="ltr" className="rounded-lg bg-surface px-3 py-1.5 font-mono text-ink">{created.password}</code>
+              <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard?.writeText(created.password ?? ""); toast.success(tm.copied); }}>
+                <Copy className="h-4 w-4" aria-hidden />{tm.copy}</Button>
+            </>}
             <Button size="sm" variant="ghost" onClick={() => setCreated(null)}>{t.common.close}</Button>
           </div>
         </div>
@@ -81,7 +86,7 @@ export function TeamPanel() {
           <Field label={t.common.role} htmlFor="tm-role"><Select id="tm-role" className="w-full" value={form.role}
             onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
             {ROLES.map((r) => <option key={r} value={r}>{(t.roles as Record<string, string>)[r]}</option>)}</Select></Field>
-          <Field label={tm.password} htmlFor="tm-password" hint={tm.passwordHint}>
+          <Field label={tm.password} htmlFor="tm-password" hint={emailOn ? tm.inviteHint : tm.passwordHint}>
             <div className="flex gap-2"><Input id="tm-password" dir="ltr" value={form.password} maxLength={200}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
               <Button type="button" variant="secondary" aria-label={tm.generate} onClick={() => setForm((f) => ({ ...f, password: generatePassword() }))}>

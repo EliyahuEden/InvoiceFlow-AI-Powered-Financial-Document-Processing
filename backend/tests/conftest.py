@@ -25,6 +25,7 @@ os.environ.update({
     "RETRIEVAL_MODE": "hybrid",
     "LLM_PROVIDER": "offline",
     "FX_PROVIDER": "static",  # tests never call the Bank of Israel API
+    "EMAIL_BACKEND": "console",  # tests never send mail; email tests switch to the in-memory outbox
     "JWT_SECRET": "test-secret-0123456789abcdef0123456789abcdef",
     "RATE_LIMIT_LOGIN_PER_MINUTE": "1000",
     "RATE_LIMIT_UPLOAD_PER_MINUTE": "1000",

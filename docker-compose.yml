@@ -23,6 +23,16 @@ x-backend-env: &backend-env
   LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
   AI_DAILY_TOKEN_BUDGET: ${AI_DAILY_TOKEN_BUDGET:-100000}   # per business per day, then offline; 0 = unlimited
   RATE_LIMIT_AI_PER_MINUTE: ${RATE_LIMIT_AI_PER_MINUTE:-20}
+  # Email: the local Mailpit inbox (http://localhost:8025) by default. For real delivery set SMTP_HOST, SMTP_PORT,
+  # SMTP_USERNAME, SMTP_PASSWORD, SMTP_SECURITY (starttls|ssl) and EMAIL_FROM in .env.
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-auto}
+  SMTP_HOST: ${SMTP_HOST:-mailpit}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_SECURITY: ${SMTP_SECURITY:-none}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:-InvoiceFlow <no-reply@invoiceflow.local>}
+  APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
   EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-fastembed}
   RERANKER_BACKEND: ${RERANKER_BACKEND:-fastembed}
   MODEL_CACHE_DIR: /models
@@ -65,6 +75,10 @@ services:
     volumes:
       - s3data:/data
       - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+
+  mailpit:  # local test inbox: every email the app sends appears at http://localhost:8025 (nothing leaves the machine)
+    image: axllent/mailpit:v1.21.8
+    ports: ["8025:8025"]
 
   api:
     build: { context: ., dockerfile: backend/Dockerfile }
