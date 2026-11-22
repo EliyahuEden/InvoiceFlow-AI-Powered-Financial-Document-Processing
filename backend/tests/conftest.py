@@ -9,6 +9,7 @@ Environment is configured *before* the app is imported:
 from __future__ import annotations
 
 import os
+import copy
 import tempfile
 from pathlib import Path
 
@@ -66,9 +67,69 @@ def db_clean(migrated):
     yield
 
 
+# The seeded world is built once per test run and then restored from a binary copy before each test: building it
+# (two tenants, master data, eight indexed knowledge documents) took about 3.4 s per test, most of the suite's time.
+_WORLD: dict | None = None
+_SNAPSHOT: dict[str, bytes] = {}
+
+
+def _tables(conn) -> list[str]:  # noqa: ANN001
+    return [r[0] for r in conn.execute(text(
+        "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> 'alembic_version' ORDER BY 1"))]
+
+
+def _take_snapshot() -> None:
+    eng = create_engine(get_settings().migration_database_url)
+    try:
+        with eng.connect() as conn:
+            tables = _tables(conn)
+        raw = eng.raw_connection()
+        try:
+            with raw.cursor() as cur:
+                for t in tables:
+                    with cur.copy(f'COPY "{t}" TO STDOUT (FORMAT BINARY)') as copy:
+                        _SNAPSHOT[t] = b"".join(bytes(chunk) for chunk in copy)
+        finally:
+            raw.close()
+    finally:
+        eng.dispose()
+
+
+def _restore_snapshot() -> bool:
+    """Load the saved world into the emptied database. Foreign keys are not re-checked (the rows were consistent
+    when copied). Returns False when restoring is not possible, and the caller builds the world from scratch."""
+    eng = create_engine(get_settings().migration_database_url)
+    raw = eng.raw_connection()
+    try:
+        with raw.cursor() as cur:
+            cur.execute("SET session_replication_role = replica")
+            for t, data in _SNAPSHOT.items():
+                if data:
+                    with cur.copy(f'COPY "{t}" FROM STDIN (FORMAT BINARY)') as copy:
+                        copy.write(data)
+            cur.execute("SET session_replication_role = DEFAULT")
+        raw.commit()
+        return True
+    except Exception:  # noqa: BLE001 - e.g. a database user without the right to skip FK checks
+        raw.rollback()
+        _SNAPSHOT.clear()
+        return False
+    finally:
+        raw.close()
+        eng.dispose()
+
+
 @pytest.fixture()
 def world(db_clean):
     """Two tenants with users, the demo suppliers/POs/receipts and the knowledge base indexed."""
+    global _WORLD
+    if _WORLD is None or not _SNAPSHOT or not _restore_snapshot():
+        _WORLD = _build_world()
+        _take_snapshot()
+    return copy.deepcopy(_WORLD)  # each test gets its own copy
+
+
+def _build_world() -> dict:
     from app.core.db import session_scope
     from app.demo import seed
     from app.demo.knowledge import KNOWLEDGE

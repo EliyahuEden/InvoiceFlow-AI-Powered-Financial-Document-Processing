@@ -63,7 +63,7 @@ class ExceptionCase(UUIDPk, Timestamps, TenantScoped, Base):
     agent_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decision: Mapped[str | None] = mapped_column(String(20))  # approve | reject | request_info
     decision_note: Mapped[str | None] = mapped_column(Text)
-    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     comments: Mapped[list[ExceptionComment]] = relationship(
@@ -76,7 +76,7 @@ class ExceptionComment(UUIDPk, Timestamps, TenantScoped, Base):
     exception_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("exceptions.id", ondelete="CASCADE"), index=True
     )
-    author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
     body: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(String(20), default="note")  # note | info_request | decision
 
@@ -95,7 +95,7 @@ class Approval(UUIDPk, Timestamps, TenantScoped, Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | approved | rejected | superseded
     # fingerprint of the evidence and route this step approves; a change supersedes the step (audit FIN-01)
     basis: Mapped[str | None] = mapped_column(String(64))
-    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     comment: Mapped[str | None] = mapped_column(Text)
 
@@ -113,7 +113,7 @@ class AgentRun(UUIDPk, Timestamps, TenantScoped, Base):
     steps: Mapped[list] = mapped_column(JSONB, default=list)  # tool-call trace
     result: Mapped[dict | None] = mapped_column(JSONB)
     error: Mapped[str | None] = mapped_column(Text)
-    started_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    started_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
 
 
 class AICall(UUIDPk, Timestamps, TenantScoped, Base):

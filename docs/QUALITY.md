@@ -64,3 +64,24 @@ columns, findings joined in SQL).
 - (Done) The browser end-to-end suite passes on Playwright 1.55.1: 13 passed, 3 opt-in screenshot specs skipped.
 - Model-mode Copilot answers were spot-checked live, not benchmarked.
 - Load from many concurrent users (the timings above are one user at a time).
+
+## Database (Postgres best-practices review)
+
+Measured in a disposable copy of the schema with 200,000 invoices and 200,000 audit entries across 50 businesses,
+plus one business with 100,000 of each, queried as the restricted application role with row-level security on.
+
+| Query | Before | After migration 0009 |
+|---|---|---|
+| Invoice list, first page (100k-invoice business) | 34.7 ms | 0.04 ms |
+| Invoice list, status filter, first page | 19.4 ms | 0.06 ms |
+| Invoice list, page 100 | 35.9 ms | 1.8 ms |
+| Audit log, first page | 0.04 ms | unchanged (already indexed) |
+| Typical business (4,000 invoices), first page | 1.8 ms | unchanged |
+
+- Tenant policies (`organization_id = current_setting('app.org_id')`) are used as index conditions on every
+  tenant table, so the "wrap the function in a sub-select" rewrite brings no gain here; every tenant table has an
+  index that starts with `organization_id`.
+- Every foreign key now has an index (guarded by `tests/test_schema_indexes.py`); before, nine did not.
+- Connection pool: 10 + 10 overflow per process with `pool_pre_ping`. Behind a managed pooler (PgBouncer in
+  transaction mode), keep it smaller per process.
+- Remaining cost: the list's total count reads every row of the business (about 22 ms at 100,000 invoices).

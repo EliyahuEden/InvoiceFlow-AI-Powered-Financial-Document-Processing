@@ -35,7 +35,7 @@ class PurchaseOrder(UUIDPk, Timestamps, TenantScoped, Base):
     currency: Mapped[str] = mapped_column(String(3), default="ILS")
     status: Mapped[str] = mapped_column(String(20), default="open")  # open | partially_received | closed | cancelled
     notes: Mapped[str | None] = mapped_column(Text)
-    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
 
     supplier: Mapped[Supplier] = relationship()
     lines: Mapped[list[POLine]] = relationship(

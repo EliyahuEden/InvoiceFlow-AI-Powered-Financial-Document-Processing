@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,7 +28,7 @@ class Document(UUIDPk, Timestamps, TenantScoped, Base):
     text_method: Mapped[str | None] = mapped_column(String(20))  # native | ocr | mixed
     language: Mapped[str | None] = mapped_column(String(10))  # he | en | mixed
     error: Mapped[str | None] = mapped_column(Text)
-    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
 
     pages: Mapped[list[DocumentPage]] = relationship(
         back_populates="document", order_by="DocumentPage.page_no", cascade="all, delete-orphan"
@@ -55,6 +55,8 @@ class DocumentPage(UUIDPk, TenantScoped, Base):
 
 class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     __tablename__ = "invoices"
+    # the invoice list's own order, newest first within a business (migration 0009)
+    __table_args__ = (Index("ix_invoices_org_created", "organization_id", text("created_at DESC NULLS LAST")),)
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id"), index=True)
     supplier_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("suppliers.id"), index=True)
     purchase_order_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -83,7 +85,7 @@ class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     extraction_method: Mapped[str | None] = mapped_column(String(40))  # rule_based | llm:<model>
     extraction_raw: Mapped[dict | None] = mapped_column(JSONB)
     language: Mapped[str | None] = mapped_column(String(10))
-    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
 
     document: Mapped[Document | None] = relationship()
     lines: Mapped[list[InvoiceLine]] = relationship(

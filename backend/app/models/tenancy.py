@@ -86,7 +86,8 @@ class AuthSession(UUIDPk, Timestamps, Base):
 
     __tablename__ = "auth_sessions"
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"),
+                                                       index=True)
     refresh_token_hash: Mapped[str] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -103,7 +104,7 @@ class AuthToken(UUIDPk, Timestamps, Base):
     __tablename__ = "auth_tokens"
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
     purpose: Mapped[str] = mapped_column(String(20))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
