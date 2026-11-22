@@ -18,6 +18,7 @@ import re
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, TypedDict
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field, ValidationError
@@ -52,12 +53,12 @@ class AgentState(TypedDict, total=False):
     steps: Annotated[list[str], operator.add]
 
 
-def _ctx(config: dict) -> ToolContext:
+def _ctx(config: RunnableConfig) -> ToolContext:
     return CONTEXTS[config["configurable"]["run_key"]]
 
 
 # ------------------------------------------------------------------ nodes
-def load_context(state: AgentState, config: dict) -> dict:
+def load_context(state: AgentState, config: RunnableConfig) -> dict:
     ctx = _ctx(config)
     inv = call_tool(ctx, "get_invoice", {"invoice_id": state["invoice_id"]})
     supplier, pos, receipts = None, [], []
@@ -74,7 +75,7 @@ def load_context(state: AgentState, config: dict) -> dict:
             "steps": ["load_context"]}
 
 
-def reconcile(state: AgentState, config: dict) -> dict:
+def reconcile(state: AgentState, config: RunnableConfig) -> dict:
     out = call_tool(_ctx(config), "run_reconciliation", {"invoice_id": state["invoice_id"]})
     return {"reconciliation": out, "steps": ["reconcile"]}
 
@@ -118,7 +119,7 @@ def _add_evidence(evidence: list[dict], seen: set[str], finding: str, query: str
         evidence.append({"id": len(evidence) + 1, "finding_type": finding, "query": query, **p})
 
 
-def investigate(state: AgentState, config: dict) -> dict:
+def investigate(state: AgentState, config: RunnableConfig) -> dict:
     ctx = _ctx(config)
     supplier_id = (state.get("reconciliation") or {}).get("supplier_id") or (state.get("invoice") or {}).get("supplier_id")
     evidence: list[dict] = []
@@ -346,7 +347,7 @@ def build_llm_report(llm, findings: list[dict], evidence: list[dict], invoice: d
     return None, calls
 
 
-def explain(state: AgentState, config: dict) -> dict:
+def explain(state: AgentState, config: RunnableConfig) -> dict:
     ctx = _ctx(config)
     findings = _actionable(state)
     evidence = state.get("evidence", [])
@@ -372,7 +373,7 @@ def explain(state: AgentState, config: dict) -> dict:
     return {"report": report, "proposed_action": action, "steps": ["explain"]}
 
 
-def draft_exception(state: AgentState, config: dict) -> dict:
+def draft_exception(state: AgentState, config: RunnableConfig) -> dict:
     if not _actionable(state):
         return {"steps": ["draft_exception:skipped_no_findings"]}
     out = call_tool(_ctx(config), "create_exception_draft",
@@ -381,7 +382,7 @@ def draft_exception(state: AgentState, config: dict) -> dict:
     return {"exception_id": out.get("exception_id", ""), "steps": ["draft_exception"]}
 
 
-def human_review(state: AgentState, config: dict) -> dict:
+def human_review(state: AgentState, config: RunnableConfig) -> dict:
     if not state.get("exception_id"):
         return {"steps": ["human_review:not_required"]}
     decision = interrupt({"exception_id": state["exception_id"], "proposed_action": state["proposed_action"],
@@ -389,7 +390,7 @@ def human_review(state: AgentState, config: dict) -> dict:
     return {"decision": decision, "steps": ["human_review"]}
 
 
-def finalize(state: AgentState, config: dict) -> dict:
+def finalize(state: AgentState, config: RunnableConfig) -> dict:
     return {"steps": ["finalize"]}
 
 

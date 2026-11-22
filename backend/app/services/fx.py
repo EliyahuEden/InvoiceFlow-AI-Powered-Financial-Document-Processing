@@ -52,12 +52,13 @@ class Rates:
                    datetime.fromisoformat(d["fetched_at"]))
 
 
-_MEMORY: dict = {"rates": None, "fetched_at": None}
+_MEMORY: dict = {"rates": None, "fetched_at": None, "failed_at": None}
+RETRY_AFTER_FAILURE = timedelta(minutes=10)
 _LOCK = threading.Lock()
 
 
 def clear_cache() -> None:
-    _MEMORY.update(rates=None, fetched_at=None)
+    _MEMORY.update(rates=None, fetched_at=None, failed_at=None)
 
 
 def _provider() -> str:
@@ -141,14 +142,16 @@ def current_rates() -> Rates | None:
                     cached = cached or shared
             except Exception:  # noqa: BLE001
                 pass
+        failed_at = _MEMORY.get("failed_at")
+        if failed_at and now - failed_at < RETRY_AFTER_FAILURE:
+            return cached  # the bank was unreachable a moment ago: do not make every page wait for the timeout again
         try:
             fresh = fetch_boi()
         except Exception as exc:  # noqa: BLE001 - a rate refresh must never break a page
             log.warning("fx_rates_unavailable", error=str(exc)[:200], using_last_good=cached is not None)
-            if cached is not None:
-                _MEMORY["fetched_at"] = now - ttl + timedelta(minutes=10)  # retry in 10 minutes, not on every request
+            _MEMORY["failed_at"] = now
             return cached
-        _MEMORY.update(rates=fresh, fetched_at=fresh.fetched_at)
+        _MEMORY.update(rates=fresh, fetched_at=fresh.fetched_at, failed_at=None)
         if r is not None:
             try:
                 r.set(REDIS_KEY, fresh.to_json(), ex=int(ttl.total_seconds()) * 4)
@@ -167,3 +170,25 @@ def to_base(amount: Decimal | None, currency: str | None, rates: Rates | None) -
     if rates is None or code not in rates.rates:
         return None
     return round_money(amount * rates.rates[code])
+
+
+@dataclass(frozen=True)
+class ApprovalRoute:
+    steps: int
+    total_base: Decimal | None   # the total in shekels that was compared, None when it could not be converted
+    rate: Decimal | None         # shekels per unit, for foreign currencies
+    rate_as_of: date | None
+
+
+def approval_steps(total: Decimal | None, currency: str | None, threshold: Decimal, rates: Rates | None) -> ApprovalRoute:
+    """The dual-approval threshold is a shekel amount, so a foreign invoice is compared in shekels.
+    A foreign invoice that cannot be converted gets both approvals: a missing rate must never remove a control."""
+    if total is None:
+        return ApprovalRoute(1, None, None, None)
+    base = to_base(total, currency or BASE, rates)
+    code = ALIASES.get((currency or BASE).upper(), (currency or BASE).upper())
+    rate = rates.rates.get(code) if rates is not None and code != BASE else None
+    as_of = rates.as_of if rate is not None else None
+    if base is None:
+        return ApprovalRoute(2, None, None, None)
+    return ApprovalRoute(2 if base > threshold else 1, base, rate, as_of)

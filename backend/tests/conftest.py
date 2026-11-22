@@ -54,6 +54,11 @@ def db_clean(migrated):
             "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> 'alembic_version'"))]
         conn.execute(text("TRUNCATE " + ", ".join(f'"{t}"' for t in tables) + " CASCADE"))
     eng.dispose()
+    # Rate-limit windows (e.g. 10 sign-ups per hour) live in the test-only Redis database: start each test fresh,
+    # or a second run within the hour fails with 429.
+    from app.services.events import get_redis
+
+    get_redis().flushdb()
     from app.services.rag import service as rag_service
 
     rag_service._INDEX_CACHE.clear()

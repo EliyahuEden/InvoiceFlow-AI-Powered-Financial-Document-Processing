@@ -53,6 +53,8 @@ def test_refresh_rotates_and_reuse_of_an_old_refresh_token_revokes_the_session(c
     assert client.get("/api/auth/me", headers=_bearer(new_access)).status_code == 200
 
     # a stolen, already-rotated refresh token is replayed: the whole session is revoked
+    # (the attacker holds only the old token: clear the jar so the client cannot also send the new cookie)
+    client.cookies.clear()
     client.cookies.set("invoiceflow_refresh", old_refresh)
     assert client.post("/api/auth/refresh", headers=CSRF).status_code == 401
     assert client.get("/api/auth/me", headers=_bearer(new_access)).status_code == 401

@@ -233,8 +233,13 @@ def approval_basis(inv: Invoice, steps: int) -> str:
 
 
 def ensure_approval_steps(session: Session, org: Organization, inv: Invoice) -> None:
+    from app.services import fx
+
+    # The threshold is a shekel amount: a foreign invoice is compared at the current rate, and one that
+    # cannot be converted gets both approvals.
     threshold = Decimal(str(org.settings.get("approval", {}).get("dual_approval_threshold", "20000")))
-    steps = 2 if inv.total is not None and inv.total > threshold else 1
+    route = fx.approval_steps(inv.total, inv.currency, threshold, fx.current_rates())
+    steps = route.steps
     basis = approval_basis(inv, steps)
     active = session.scalars(select(Approval).where(Approval.invoice_id == inv.id, Approval.status != "superseded")
                              .with_for_update()).all()
@@ -247,6 +252,15 @@ def ensure_approval_steps(session: Session, org: Organization, inv: Invoice) -> 
                      actor_type="system", actor_label="reconciliation-engine",
                      meta={"steps": [{"step": a.step, "decided_by": str(a.decided_by) if a.decided_by else None}
                                      for a in active], "reason": "invoice evidence or approval route changed"})
+    if (inv.currency or "ILS").upper() not in ("ILS", "NIS"):
+        audit.record(session, org_id=org.id, action="approval.route", entity_type="invoice", entity_id=inv.id,
+                     actor_type="system", actor_label="reconciliation-engine",
+                     meta={"currency": inv.currency, "total": str(inv.total) if inv.total is not None else None,
+                           "total_base": str(route.total_base) if route.total_base is not None else None,
+                           "rate": str(route.rate) if route.rate is not None else None,
+                           "rate_as_of": route.rate_as_of.isoformat() if route.rate_as_of else None,
+                           "threshold": str(threshold), "steps": steps,
+                           "reason": "converted to shekels" if route.total_base is not None else "no exchange rate: both approvals"})
     session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=1, required_role="finance_reviewer", basis=basis))
     if steps == 2:
         session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=2, required_role="admin", basis=basis))

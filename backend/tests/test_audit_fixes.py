@@ -249,3 +249,27 @@ def test_approving_the_proposed_action_needs_no_extra_note(client, as_user):
     exc_id, proposed, fin = _blocking_case(client, as_user)
     r = client.post(f"/api/exceptions/{exc_id}/decision", headers=fin, json={"decision": "approve"})
     assert r.status_code == 200, r.text
+
+
+@pytest.mark.integration
+def test_a_dollar_invoice_is_routed_by_its_shekel_value(client, as_user, world):
+    """The dual-approval threshold is in shekels: 7,633.42 USD (about 25,400 ILS) needs the second approver."""
+    import uuid
+
+    from app.core.db import session_scope
+    from app.models import Invoice, Organization
+    from app.services.reconciliation.service import ensure_approval_steps
+    from tests.conftest import upload_invoice
+
+    proc, fin = as_user("procurement@kinneret.example"), as_user("finance@kinneret.example")
+    iid = upload_invoice(client, proc, "01_correct_tavor_he.pdf")["invoice_id"]  # 7,633.42 ILS, reconciled
+    assert [a["step"] for a in _approvals(client, fin, iid)] == [1]
+    with session_scope(world["org_id"]) as session:
+        inv = session.get(Invoice, uuid.UUID(iid))
+        assert inv.status == "reconciled"
+        inv.currency = "USD"
+        ensure_approval_steps(session, session.get(Organization, world["org_id"]), inv)
+    assert [a["step"] for a in _approvals(client, fin, iid) if a["status"] == "pending"] == [1, 2]
+    route = client.get(f"/api/audit?entity_id={iid}&action=approval.route", headers=fin).json()["items"]
+    assert route and route[0]["meta"]["currency"] == "USD" and route[0]["meta"]["steps"] == 2
+    assert route[0]["meta"]["total_base"] == "25419.29" and route[0]["meta"]["rate"] == "3.33"

@@ -79,6 +79,21 @@ def test_no_rates_at_all_means_no_conversion(monkeypatch):
     assert fx.current_rates() is None
 
 
+def test_an_unreachable_bank_is_not_retried_on_every_request(monkeypatch):
+    """Offline with no saved rates: one failed fetch, then no conversion for 10 minutes, not a 5-second wait per page."""
+    monkeypatch.setattr(fx, "_provider", lambda: "boi")
+    calls = []
+
+    def boom(transport=None):
+        calls.append(1)
+        raise fx.FxUnavailable("network unreachable")
+
+    monkeypatch.setattr(fx, "fetch_boi", boom)
+    assert fx.current_rates() is None
+    assert fx.current_rates() is None
+    assert len(calls) == 1
+
+
 @pytest.mark.parametrize("payload", [{}, {"exchangeRates": "x"}, {"exchangeRates": [{"key": "USD"}]}, None])
 def test_malformed_responses_are_rejected_not_trusted(payload):
     with pytest.raises(fx.FxUnavailable):
@@ -160,3 +175,31 @@ def test_queue_ranks_a_dollar_case_by_its_shekel_value(client, as_user):
     assert usd["amount_at_risk"] == "2000.00" and usd["amount_at_risk_base"] == "6660.00"
     assert ils["amount_at_risk_base"] is None  # already in shekels
     assert usd["priority"]["rank"] < ils["priority"]["rank"]
+
+
+# ---- dual-approval threshold (a shekel limit) must compare foreign invoices in shekels
+RATES = fx.Rates(rates={"USD": Decimal("3.33"), "EUR": Decimal("3.65")}, as_of=date(2026, 11, 20), source="test")
+LIMIT = Decimal("20000")
+
+
+@pytest.mark.parametrize(("total", "currency", "steps"), [
+    ("15000", "ILS", 1),
+    ("25000", "ILS", 2),
+    ("20000", "ILS", 1),      # "over the threshold", as before
+    ("7000", "USD", 2),       # 23,310 ILS: a dollar figure below 20,000 must not skip the second approver
+    ("5000", "USD", 1),       # 16,650 ILS
+    ("6000", "EUR", 2),       # 21,900 ILS
+])
+def test_approval_steps_compare_in_shekels(total, currency, steps):
+    assert fx.approval_steps(Decimal(total), currency, LIMIT, RATES).steps == steps
+
+
+def test_approval_steps_fail_safe_without_a_rate():
+    assert fx.approval_steps(Decimal("100"), "USD", LIMIT, None).steps == 2
+    assert fx.approval_steps(Decimal("100"), "CHF", LIMIT, RATES).steps == 2
+
+
+def test_approval_steps_record_the_rate_used():
+    route = fx.approval_steps(Decimal("7000"), "USD", LIMIT, RATES)
+    assert (route.total_base, route.rate, route.rate_as_of) == (Decimal("23310.00"), Decimal("3.33"), date(2026, 11, 20))
+    assert fx.approval_steps(None, "ILS", LIMIT, RATES).steps == 1
