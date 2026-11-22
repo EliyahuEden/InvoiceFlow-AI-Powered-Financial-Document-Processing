@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models import Document, DocumentPage, Invoice, InvoiceLine, Job, Organization, User
 from app.services import audit, events, jobs
+from app.services.documents.classify import classify_document
 from app.services.documents.hebrew import detect_language
 from app.services.documents.pages import drop_duplicate_pages
 from app.services.documents.text_extraction import OCRUnavailable, PageText, Word, extract_pages
@@ -79,6 +80,15 @@ def create_invoice_upload(session: Session, *, org_id: uuid.UUID, user: User | N
                  after={"filename": doc.filename, "sha256": doc.sha256, "size_bytes": doc.size_bytes},
                  meta={"document_id": str(doc.id), "job_id": str(job.id)})
     return inv, job
+
+
+def clean_pages(pages: list[PageText]) -> list[PageText]:
+    """Remove NUL characters from extracted text: some PDFs contain them and PostgreSQL cannot store them."""
+    for p in pages:
+        p.text = p.text.replace("\x00", "")
+        for w in p.words:
+            w.t = w.t.replace("\x00", "")
+    return pages
 
 
 def save_pages(session: Session, doc: Document, pages: list[PageText]) -> None:
@@ -163,6 +173,11 @@ def run_extraction(session: Session, org: Organization, inv: Invoice, doc: Docum
             "code": "DUPLICATE_PAGES", "severity": "info", "pages": duplicate_pages,
             "message": f"Page(s) {', '.join(map(str, duplicate_pages))} repeat an earlier page (a copy of the same "
                        f"invoice) and were ignored, so nothing is counted twice."}]
+    kind = classify_document("\n".join(p.text for p in pages))
+    if kind:
+        inv.validation_warnings = [*inv.validation_warnings, {
+            "code": "NOT_AN_INVOICE", "severity": "critical", "kind": kind[0], "phrase": kind[1],
+            "message": f"The document is titled '{kind[1]}' and does not look like a supplier invoice."}]
     pages = all_pages
     injections = detect_injection("\n".join(p.text for p in pages))
     if injections:
@@ -222,7 +237,7 @@ def handle_invoice_process(session: Session, job: Job) -> dict:
 
     t0 = time.perf_counter()
     try:
-        pages = extract_pages(data, doc.mime_type, progress)
+        pages = clean_pages(extract_pages(data, doc.mime_type, progress))
     except OCRUnavailable as exc:
         doc.status, doc.error, inv.status = "failed", str(exc), "failed"
         audit.record(session, org_id=org.id, action="invoice.processing_failed", entity_type="invoice",

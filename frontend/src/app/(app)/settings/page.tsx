@@ -4,6 +4,7 @@ import { Check, Minus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/components/session";
+import { SessionsPanel } from "@/components/sessions-panel";
 import { PageHeader } from "@/components/shell";
 import { Button, ErrorState, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
@@ -93,6 +94,7 @@ export default function SettingsPage() {
           {admin && <div className="border-t border-line p-4"><Button variant="primary" loading={busy} onClick={save}>{t.common.save}</Button></div>}
         </Panel>
       </div>
+      <SessionsPanel />
       <Panel>
         <PanelHeader title={t.settings.members} />
         <Table>

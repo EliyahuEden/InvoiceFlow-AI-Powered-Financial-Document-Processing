@@ -11,7 +11,7 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const { t } = useI18n();
   const mod = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
   const groups: [string, [string[], string][]][] = [
-    [t.shortcuts.general, [[[mod, "K"], t.shortcuts.open], [["?"], t.shortcuts.help]]],
+    [t.shortcuts.general, [[[mod, "K"], t.shortcuts.open], [["/"], t.copilot.open], [["?"], t.shortcuts.help]]],
     [t.shortcuts.navigation, [[["G", "D"], t.shortcuts.gotoDashboard], [["G", "Q"], t.shortcuts.gotoQueue], [["G", "I"], t.shortcuts.gotoInbox],
       [["G", "S"], t.nav.suppliers], [["G", "P"], t.nav.purchaseOrders], [["G", "K"], t.nav.knowledge]]],
     [t.shortcuts.workspace, [[["N"], t.shortcuts.nextItem], [["E"], t.shortcuts.evidence], [["D"], t.shortcuts.decision]]],

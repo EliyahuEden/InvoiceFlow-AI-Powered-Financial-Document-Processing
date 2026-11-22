@@ -27,10 +27,16 @@ def dashboard(p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = 
     total_value = sum((i.total or Decimal(0) for i in invoices if i.currency in (None, "ILS")), Decimal(0))
     processed = [i for i in invoices if i.status not in ("processing", "failed")]
     first_pass = [i for i in processed if i.status in ("reconciled", "approved")]
-    disc = db.execute(select(Discrepancy.type, Discrepancy.severity, Discrepancy.evidence)
+    disc = db.execute(select(Discrepancy.type, Discrepancy.severity, Discrepancy.evidence, Invoice.currency)
+                      .join(Invoice, Invoice.id == Discrepancy.invoice_id)
                       .where(Discrepancy.organization_id == org, Discrepancy.status == "open")).all()
-    risk = sum(Decimal(e["amount_at_risk"]) for _, _, e in disc if e and e.get("amount_at_risk"))
-    type_counts = Counter(t for t, _, _ in disc)
+    # money at risk per currency: amounts in different currencies are never added (audit FIN-07)
+    risk_by_currency: dict[str, Decimal] = defaultdict(Decimal)
+    for _, _, e, cur in disc:
+        if e and e.get("amount_at_risk"):
+            risk_by_currency[cur or "unknown"] += Decimal(e["amount_at_risk"])
+    base = (p.org.settings or {}).get("base_currency", "ILS")
+    type_counts = Counter(t for t, _, _, _ in disc)
     open_exc = db.scalar(select(func.count()).where(ExceptionCase.organization_id == org,
                                                     ExceptionCase.status.in_(["draft", "open", "pending_info"])))
     jobs = db.scalars(select(Job).where(Job.organization_id == org, Job.type == "invoice.process",
@@ -52,7 +58,9 @@ def dashboard(p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = 
     return {
         "kpis": {
             "invoices_total": len(invoices), "open_exceptions": open_exc or 0,
-            "amount_at_risk": money(risk), "total_value_ils": money(total_value),
+            "amount_at_risk": money(risk_by_currency.get(base, Decimal(0))), "amount_at_risk_currency": base,
+            "amount_at_risk_by_currency": {c: money(v) for c, v in sorted(risk_by_currency.items())},
+            "total_value_ils": money(total_value),
             "auto_match_rate": round(len(first_pass) / len(processed), 3) if processed else None,
             "awaiting_approval": by_status.get("reconciled", 0), "approved": by_status.get("approved", 0),
             "median_processing_seconds": round(statistics.median(durations), 1) if durations else None,

@@ -50,7 +50,9 @@ def handle_knowledge_ingest(session: Session, job: Job) -> dict:
     doc = session.get(Document, kd.document_id)
     data = get_storage().get(doc.storage_key)
     jobs.report_progress(session, job, 10, "Extracting text")
-    pages = extract_pages(data, doc.mime_type)
+    from app.services.processing import clean_pages
+
+    pages = clean_pages(extract_pages(data, doc.mime_type))
     save_pages(session, doc, pages)
     kd.language = detect_language(" ".join(p.text for p in pages))
     jobs.report_progress(session, job, 40, f"Chunking ({s.chunking_strategy})")

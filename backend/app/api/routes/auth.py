@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -196,6 +196,42 @@ def logout_all(request: Request, response: Response, p: Principal = Depends(get_
         s.close()
     _clear_cookies(response)
     return {"ok": True, "sessions_revoked": n}
+
+
+@router.get("/sessions")
+def list_sessions(request: Request, p: Principal = Depends(get_principal)) -> dict:
+    """The caller's own signed-in browsers and clients (never other users')."""
+    current = _session_id_from_request(request)
+    s = new_session()
+    try:
+        rows = sorted(auth_sessions.active_sessions(s, p.user.id),
+                      key=lambda r: r.last_used_at or r.created_at, reverse=True)
+        return {"items": [{
+            "id": str(r.id), "current": r.id == current, "created_at": r.created_at.isoformat(),
+            "last_used_at": r.last_used_at.isoformat() if r.last_used_at else None,
+            "expires_at": min(r.expires_at, r.absolute_expires_at).isoformat(),
+            "ip": r.ip, "user_agent": r.user_agent,
+        } for r in rows]}
+    finally:
+        s.close()
+
+
+@router.delete("/sessions/{session_id}")
+def revoke_session(session_id: uuid.UUID, request: Request, p: Principal = Depends(get_principal)) -> dict:
+    """Sign out one of the caller's own sessions (another browser, a lost laptop)."""
+    _require_csrf(request)
+    s = new_session()
+    try:
+        if session_id not in {r.id for r in auth_sessions.active_sessions(s, p.user.id)}:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")
+        auth_sessions.revoke(s, session_id, "revoked_by_user")
+        set_session_org(s, p.org_id)
+        audit.record(s, org_id=p.org_id, action="auth.session_revoked", entity_type="user", entity_id=p.user.id,
+                     actor_id=p.user.id, actor_label=p.user.email, meta={"session_id": str(session_id)})
+        s.commit()
+    finally:
+        s.close()
+    return {"ok": True}
 
 
 @router.get("/me")

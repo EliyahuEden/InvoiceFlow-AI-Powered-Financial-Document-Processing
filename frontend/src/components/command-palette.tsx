@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
-import { ArrowRight, Building2, FileText, Languages, Loader2, Moon, Search, ShoppingCart, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Building2, FileText, Languages, Loader2, Moon, Search, ShoppingCart, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -20,7 +20,9 @@ const EMPTY: Results = { invoices: [], suppliers: [], pos: [] };
 
 /** ⌘K / Ctrl+K: jump anywhere and search invoices, suppliers and purchase orders through the
  *  existing list APIs (tenant-scoped and permission-checked by the backend). */
-export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CommandPalette({ open, onOpenChange, onAskCopilot }: {
+  open: boolean; onOpenChange: (open: boolean) => void; onAskCopilot?: () => void;
+}) {
   const { t, locale, setLocale } = useI18n();
   const { can } = useSession();
   const nav = useNav();
@@ -65,6 +67,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         if (r.item) router.push(`/exceptions/${r.item.exception_id}`); else toast.success(t.review.clearTitle);
       } catch { toast.error(t.common.error); }
     } },
+    !!onAskCopilot && { id: "copilot", label: t.copilot.open, icon: Bot, run: () => { onOpenChange(false); onAskCopilot(); } },
     { id: "theme", label: t.palette.toggleTheme, icon: Moon, run: () => { setTheme(currentTheme() === "dark" ? "light" : "dark"); onOpenChange(false); } },
     { id: "lang", label: t.palette.switchLanguage, icon: Languages, run: () => { setLocale(locale === "he" ? "en" : "he"); onOpenChange(false); } },
   ];

@@ -167,3 +167,20 @@ def test_trace_is_complete_and_serializable():
     d = E.reconcile(invoice(po), c).to_dict()
     json.dumps(d, default=str)
     assert {ch["check"] for ch in d["checks"]} >= {"supplier_identified", "purchase_order_found", "prices_within_tolerance"}
+
+
+def test_a_document_that_is_not_an_invoice_is_blocked_with_one_clear_finding():
+    c, po = ctx()
+    inv = replace(invoice(po), document_kind=("order_confirmation", "אישור הזמנה"))
+    r = E.reconcile(inv, c)
+    assert r.outcome == "blocked"
+    assert [f.type for f in r.findings] == ["NOT_AN_INVOICE"]  # no PO-matching noise for a non-invoice
+    f = r.findings[0]
+    assert f.severity == "critical" and f.params == {"phrase": "אישור הזמנה"}
+    assert f.evidence["kind"] == "order_confirmation"
+    assert E.MESSAGE_PARAMS["NOT_AN_INVOICE"] == {"phrase"}
+
+
+def test_invoices_without_a_document_kind_reconcile_as_before():
+    c, po = ctx()
+    assert "NOT_AN_INVOICE" not in {f.type for f in E.reconcile(invoice(po), c).findings}

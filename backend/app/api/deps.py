@@ -108,7 +108,22 @@ def money(v: Decimal | None) -> str | None:
     return None if v is None else f"{v:.2f}"
 
 
+def price(v: Decimal | None) -> str | None:
+    """A unit price with every stored digit (at least two decimals): rounding it to cents would
+    change extended amounts when a correction sends the line back (audit FIN-04)."""
+    if v is None:
+        return None
+    s = format(v.normalize(), "f")
+    whole, _, frac = s.partition(".")
+    return f"{whole}.{frac.ljust(2, '0')}"
+
+
+MAX_PAGE = 100_000
+
+
 def page_params(page: int = 1, page_size: int = 25) -> tuple[int, int]:
+    if page > MAX_PAGE:  # an offset past this is never a real request and overflows the database (fuzz finding)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"page must be at most {MAX_PAGE}")
     page = max(1, page)
     page_size = min(max(1, page_size), 100)
     return page, page_size

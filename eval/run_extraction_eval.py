@@ -202,6 +202,22 @@ def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
     }
 
 
+def _previous_results() -> dict:
+    """Model-scored systems from the last saved result, each tagged with when and with which model it ran."""
+    path = ROOT / "eval" / "results" / "extraction_latest.json"
+    try:
+        old = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    kept = {}
+    for name in ("llm", "rules_first"):
+        res = (old.get("systems") or {}).get(name) or {}
+        if "overall_field_accuracy" in res:
+            kept[name] = {**res, "carried_over": {"from_run": res.get("carried_over", {}).get("from_run", old.get("generated_at")),
+                                                   "llm": res.get("carried_over", {}).get("llm", old.get("llm"))}}
+    return kept
+
+
 def llm_info(requested: bool) -> dict | None:
     """Which model and endpoint produced the LLM numbers (never the key)."""
     if not requested:
@@ -237,13 +253,15 @@ def main() -> None:
     systems = {"rule_based": run("rule_based", rows_eval, args.skip_ocr)}
     skipped_llm = {"skipped": "not requested (requires --llm and a configured provider)"}
     chosen = {x.strip() for x in args.llm_systems.split(",")}
+    previous = _previous_results()
     for name in ("llm", "rules_first"):
-        if not args.llm:
-            systems[name] = skipped_llm
-        elif name in chosen:
+        if args.llm and name in chosen:
             systems[name] = run(name, rows_eval, args.skip_ocr, args.pace)
+        elif name in previous:
+            # an offline run must not erase model measurements made earlier: keep them, labelled with their date
+            systems[name] = previous[name]
         else:
-            systems[name] = {"skipped": "not selected in this run (--llm-systems)"}
+            systems[name] = skipped_llm if not args.llm else {"skipped": "not selected in this run (--llm-systems)"}
     for name, res in systems.items():
         if "overall_field_accuracy" in res:
             print(name, "field acc", res["overall_field_accuracy"], "lines F1", res["line_items"]["f1"],

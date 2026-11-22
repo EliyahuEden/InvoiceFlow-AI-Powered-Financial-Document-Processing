@@ -11,7 +11,7 @@ POSSIBLE_DUPLICATE, MISSING_PURCHASE_ORDER, PO_SUPPLIER_MISMATCH, PO_CLOSED,
 CURRENCY_MISMATCH, CURRENCY_NOT_STATED, AMBIGUOUS_DESCRIPTION, ITEM_NOT_ON_PO,
 PRICE_MISMATCH, QUANTITY_EXCEEDS_ORDERED, QUANTITY_EXCEEDS_RECEIVED,
 MISSING_GOODS_RECEIPT, LINE_TOTAL_MISMATCH, SUBTOTAL_MISMATCH, TOTAL_MISMATCH,
-UNBILLED_PO_LINES, INCOMPLETE_EXTRACTION, SUSPICIOUS_CONTENT
+UNBILLED_PO_LINES, INCOMPLETE_EXTRACTION, SUSPICIOUS_CONTENT, NOT_AN_INVOICE, AMBIGUOUS_PURCHASE_ORDER
 """
 from __future__ import annotations
 
@@ -34,10 +34,11 @@ SEVERITY = {
     "PRICE_MISMATCH": "critical", "QUANTITY_EXCEEDS_ORDERED": "critical", "QUANTITY_EXCEEDS_RECEIVED": "critical",
     "MISSING_GOODS_RECEIPT": "critical", "LINE_TOTAL_MISMATCH": "warning", "SUBTOTAL_MISMATCH": "warning",
     "TOTAL_MISMATCH": "critical", "UNBILLED_PO_LINES": "info", "INCOMPLETE_EXTRACTION": "critical",
-    "SUSPICIOUS_CONTENT": "warning",
+    "SUSPICIOUS_CONTENT": "warning", "NOT_AN_INVOICE": "critical", "AMBIGUOUS_PURCHASE_ORDER": "critical",
 }
 BLOCKING = {"UNRECOGNIZED_SUPPLIER", "AMBIGUOUS_SUPPLIER", "DUPLICATE_INVOICE", "MISSING_PURCHASE_ORDER",
-            "PO_SUPPLIER_MISMATCH", "SUPPLIER_BLOCKED", "INCOMPLETE_EXTRACTION"}
+            "PO_SUPPLIER_MISMATCH", "SUPPLIER_BLOCKED", "INCOMPLETE_EXTRACTION", "NOT_AN_INVOICE",
+            "AMBIGUOUS_PURCHASE_ORDER"}
 
 # Message templates are rendered by the client in the reader's language. Each finding carries a
 # message key (its type, or a variant of it) plus these display-ready parameters. The English
@@ -68,6 +69,9 @@ MESSAGE_PARAMS: dict[str, set[str]] = {
     "UNBILLED_PO_LINES": {"count"},
     "INCOMPLETE_EXTRACTION": {"missing"},
     "SUSPICIOUS_CONTENT": set(),
+    "NOT_AN_INVOICE": {"phrase"},
+    "AMBIGUOUS_PURCHASE_ORDER": {"reference", "count"},
+    "AMBIGUOUS_PURCHASE_ORDER_INFERRED": {"count"},
 }
 
 
@@ -137,6 +141,7 @@ class InvoiceData:
     document_sha256: str | None = None
     supplier_id: uuid.UUID | None = None  # set when a human confirmed the supplier
     security_flags: list[str] = field(default_factory=list)  # e.g. embedded prompt-injection text
+    document_kind: tuple[str, str] | None = None  # (kind, printed title) when not a supplier invoice
 
 
 @dataclass
@@ -311,7 +316,8 @@ def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Contex
 
 
 def _line_score(il: InvLine, pl: POLineData) -> tuple[str, float]:
-    if il.sku and pl.sku and normalize_doc_number(il.sku) == normalize_doc_number(pl.sku):
+    sku = normalize_doc_number(il.sku)
+    if sku and sku == normalize_doc_number(pl.sku):
         return "sku", 1.0
     return "description", similarity(il.description, pl.description)
 
@@ -320,7 +326,16 @@ def resolve_po(inv: InvoiceData, supplier: SupplierData, ctx: Context) -> tuple[
     pos = ctx.purchase_orders
     if inv.po_reference:
         ref = normalize_doc_number(inv.po_reference)
-        po = next((p for p in pos if normalize_doc_number(p.number) == ref), None)
+        candidates = sorted((p for p in pos if ref and normalize_doc_number(p.number) == ref), key=lambda p: str(p.id))
+        own = [p for p in candidates if p.supplier_id == supplier.id]
+        pick = own if own else candidates
+        if len(pick) > 1:  # FIN-05: never choose by database order
+            return None, {"method": "reference", "reference": inv.po_reference, "candidates": len(pick)}, [Finding(
+                "AMBIGUOUS_PURCHASE_ORDER",
+                f"{len(pick)} purchase orders match the reference {inv.po_reference}; confirm which one applies.",
+                actual=inv.po_reference, evidence={"po_ids": [str(p.id) for p in pick]},
+                params={"reference": inv.po_reference, "count": len(pick)})]
+        po = pick[0] if pick else None
         if po is None:
             return None, {"method": "reference", "reference": inv.po_reference}, [Finding(
                 "MISSING_PURCHASE_ORDER", f"The invoice references {inv.po_reference}, which does not exist.",
@@ -332,14 +347,21 @@ def resolve_po(inv: InvoiceData, supplier: SupplierData, ctx: Context) -> tuple[
                 actual=inv.po_reference, evidence={"po_id": str(po.id)}, params={"po": po.number})]
         return po, {"method": "reference", "reference": inv.po_reference}, []
     # No reference: look for an open PO of this supplier whose lines cover the invoice.
-    best, best_score = None, 0.0
+    covers: list[tuple[float, POData]] = []
     for p in pos:
         if p.supplier_id != supplier.id or p.status in ("closed", "cancelled"):
             continue
         scores = [max((_line_score(il, pl)[1] for pl in p.lines), default=0.0) for il in inv.lines]
-        cover = sum(1 for s in scores if s >= float(ctx.tolerances.description_match_min)) / max(1, len(scores))
-        if cover > best_score:
-            best, best_score = p, cover
+        covers.append((sum(1 for s in scores if s >= float(ctx.tolerances.description_match_min)) / max(1, len(scores)), p))
+    best_score = max((c for c, _ in covers), default=0.0)
+    tied = sorted((p for c, p in covers if c == best_score), key=lambda p: str(p.id))
+    if best_score >= 0.75 and len(tied) > 1:  # FIN-05: equal coverage is ambiguous, not "the first one"
+        return None, {"method": "inferred_from_lines", "coverage": best_score, "candidates": len(tied)}, [Finding(
+            "AMBIGUOUS_PURCHASE_ORDER",
+            f"No purchase order is referenced and {len(tied)} open orders of this supplier cover the lines equally.",
+            evidence={"po_ids": [str(p.id) for p in tied], "coverage": best_score},
+            params={"count": len(tied)}, message_key="AMBIGUOUS_PURCHASE_ORDER_INFERRED")]
+    best = tied[0] if tied else None
     if best is not None and best_score >= 0.75:
         return best, {"method": "inferred_from_lines", "coverage": best_score}, []
     return None, {"method": "none"}, [Finding(
@@ -354,7 +376,7 @@ def match_lines(inv: InvoiceData, po: POData, tol: Tolerances) -> tuple[list[Lin
     used: set[uuid.UUID] = set()
     for il in inv.lines:
         scored = sorted(((*_line_score(il, pl), pl) for pl in po.lines if pl.id not in used),
-                        key=lambda x: -x[1])
+                        key=lambda x: (-x[1], x[2].line_no))
         cands = [{"po_line_id": str(pl.id), "po_line_no": pl.line_no, "description": pl.description,
                   "unit_price": str(pl.unit_price), "score": sc} for _, sc, pl in scored[:3]]
         if not scored or scored[0][1] < float(tol.description_match_min):
@@ -367,6 +389,25 @@ def match_lines(inv: InvoiceData, po: POData, tol: Tolerances) -> tuple[list[Lin
                                     params={"line": il.line_no, "description": il.description, "po": po.number}))
             continue
         method, score, pl = scored[0]
+        same_sku = [x for x in scored if x[0] == "sku"]
+        if method == "sku" and len(same_sku) > 1:
+            # FIN-05: a SKU repeated on several PO lines; only an identical unit price decides it
+            by_price = [x for x in same_sku if il.unit_price is not None and x[2].unit_price == il.unit_price]
+            if len(by_price) == 1:
+                method, score, pl = by_price[0]
+            else:
+                c2 = [{"po_line_id": str(x[2].id), "po_line_no": x[2].line_no, "description": x[2].description,
+                       "unit_price": str(x[2].unit_price), "score": x[1]} for x in same_sku[:2]]
+                matches.append(LineMatch(il.line_no, str(il.id) if il.id else None, None, None, "ambiguous", score, c2))
+                findings.append(Finding(
+                    "AMBIGUOUS_DESCRIPTION",
+                    f"Line {il.line_no} SKU {il.sku} appears on several PO lines ({c2[0]['description']} / "
+                    f"{c2[1]['description']}) with different prices.",
+                    invoice_line_id=str(il.id) if il.id else None, invoice_line_no=il.line_no,
+                    evidence={"candidates": c2, "rule": "repeated_sku"},
+                    params={"line": il.line_no, "description": il.description,
+                            "first": c2[0]["description"], "second": c2[1]["description"]}))
+                continue
         if method != "sku" and len(scored) > 1 and scored[0][1] - scored[1][1] < float(tol.description_ambiguity_margin):
             # Deterministic tie-break hint only: a candidate with the identical unit price.
             price_hits = [c for c in cands[:2] if il.unit_price is not None and D(c["unit_price"]) == il.unit_price]
@@ -418,44 +459,60 @@ def check_lines(inv: InvoiceData, po: POData, matches: list[LineMatch], ctx: Con
         ref = dict(invoice_line_id=m.invoice_line_id, invoice_line_no=il.line_no, po_line_id=m.po_line_id)
         price = None if il.unit_price is None else (
             (il.unit_price * gross).quantize(Decimal("0.0001")) if gross else il.unit_price)
+        # FIN-07: one exposure per line. Units billed beyond what was ordered or received are at risk
+        # once (at the invoiced price, capped at this invoice's quantity); a price difference applies only
+        # to the remaining units. With no goods receipt at all, MISSING_GOODS_RECEIPT already carries the
+        # whole subtotal, so line findings add nothing to it.
+        qty = il.quantity or ZERO
+        prev = ctx.previously_invoiced.get(pl.id, ZERO)
+        billed = qty + prev
+        over_ordered = max(billed - pl.quantity, ZERO) if billed > pl.quantity + tol.quantity_abs else ZERO
+        received = ctx.received.get(pl.id, ZERO)
+        check_received = mode == "three_way" and not no_receipts
+        over_received = max(billed - received, ZERO) if check_received and billed > received + tol.quantity_abs else ZERO
+        qty_units = min(max(over_ordered, over_received), qty)
+        qty_owner = "QUANTITY_EXCEEDS_RECEIVED" if over_received >= over_ordered and over_received > 0 else "QUANTITY_EXCEEDS_ORDERED"
+        line_price = il.unit_price or pl.unit_price
+        covered_by_receipt_gap = mode == "three_way" and no_receipts and inv.subtotal is not None
+
+        def risk(value: Decimal) -> str | None:
+            return None if covered_by_receipt_gap else str(round_money(value))
+
         if currency_ok and price is not None and not within_tolerance(pl.unit_price, price, tol.price_abs, tol.price_pct):
             diff = price - pl.unit_price
             pct = (diff / pl.unit_price * 100).quantize(Decimal("0.01")) if pl.unit_price else None
-            qty = il.quantity or ZERO
             out.append(Finding(
                 "PRICE_MISMATCH",
                 f"Line {il.line_no}: unit price {amt(price)} vs {amt(pl.unit_price)} on {po.number} "
                 f"({'+' if diff > 0 else ''}{pct}%), tolerance {tol.price_pct}% / {tol.price_abs}.",
                 expected=amt(pl.unit_price), actual=amt(price), difference=amt(diff),
-                amount_at_risk=str(round_money(max(diff, ZERO) * qty)),
+                amount_at_risk=risk(max(diff, ZERO) * (qty - qty_units)),
                 evidence={"pct": str(pct), "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs),
-                          "compared_net_of_vat": gross is not None},
+                          "compared_net_of_vat": gross is not None, "units_priced": str(qty - qty_units)},
                 params={"line": il.line_no, "invoice_price": amt(price), "po_price": amt(pl.unit_price),
                         "po": po.number, "pct": None if pct is None else f"{'+' if diff > 0 else ''}{pct}",
                         "tolerance_pct": str(tol.price_pct), "tolerance_abs": str(tol.price_abs)}, **ref))
         if il.quantity is not None:
-            billed = il.quantity + ctx.previously_invoiced.get(pl.id, ZERO)
-            if billed > pl.quantity + tol.quantity_abs:
-                excess = billed - pl.quantity
+            if over_ordered > 0:
+                mine = qty_owner == "QUANTITY_EXCEEDS_ORDERED"
                 out.append(Finding(
                     "QUANTITY_EXCEEDS_ORDERED",
                     f"Line {il.line_no}: cumulative billed quantity {q(billed)} exceeds ordered {q(pl.quantity)}.",
-                    expected=q(pl.quantity), actual=q(billed), difference=q(excess),
-                    amount_at_risk=str(round_money(excess * (il.unit_price or pl.unit_price))),
-                    evidence={"previously_invoiced": str(ctx.previously_invoiced.get(pl.id, ZERO))},
+                    expected=q(pl.quantity), actual=q(billed), difference=q(over_ordered),
+                    amount_at_risk=risk(qty_units * line_price) if mine else None,
+                    evidence={"previously_invoiced": str(prev),
+                              **({} if mine else {"risk_counted_in": "QUANTITY_EXCEEDS_RECEIVED"})},
                     params={"line": il.line_no, "billed": q(billed), "ordered": q(pl.quantity)}, **ref))
-            if mode == "three_way" and not no_receipts:
-                received = ctx.received.get(pl.id, ZERO)
-                if billed > received + tol.quantity_abs:
-                    excess = billed - received
-                    out.append(Finding(
-                        "QUANTITY_EXCEEDS_RECEIVED",
-                        f"Line {il.line_no}: billed {q(billed)} but only {q(received)} received on goods receipts.",
-                        expected=q(received), actual=q(billed), difference=q(excess),
-                        amount_at_risk=str(round_money(excess * (il.unit_price or pl.unit_price))),
-                        evidence={"received": str(received),
-                                  "previously_invoiced": str(ctx.previously_invoiced.get(pl.id, ZERO))},
-                        params={"line": il.line_no, "billed": q(billed), "received": q(received)}, **ref))
+            if over_received > 0:
+                mine = qty_owner == "QUANTITY_EXCEEDS_RECEIVED"
+                out.append(Finding(
+                    "QUANTITY_EXCEEDS_RECEIVED",
+                    f"Line {il.line_no}: billed {q(billed)} but only {q(received)} received on goods receipts.",
+                    expected=q(received), actual=q(billed), difference=q(over_received),
+                    amount_at_risk=risk(qty_units * line_price) if mine else None,
+                    evidence={"received": str(received), "previously_invoiced": str(prev),
+                              **({} if mine else {"risk_counted_in": "QUANTITY_EXCEEDS_ORDERED"})},
+                    params={"line": il.line_no, "billed": q(billed), "received": q(received)}, **ref))
     matched_ids = {m.po_line_id for m in matches if m.po_line_id}
     unbilled = [pl for pl in po.lines if str(pl.id) not in matched_ids and ctx.previously_invoiced.get(pl.id, ZERO) < pl.quantity]
     if unbilled and not any(m.method == "ambiguous" for m in matches):
@@ -504,6 +561,13 @@ def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result
     missing = [n for n, v in (("invoice_number", inv.invoice_number), ("total", inv.total)) if v in (None, "")]
     if not inv.lines:
         missing.append("line_items")
+    # a line cannot be compared with a PO without its quantity, unit price and amount; None is missing,
+    # zero is a value (audit FIN-03: such a line used to reconcile as "matched")
+    for ln in inv.lines:
+        absent = [label for label, v in (("quantity", ln.quantity), ("unit price", ln.unit_price),
+                                         ("line total", ln.line_total)) if v is None]
+        if absent:
+            missing.append(f"line {ln.line_no} {'/'.join(absent)}")
     if missing:
         findings.append(Finding("INCOMPLETE_EXTRACTION",
                                 f"Required data is missing ({', '.join(missing)}); correct the extraction before matching.",
@@ -514,6 +578,17 @@ def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result
                                 "The document contains instruction-like text aimed at automated systems. It was ignored; "
                                 "a reviewer should verify the invoice with the supplier through a known channel.",
                                 evidence={"snippets": inv.security_flags[:3]}))
+
+    if inv.document_kind:
+        kind, phrase = inv.document_kind
+        findings = [Finding("NOT_AN_INVOICE",
+                            f"The document is titled '{phrase}': it looks like a {kind.replace('_', ' ')}, not a "
+                            f"supplier invoice. Nothing was matched against purchase orders.",
+                            evidence={"kind": kind, "phrase": phrase}, params={"phrase": phrase})]
+        check("is_supplier_invoice", False, kind)
+        return Result(engine_version=ENGINE_VERSION, mode=mode, outcome="blocked", supplier_id=None,
+                      supplier_match={}, purchase_order_id=None, po_match={}, findings=findings, line_matches=[],
+                      checks=checks)
 
     supplier, sup_match, f = identify_supplier(inv, ctx.suppliers)
     findings += f

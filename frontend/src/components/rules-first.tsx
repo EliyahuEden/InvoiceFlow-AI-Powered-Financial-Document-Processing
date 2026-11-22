@@ -29,7 +29,9 @@ export function RulesFirstReport({ r }: { r: any }) {
   const measured = rf && !rf.skipped && typeof rf.overall_field_accuracy === "number";
   const num = new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-US");
   const gaps = Object.entries(router.gap_counts as Record<string, number>).map(([label, value]) => ({ label, value }));
-  const model = r.llm ? [r.llm.model, r.llm.endpoint].filter(Boolean).join(" · ") : "";
+  // an offline rerun carries earlier model results forward with their own model label
+  const llm = r.llm ?? rf?.carried_over?.llm;
+  const model = llm ? [llm.model, llm.endpoint].filter(Boolean).join(" · ") : "";
   return (
     <Panel id="report-rules-first" className="scroll-mt-24">
       <PanelHeader title={rt.title} sub={rt.sub} />

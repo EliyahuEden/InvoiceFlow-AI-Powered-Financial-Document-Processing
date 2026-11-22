@@ -182,3 +182,27 @@ def test_ocr_unavailable_marks_invoice_failed(client, as_user, monkeypatch):
     with session_scope() as s:
         job = s.scalars(select(Job).where(Job.entity_id == d["id"])).first()
         assert job.status == "failed" and job.attempts == job.max_attempts  # permanent: not retried
+
+
+def test_a_booking_confirmation_is_flagged_as_not_an_invoice_and_can_be_rejected(client, as_user):
+    import io
+
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf)
+    for i, line in enumerate(["Booking Confirmation", "Seaside Hotel (invented)", "Confirmation no. 980001",
+                              "Check-in: 12 Aug 2026   Check-out: 14 Aug 2026", "Total: 1,840.00 ILS"]):
+        c.drawString(72, 760 - 22 * i, line)
+    c.save()
+    proc, fin = as_user("procurement@kinneret.example"), as_user("finance@kinneret.example")
+    r = client.post("/api/invoices/upload", headers=proc, files={"file": ("booking.pdf", buf.getvalue(), "application/pdf")})
+    assert r.status_code in (200, 201, 202), r.text
+    drain()
+    d = _detail(client, fin, r.json()["invoice_id"])
+    assert any(w["code"] == "NOT_AN_INVOICE" and w["kind"] == "order_confirmation" for w in d["validation_warnings"])
+    assert [x["type"] for x in d["discrepancies"]] == ["NOT_AN_INVOICE"]
+    exc = client.get(f"/api/exceptions/{d['exception']['id']}", headers=fin).json()
+    assert exc["proposed_action"] == "reject_invoice"
+    r = client.post(f"/api/exceptions/{exc['id']}/decision", headers=fin, json={"decision": "approve", "note": "not an invoice"})
+    assert r.json()["invoice_status"] == "rejected"

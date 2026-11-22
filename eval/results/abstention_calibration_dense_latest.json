@@ -1,0 +1,419 @@
+{
+  "generated_at": "2026-11-21T14:15:25+00:00",
+  "git_rev": null,
+  "python": "3.12.16",
+  "set": "questions.jsonl + questions_calibration_extra.jsonl (calibration; the held-out set is not used)",
+  "method": "no reranker: abstain-if (lexical coverage < min_strength) and (top-1 dense < threshold); best balanced accuracy, middle of the tied threshold interval",
+  "models": {
+    "embedding": "intfloat/multilingual-e5-large"
+  },
+  "dense": {
+    "threshold": 0.906,
+    "balanced_accuracy": 0.802,
+    "answerable_answered": "37/48",
+    "unanswerable_refused": "15/18",
+    "tied_interval": [
+      0.906,
+      0.906
+    ],
+    "min_strength": 0.35
+  },
+  "per_question": [
+    {
+      "id": "he-01",
+      "answerable": true,
+      "top1_dense": 0.8946,
+      "coverage": 1.0
+    },
+    {
+      "id": "he-02",
+      "answerable": true,
+      "top1_dense": 0.8913,
+      "coverage": 0.6
+    },
+    {
+      "id": "he-03",
+      "answerable": true,
+      "top1_dense": 0.9161,
+      "coverage": 0.833
+    },
+    {
+      "id": "he-04",
+      "answerable": true,
+      "top1_dense": 0.9066,
+      "coverage": 0.333
+    },
+    {
+      "id": "he-05",
+      "answerable": true,
+      "top1_dense": 0.8883,
+      "coverage": 0.571
+    },
+    {
+      "id": "he-06",
+      "answerable": true,
+      "top1_dense": 0.893,
+      "coverage": 1.0
+    },
+    {
+      "id": "he-07",
+      "answerable": true,
+      "top1_dense": 0.904,
+      "coverage": 0.6
+    },
+    {
+      "id": "he-08",
+      "answerable": true,
+      "top1_dense": 0.9244,
+      "coverage": 0.667
+    },
+    {
+      "id": "he-09",
+      "answerable": true,
+      "top1_dense": 0.9111,
+      "coverage": 1.0
+    },
+    {
+      "id": "he-10",
+      "answerable": true,
+      "top1_dense": 0.8769,
+      "coverage": 0.5
+    },
+    {
+      "id": "he-11",
+      "answerable": true,
+      "top1_dense": 0.8827,
+      "coverage": 0.5
+    },
+    {
+      "id": "he-12",
+      "answerable": true,
+      "top1_dense": 0.8745,
+      "coverage": 0.4
+    },
+    {
+      "id": "he-13",
+      "answerable": true,
+      "top1_dense": 0.8814,
+      "coverage": 0.833
+    },
+    {
+      "id": "he-14",
+      "answerable": true,
+      "top1_dense": 0.8938,
+      "coverage": 0.667
+    },
+    {
+      "id": "he-15",
+      "answerable": true,
+      "top1_dense": 0.8934,
+      "coverage": 0.571
+    },
+    {
+      "id": "he-16",
+      "answerable": true,
+      "top1_dense": 0.8903,
+      "coverage": 0.6
+    },
+    {
+      "id": "en-01",
+      "answerable": true,
+      "top1_dense": 0.881,
+      "coverage": 0.5
+    },
+    {
+      "id": "en-02",
+      "answerable": true,
+      "top1_dense": 0.8774,
+      "coverage": 0.6
+    },
+    {
+      "id": "en-03",
+      "answerable": true,
+      "top1_dense": 0.8922,
+      "coverage": 0.833
+    },
+    {
+      "id": "en-04",
+      "answerable": true,
+      "top1_dense": 0.9128,
+      "coverage": 0.571
+    },
+    {
+      "id": "en-05",
+      "answerable": true,
+      "top1_dense": 0.8839,
+      "coverage": 0.4
+    },
+    {
+      "id": "en-06",
+      "answerable": true,
+      "top1_dense": 0.8947,
+      "coverage": 0.714
+    },
+    {
+      "id": "en-07",
+      "answerable": true,
+      "top1_dense": 0.8948,
+      "coverage": 0.75
+    },
+    {
+      "id": "en-08",
+      "answerable": true,
+      "top1_dense": 0.8819,
+      "coverage": 0.25
+    },
+    {
+      "id": "en-09",
+      "answerable": true,
+      "top1_dense": 0.8907,
+      "coverage": 0.8
+    },
+    {
+      "id": "en-10",
+      "answerable": true,
+      "top1_dense": 0.9159,
+      "coverage": 0.75
+    },
+    {
+      "id": "en-11",
+      "answerable": true,
+      "top1_dense": 0.8816,
+      "coverage": 0.5
+    },
+    {
+      "id": "mx-01",
+      "answerable": true,
+      "top1_dense": 0.9024,
+      "coverage": 1.0
+    },
+    {
+      "id": "mx-02",
+      "answerable": true,
+      "top1_dense": 0.8345,
+      "coverage": 0.25
+    },
+    {
+      "id": "mx-03",
+      "answerable": true,
+      "top1_dense": 0.8899,
+      "coverage": 0.571
+    },
+    {
+      "id": "mx-04",
+      "answerable": true,
+      "top1_dense": 0.8191,
+      "coverage": 0.167
+    },
+    {
+      "id": "mx-05",
+      "answerable": true,
+      "top1_dense": 0.8456,
+      "coverage": 0.667
+    },
+    {
+      "id": "mx-06",
+      "answerable": true,
+      "top1_dense": 0.8563,
+      "coverage": 0.5
+    },
+    {
+      "id": "mx-07",
+      "answerable": true,
+      "top1_dense": 0.9021,
+      "coverage": 0.375
+    },
+    {
+      "id": "md-01",
+      "answerable": true,
+      "top1_dense": 0.8861,
+      "coverage": 0.667
+    },
+    {
+      "id": "md-02",
+      "answerable": true,
+      "top1_dense": 0.8845,
+      "coverage": 0.375
+    },
+    {
+      "id": "md-03",
+      "answerable": true,
+      "top1_dense": 0.8824,
+      "coverage": 0.571
+    },
+    {
+      "id": "md-04",
+      "answerable": true,
+      "top1_dense": 0.8627,
+      "coverage": 0.333
+    },
+    {
+      "id": "md-05",
+      "answerable": true,
+      "top1_dense": 0.8951,
+      "coverage": 0.286
+    },
+    {
+      "id": "cf-01",
+      "answerable": true,
+      "top1_dense": 0.8763,
+      "coverage": 0.75
+    },
+    {
+      "id": "cf-02",
+      "answerable": true,
+      "top1_dense": 0.8385,
+      "coverage": 0.143
+    },
+    {
+      "id": "cf-03",
+      "answerable": true,
+      "top1_dense": 0.9139,
+      "coverage": 1.0
+    },
+    {
+      "id": "un-01",
+      "answerable": false,
+      "top1_dense": 0.8675,
+      "coverage": 0.286
+    },
+    {
+      "id": "un-02",
+      "answerable": false,
+      "top1_dense": 0.8621,
+      "coverage": 0.143
+    },
+    {
+      "id": "un-03",
+      "answerable": false,
+      "top1_dense": 0.8595,
+      "coverage": 0.167
+    },
+    {
+      "id": "un-04",
+      "answerable": false,
+      "top1_dense": 0.8321,
+      "coverage": 0.0
+    },
+    {
+      "id": "un-05",
+      "answerable": false,
+      "top1_dense": 0.8763,
+      "coverage": 0.75
+    },
+    {
+      "id": "un-06",
+      "answerable": false,
+      "top1_dense": 0.8117,
+      "coverage": 0.2
+    },
+    {
+      "id": "un-07",
+      "answerable": false,
+      "top1_dense": 0.8453,
+      "coverage": 0.2
+    },
+    {
+      "id": "un-08",
+      "answerable": false,
+      "top1_dense": 0.8423,
+      "coverage": 0.2
+    },
+    {
+      "id": "cx-u01",
+      "answerable": false,
+      "top1_dense": 0.905,
+      "coverage": 0.2
+    },
+    {
+      "id": "cx-u02",
+      "answerable": false,
+      "top1_dense": 0.8507,
+      "coverage": 0.333
+    },
+    {
+      "id": "cx-u03",
+      "answerable": false,
+      "top1_dense": 0.8484,
+      "coverage": 0.333
+    },
+    {
+      "id": "cx-u04",
+      "answerable": false,
+      "top1_dense": 0.8953,
+      "coverage": 0.75
+    },
+    {
+      "id": "cx-u05",
+      "answerable": false,
+      "top1_dense": 0.8397,
+      "coverage": 0.333
+    },
+    {
+      "id": "cx-u06",
+      "answerable": false,
+      "top1_dense": 0.8511,
+      "coverage": 0.2
+    },
+    {
+      "id": "cx-u07",
+      "answerable": false,
+      "top1_dense": 0.8649,
+      "coverage": 0.6
+    },
+    {
+      "id": "cx-u08",
+      "answerable": false,
+      "top1_dense": 0.8321,
+      "coverage": 0.0
+    },
+    {
+      "id": "cx-u09",
+      "answerable": false,
+      "top1_dense": 0.8295,
+      "coverage": 0.2
+    },
+    {
+      "id": "cx-u10",
+      "answerable": false,
+      "top1_dense": 0.8689,
+      "coverage": 0.167
+    },
+    {
+      "id": "cx-a01",
+      "answerable": true,
+      "top1_dense": 0.8138,
+      "coverage": 0.0
+    },
+    {
+      "id": "cx-a02",
+      "answerable": true,
+      "top1_dense": 0.8534,
+      "coverage": 0.2
+    },
+    {
+      "id": "cx-a03",
+      "answerable": true,
+      "top1_dense": 0.8406,
+      "coverage": 0.167
+    },
+    {
+      "id": "cx-a04",
+      "answerable": true,
+      "top1_dense": 0.8409,
+      "coverage": 0.25
+    },
+    {
+      "id": "cx-a05",
+      "answerable": true,
+      "top1_dense": 0.8617,
+      "coverage": 0.286
+    },
+    {
+      "id": "cx-a06",
+      "answerable": true,
+      "top1_dense": 0.8588,
+      "coverage": 0.6
+    }
+  ]
+}

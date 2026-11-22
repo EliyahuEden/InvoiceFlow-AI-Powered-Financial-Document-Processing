@@ -157,3 +157,44 @@ def test_priority_threshold_is_an_org_setting(client, as_user):
     admin = as_user("admin@kinneret.example")
     r = client.patch("/api/org/settings", headers={**admin, **CSRF}, json={"priority": {"critical_amount": "2500"}})
     assert r.status_code == 200 and r.json()["settings"]["priority"]["critical_amount"] == "2500"
+
+
+def test_user_lists_own_active_sessions_with_the_current_one_marked(client):
+    first = _login(client)["access_token"]
+    second = _login(client)["access_token"]
+    r = client.get("/api/auth/sessions", headers=_bearer(second))
+    assert r.status_code == 200
+    rows = r.json()["items"]
+    ids = {row["id"] for row in rows}
+    assert {_claims(first)["sid"], _claims(second)["sid"]} <= ids
+    current = [row for row in rows if row["current"]]
+    assert [row["id"] for row in current] == [_claims(second)["sid"]]
+    assert {"created_at", "last_used_at", "expires_at", "user_agent", "ip"} <= set(rows[0])
+    assert "refresh_token_hash" not in rows[0]
+
+
+def test_revoking_another_session_signs_it_out_immediately_and_is_audited(client):
+    other = _login(client)["access_token"]
+    mine = _login(client)["access_token"]
+    sid = _claims(other)["sid"]
+    r = client.delete(f"/api/auth/sessions/{sid}", headers={**_bearer(mine), **CSRF})
+    assert r.status_code == 200
+    assert client.get("/api/auth/me", headers=_bearer(other)).status_code == 401
+    assert client.get("/api/auth/me", headers=_bearer(mine)).status_code == 200
+    audit = client.get("/api/audit?action=auth.session_revoked", headers=_bearer(mine))
+    if audit.status_code == 200:  # finance reviewers may not read the audit log
+        assert any(e["action"] == "auth.session_revoked" for e in audit.json()["items"])
+
+
+def test_revoke_needs_the_csrf_header(client):
+    mine = _login(client)["access_token"]
+    other = _claims(_login(client)["access_token"])["sid"]
+    assert client.delete(f"/api/auth/sessions/{other}", headers=_bearer(mine)).status_code == 403
+
+
+def test_cannot_revoke_another_users_session(client):
+    theirs = client.post("/api/auth/login", json={"email": "procurement@kinneret.example", "password": DEMO_PASSWORD})
+    sid = _claims(theirs.json()["access_token"])["sid"]
+    mine = _login(client)["access_token"]
+    assert client.delete(f"/api/auth/sessions/{sid}", headers={**_bearer(mine), **CSRF}).status_code == 404
+    assert client.get("/api/auth/me", headers=_bearer(theirs.json()["access_token"])).status_code == 200

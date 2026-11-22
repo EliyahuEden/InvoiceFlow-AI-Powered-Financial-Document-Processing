@@ -197,12 +197,20 @@ class OpenAICompatibleProvider:
 
     def chat_tools(self, *, system: str, messages: list[dict], tools: list[dict], max_tokens: int = 4000) -> LLMResult:
         t0 = time.perf_counter()
-        resp = self.client.chat.completions.create(
-            model=self.model, **self._limits(max_tokens),
-            messages=[{"role": "system", "content": system}, *messages],
-            tools=[{"type": "function", "function": {"name": t["name"], "description": t["description"],
-                                                      "parameters": inline_refs(t["schema"])}} for t in tools],
-        )
+        request = {
+            "model": self.model, **self._limits(max_tokens),
+            "messages": [{"role": "system", "content": system}, *messages],
+            "tools": [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                         "parameters": inline_refs(t["schema"])}} for t in tools],
+        }
+        try:
+            resp = self.client.chat.completions.create(**request)
+        except Exception as exc:
+            # gpt-oss on some servers (Groq) occasionally leaks a channel token into a tool name and the
+            # server rejects the call ("Tool call validation failed"); sampling again usually succeeds.
+            if "tool call validation failed" not in str(exc).lower():
+                raise
+            resp = self.client.chat.completions.create(**request)
         m = resp.choices[0].message
         calls = [ToolCall(tc.id, tc.function.name, json.loads(tc.function.arguments or "{}")) for tc in m.tool_calls or []]
         u = resp.usage

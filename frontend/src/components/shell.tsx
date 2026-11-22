@@ -1,7 +1,7 @@
 "use client";
 
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { ArrowLeft, FileStack, Languages, LayoutGrid, LogOut, Moon, Search, Sun, X } from "lucide-react";
+import { ArrowLeft, FileStack, Languages, LayoutGrid, LogOut, Moon, Search, Sparkles, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +11,7 @@ import { useLiveEvents } from "@/lib/events";
 import { isActive, isTyping, useNav } from "@/lib/nav";
 import { setTheme as applyTheme, type Theme } from "@/lib/theme";
 import { CommandPalette, Kbd } from "./command-palette";
+import { CopilotPanel } from "./copilot";
 import { ShortcutsDialog } from "./shortcuts";
 import { ReviewNextButton } from "./review-next";
 import { SessionProvider, useSession } from "./session";
@@ -141,7 +142,7 @@ function useCurrentLabel(): string | null {
   return items.sort((a, b) => b.href.length - a.href.length)[0]?.label ?? null;
 }
 
-function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void }) {
+function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch: () => void; onCopilot: () => void }) {
   const { me, can } = useSession();
   const { t, locale, setLocale } = useI18n();
   const current = useCurrentLabel();
@@ -180,6 +181,9 @@ function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void
         <span className="flex gap-1" dir="ltr"><Kbd>{mod}</Kbd><Kbd>K</Kbd></span>
       </button>
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onSearch} aria-label={t.palette.trigger}><Search className="h-4 w-4" /></Button>
+      <Button variant="ai" size="sm" onClick={onCopilot} aria-label={t.copilot.open} className="gap-1.5">
+        <Sparkles className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">{t.copilot.open}</span>
+      </Button>
       <AiModeBadge />
       {/* the dashboard and the workspace carry their own primary review action */}
       {me && can("exception:decide") && path !== "/" && !path.startsWith("/exceptions") &&
@@ -215,7 +219,8 @@ function LiveEvents() {
 
 /** Global keys: Ctrl/⌘+K palette, "?" help, "g" + letter to navigate. Ignored while typing;
  *  no financial decision is ever bound to a key here. */
-function useGlobalKeys(nav: ReturnType<typeof useNav>, openPalette: () => void, openHelp: () => void) {
+function useGlobalKeys(nav: ReturnType<typeof useNav>, openPalette: () => void, openHelp: () => void,
+                       openCopilot: () => void = () => {}) {
   const router = useRouter();
   useEffect(() => {
     let pendingG = false;
@@ -224,6 +229,7 @@ function useGlobalKeys(nav: ReturnType<typeof useNav>, openPalette: () => void, 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(); return; }
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
       if (e.key === "?") { e.preventDefault(); openHelp(); return; }
+      if (e.key === "/") { e.preventDefault(); openCopilot(); return; }
       if (pendingG) {
         pendingG = false;
         const item = nav.flatMap((g) => g.items).find((i) => i.key === e.key.toLowerCase());
@@ -234,24 +240,26 @@ function useGlobalKeys(nav: ReturnType<typeof useNav>, openPalette: () => void, 
     };
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); clearTimeout(timer); };
-  }, [nav, openPalette, openHelp, router]);
+  }, [nav, openPalette, openHelp, openCopilot, router]);
 }
 
 function KeyedShell({ children, open, setOpen }: { children: React.ReactNode; open: boolean; setOpen: (v: boolean) => void }) {
   const nav = useNav();
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
-  useGlobalKeys(nav, () => setPalette(true), () => setHelp(true));
+  const [copilot, setCopilot] = useState(false);
+  useGlobalKeys(nav, () => setPalette(true), () => setHelp(true), () => setCopilot(true));
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-[84px] shrink-0 lg:block">
         <Rail onOpenAll={() => setOpen(true)} />
       </aside>
       {open && <NavDrawer onClose={() => setOpen(false)} />}
-      <CommandPalette open={palette} onOpenChange={setPalette} />
+      <CommandPalette open={palette} onOpenChange={setPalette} onAskCopilot={() => setCopilot(true)} />
+      <CopilotPanel open={copilot} onOpenChange={setCopilot} />
       <ShortcutsDialog open={help} onOpenChange={setHelp} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenu={() => setOpen(true)} onSearch={() => setPalette(true)} />
+        <TopBar onMenu={() => setOpen(true)} onSearch={() => setPalette(true)} onCopilot={() => setCopilot(true)} />
         {children}
       </div>
     </div>

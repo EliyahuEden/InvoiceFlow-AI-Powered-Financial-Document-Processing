@@ -13,7 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
 import { useUnsavedWork } from "@/lib/use-unsaved-work";
 
-type LineDraft = { line_no: number; sku: string; description: string; quantity: string; unit_price: string; discount: string; line_total: string };
+type LineDraft = { id?: string; line_no: number; sku: string; description: string; quantity: string; unit_price: string; discount: string; line_total: string };
 
 export default function ReviewPage() {
   const { t, locale } = useI18n();
@@ -33,7 +33,7 @@ export default function ReviewPage() {
     const h: Record<string, string> = {};
     for (const f of FIELD_DEFS) h[f.key] = ((inv as unknown as Record<string, string | null>)[f.key] ?? "") as string;
     setHeader(h);
-    setLines(inv.lines.map((l) => ({ line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "",
+    setLines(inv.lines.map((l) => ({ id: l.id, line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "",
       unit_price: l.unit_price ?? "", discount: l.discount ?? "", line_total: l.line_total ?? "" })));
     setSupplierId(inv.supplier_id ?? "");
   }, [inv]);
@@ -48,7 +48,7 @@ export default function ReviewPage() {
     return out;
   }, [header, inv]);
   const linesChanged = useMemo(() => !!inv && JSON.stringify(lines) !== JSON.stringify(inv.lines.map((l) => ({
-    line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "", unit_price: l.unit_price ?? "",
+    id: l.id, line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "", unit_price: l.unit_price ?? "",
     discount: l.discount ?? "", line_total: l.line_total ?? "" }))), [lines, inv]);
   const supplierChanged = !!inv && supplierId !== (inv.supplier_id ?? "");
   const dirty = Object.keys(changed).length > 0 || linesChanged || supplierChanged || !!reason.trim();

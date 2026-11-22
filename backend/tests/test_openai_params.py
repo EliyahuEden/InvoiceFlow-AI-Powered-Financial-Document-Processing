@@ -61,3 +61,40 @@ def test_tool_calls_use_the_same_limits():
     p, fake = _provider("gpt-5.4-nano")
     p.chat_tools(system="s", messages=[{"role": "user", "content": "hi"}], tools=[], max_tokens=1500)
     assert fake.kwargs["reasoning_effort"] == "low" and "max_tokens" not in fake.kwargs
+
+
+class FlakyCompletions(FakeCompletions):
+    """First call fails the way Groq rejects a gpt-oss tool call with a leaked channel token."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__()
+        self.message, self.count = message, 0
+
+    def create(self, **kwargs):  # noqa: ANN003, ANN201
+        self.count += 1
+        if self.count == 1:
+            raise RuntimeError(self.message)
+        return super().create(**kwargs)
+
+
+def _flaky(message: str) -> tuple[OpenAICompatibleProvider, FlakyCompletions]:
+    p, _ = _provider("openai/gpt-oss-20b", base_url="https://api.groq.com/openai/v1")
+    fake = FlakyCompletions(message)
+    p.client = SimpleNamespace(chat=SimpleNamespace(completions=fake))
+    return p, fake
+
+
+def test_rejected_tool_call_is_retried_once():
+    p, fake = _flaky("Error code: 400 - Tool call validation failed: attempted to call tool 'retrieve_policy<|channel|>commentary'")
+    p.chat_tools(system="s", messages=[{"role": "user", "content": "q"}],
+                 tools=[{"name": "retrieve_policy", "description": "d", "schema": {"type": "object"}}])
+    assert fake.count == 2
+
+
+def test_other_errors_are_not_retried_here():
+    import pytest
+
+    p, fake = _flaky("Error code: 401 - invalid api key")
+    with pytest.raises(RuntimeError):
+        p.chat_tools(system="s", messages=[], tools=[])
+    assert fake.count == 1

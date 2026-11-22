@@ -13,8 +13,10 @@ pytestmark = pytest.mark.integration
 
 
 def test_no_tool_can_approve_reject_or_pay():
-    forbidden = ("approve", "reject", "pay", "payment", "transfer", "delete", "update_invoice", "set_status")
-    assert not [n for n in TOOLS if any(w in n for w in forbidden)]
+    forbidden_words = {"approve", "reject", "pay", "payment", "transfer", "delete", "update", "set"}
+    forbidden_names = {"update_invoice", "set_status"}
+    # whole words only: "open_payables" reports what is owed, it does not pay
+    assert not [n for n in TOOLS if forbidden_words & set(n.split("_")) or n in forbidden_names]
 
 
 def test_tool_permissions_and_validation(client, as_user, world):

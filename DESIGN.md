@@ -156,6 +156,12 @@ Assistant (Hebrew + Latin, 400–700) for everything; JetBrains Mono only for co
 - **Command palette** (`command-palette.tsx`, cmdk inside a Radix dialog): Ctrl/⌘+K or the top-bar search pill. It searches invoices, suppliers and purchase orders through the existing list APIs (so tenant scoping and permissions come from the backend), offers *Review next priority*, theme and language actions, and every permitted destination with its key hint.
 - **Shortcuts** (`shortcuts.tsx`, `?` opens the list): `G` then `D`/`Q`/`I`/`U`/`S`/`P`/`K` to navigate; in the workspace `N` next item (through the unsaved-work guard), `E` evidence, `D` decision. Keys are ignored while typing. No approve, reject or other financial decision has a single-key shortcut.
 
+- **AP Copilot** (`copilot.tsx`): a side sheet from the inline-end edge, opened by the violet "Ask Copilot" top-bar
+  button, `/` or the palette. Suggested questions, the reviewer's message as a charcoal bubble, answers with an
+  AI badge, linked citation chips per record, a collapsed "Steps" list of the read-only tools used, follow-up
+  chips, and an amber "Not verified" badge when the figures could not be checked. A read-only notice sits under
+  the title.
+
 ## Motion
 Motion (`motion/react`, LazyMotion) gives each page a 180ms fade-and-rise; queue rows rise in with a 24ms stagger capped at eight rows; dialogs fade and scale in; the login aurora drifts over 22s. Figures never animate, and `prefers-reduced-motion` turns all of it off.
 

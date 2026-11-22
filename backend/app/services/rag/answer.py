@@ -42,6 +42,23 @@ PROMPT_VERSION = "rag-answer-v2"
 # a cross-encoder scores topical relevance, not answerability. LLM mode decides answerability itself
 # and its citations are verified; that is the intended fix for near-miss refusals.
 RERANK_ABSTAIN_LOGIT = -0.92
+# Without a reranker: abstain when lexical coverage is weak AND the top dense similarity is below
+# this floor. Dense similarity scales differ per model (e5 scores sit around 0.8-0.95), so the floor
+# is calibrated per model on the calibration questions (eval/calibrate_abstention.py --no-reranker,
+# eval/results/abstention_calibration_dense_latest.json). Other models keep the original 0.35.
+DENSE_ABSTAIN_FLOOR = {"multilingual-e5-large": 0.906}
+DEFAULT_DENSE_FLOOR = 0.35
+
+
+def dense_floor(backend: str | None = None, model: str | None = None) -> float:
+    if backend is None or model is None:
+        from app.core.config import get_settings
+
+        s = get_settings()
+        backend, model = backend or s.embedding_backend, model or s.embedding_model
+    if backend != "fastembed":
+        return DEFAULT_DENSE_FLOOR
+    return next((v for k, v in DENSE_ABSTAIN_FLOOR.items() if k in model), DEFAULT_DENSE_FLOOR)
 
 SYSTEM = """You answer questions about a company's supplier agreements and purchasing policies.
 Use ONLY the numbered evidence passages provided. Do not use outside knowledge.
@@ -139,8 +156,9 @@ def evidence_strength(question: str, hit: Hit) -> float:
 
 
 def answer_extractive(question: str, hits: list[Hit], min_strength: float = 0.34,
-                      min_dense: float = 0.35) -> dict:
+                      min_dense: float | None = None) -> dict:
     t0 = time.perf_counter()
+    min_dense = dense_floor() if min_dense is None else min_dense
     hits, excluded = screen_hits(hits)
     if not hits:
         return {"answer": "No documents are available to answer this question.", "abstained": True,

@@ -149,6 +149,31 @@ The bigger model helps whenever no reranker is used, and is a wash once the cros
 
 Details: [RAG_DESIGN.md](RAG_DESIGN.md).
 
+### multilingual-e5-large as the default embedder
+
+`EMBEDDING_MODEL` now defaults to `intfloat/multilingual-e5-large` (1024-d; migration 0004 resizes the
+column, `python -m app.cli reindex-embeddings` re-embeds stored chunks). Without a reranker, extractive
+answers abstain when lexical coverage is weak and the top dense similarity is below a floor; e5's
+similarities sit much higher than MiniLM's, so the old 0.35 floor never fired. The floor is now per model,
+calibrated on the calibration questions only (`calibrate_abstention.py --no-reranker`): e5 0.906
+(balanced accuracy 0.802 on calibration); other models keep 0.35.
+
+Held-out (35 questions, never used for tuning), clause chunks:
+
+| | MiniLM | e5-large |
+|---|---|---|
+| Hybrid + rerank (default): R@5 · MRR | 0.98 · 0.960 | 1.00 · 0.950 |
+| Hybrid + rerank: answers correct · citations correct | 0.76 · 0.77 | 0.72 · 0.73 |
+| Hybrid + rerank: unanswerable refused (answerable wrongly refused) | 7/10 (2) | 6/10 (2) |
+| Dense only: MRR | 0.646 | 0.875 |
+| No reranker: unanswerable refused (wrongly refused) | 1/10 (0) | 9/10 (5) |
+| No reranker: answers correct · citations correct | 0.68 · 0.66 | 0.64 · 0.75 |
+
+With the reranker, the two embedders are equal within one held-out question. Without it, e5 retrieves far
+better and refuses unanswerable questions instead of answering them, at the price of refusing more
+answerable ones. e5 costs a 2.1 GB model and slower embedding. Model-written answers (LLM mode) were
+not benchmarked here.
+
 ## C. Reconciliation
 **Method**
 - Each controlled case starts from a correct invoice for a PO in the synthetic world and injects exactly one fault, or a **near miss that must not be flagged**:
@@ -173,6 +198,40 @@ The former end-to-end miss (the scanned Hermon invoice reported `MISSING_PURCHAS
 2. A "paraphrase" generator dropped the last word of each description. For the colour variants it produced "מרקר מחיק" from "מרקר מחיק שחור / כחול / אדום", which really is ambiguous, so the engine was right to flag it. The generator now drops the first word instead.
 
 Controlled-case perfection reflects deterministic rules on exact inputs. **The end-to-end number is the realistic one.**
+
+## C2. Live AI mode (agent and RAG with a real model)
+
+First end-to-end run with a real model, on the seeded demo data (9 agent investigations, Groq free tier,
+an isolated stack; `LLM_MAX_RETRIES=6` so free-tier rate limits wait instead of failing).
+
+**gpt-oss-20b, agent v4 (before the guard).** Tool calling worked (41 investigation calls), but the
+explanations were not trustworthy: an amount labelled ILS on a USD invoice, a claim that a duplicate was
+"already paid" (not in any evidence), wrong Hebrew ("בוטל" (cancelled) for billed, "הזמנה 1" for line 1,
+a gibberish headline), and one language only per report. 3 calls failed: 2 rate limits and 1 tool call
+that Groq rejected because the model leaked a channel token into the tool name.
+
+**Changes (agent v5).**
+- Bilingual reports (Hebrew and English for every text).
+- A deterministic faithfulness guard (`backend/app/services/agent/faithfulness.py`): every number must come
+  from the findings, invoice or cited evidence (or be a difference or percentage of them), amounts keep the
+  invoice currency, both languages exist, and no internal evidence ids appear in the prose. A failing report
+  is retried once with the violations quoted back; if it still fails, the template report is used.
+  Violations are stored in `ai_calls.meta`.
+- A rejected tool call is retried once in the provider.
+
+**gpt-oss-120b, agent v5.** 9 of 9 investigations produced a model report that passed every check on the
+first attempt; 0 failed calls (59 calls, about 88K tokens; 53 rate-limit responses were waited out).
+Hebrew is correct ("בשורת 1 חויב 60 יחידות"), currencies match, and no unsupported payment claim appeared.
+Remaining wording issues the guard cannot see: "exceeds the budget" (חריגה מהתקציב) where *policy* is
+meant. The evidence-id check was added after this run and has not been re-measured.
+
+**RAG answers with gpt-oss-120b** (4 spot questions, not a benchmark): the Hebrew price-tolerance question
+was answered from the current policy (v3) with both policy versions cited; the BlueWave payment terms
+(Net 45) were answered with the clause; a near-miss question (late-payment interest in the coffee agreement)
+and an unrelated one (visitor parking) were refused without invented answers.
+
+Not yet measured: the 85-question RAG benchmark with model-written answers (`run_rag_eval.py` scores
+extractive answers only), and an LLM judge for claims without numbers.
 
 ## D. Observability
 Every model invocation records provider, model, prompt version, workflow, latency, tokens, estimated cost (only when `LLM_PRICING_JSON` is set; prices are never invented), status and retries. That covers extraction, RAG answers, agent steps, embeddings and OCR. The AI-observability page aggregates p50 and p95 latency, tokens, errors, tool usage, validation-warning codes and job states.

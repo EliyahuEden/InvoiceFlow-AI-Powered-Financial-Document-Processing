@@ -4,6 +4,7 @@
     python -m app.cli generate-docs    # regenerate synthetic PDFs into data/demo
     python -m app.cli seed [--reset]   # load the demo organization and process its documents
     python -m app.cli verify-audit     # verify the hash chain of every organization's audit log
+    python -m app.cli reindex-embeddings [--all]  # embed chunks without a vector (all with --all)
 """
 from __future__ import annotations
 
@@ -11,6 +12,46 @@ import argparse
 import json
 import sys
 from pathlib import Path
+
+
+def reindex_embeddings(all_chunks: bool = False, batch: int = 64) -> int:
+    """Compute and store embeddings for knowledge chunks that have none (every chunk with
+    ``all_chunks``), e.g. after changing EMBEDDING_MODEL. Returns the number of chunks embedded."""
+    from sqlalchemy import select
+
+    from app.core.db import new_session, set_session_org
+    from app.models import KnowledgeChunk, KnowledgeDocument, Organization
+    from app.services.rag import service as rag_service
+    from app.services.rag.models import get_embedder
+
+    embedder = get_embedder()
+    done = 0
+    s = new_session()
+    try:
+        org_ids = list(s.scalars(select(Organization.id)))
+    finally:
+        s.close()
+    for org_id in org_ids:
+        s = new_session()
+        try:
+            set_session_org(s, org_id)
+            q = (select(KnowledgeChunk, KnowledgeDocument.title)
+                 .join(KnowledgeDocument, KnowledgeDocument.id == KnowledgeChunk.knowledge_document_id)
+                 .where(KnowledgeChunk.organization_id == org_id))
+            if not all_chunks:
+                q = q.where(KnowledgeChunk.embedding.is_(None))
+            rows = s.execute(q).all()
+            for i in range(0, len(rows), batch):
+                part = rows[i:i + batch]
+                vecs = embedder.embed([f"{title}. {ch.text}" for ch, title in part])  # same text as ingestion
+                for (ch, _), v in zip(part, vecs, strict=True):
+                    ch.embedding = v.tolist()
+            s.commit()
+            done += len(rows)
+            rag_service._INDEX_CACHE.pop(str(org_id), None)
+        finally:
+            s.close()
+    return done
 
 
 def migrate() -> None:
@@ -47,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--reset", action="store_true", help="truncate all data first")
     sp.add_argument("--no-process", action="store_true", help="enqueue jobs but do not run them")
     sub.add_parser("verify-audit")
+    rp = sub.add_parser("reindex-embeddings")
+    rp.add_argument("--all", action="store_true", help="re-embed every chunk, not only those without a vector")
     args = p.parse_args(argv)
 
     from app.core.logging import configure_logging
@@ -76,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
         for org in orgs:
             with session_scope(org.id) as s:
                 print(org.slug, verify_chain(s, org.id))
+    elif args.cmd == "reindex-embeddings":
+        print(f"embedded {reindex_embeddings(all_chunks=args.all)} chunks")
     return 0
 
 

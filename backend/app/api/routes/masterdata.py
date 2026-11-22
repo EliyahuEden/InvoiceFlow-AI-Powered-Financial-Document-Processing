@@ -11,7 +11,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import Principal, dec, get_db, money, page_params, paginated, require
+from app.api.deps import Principal, dec, get_db, money, page_params, paginated, price, require
 from app.models import GoodsReceipt, GRLine, Invoice, POLine, PurchaseOrder, ReconciliationRun, Supplier
 from app.services import audit
 from app.services.rbac import Perm
@@ -189,7 +189,7 @@ def get_po(po_id: uuid.UUID, p: Principal = Depends(require(Perm.MASTERDATA_READ
     return {**po_summary(po), "supplier_name": po.supplier.name, "supplier_name_en": po.supplier.name_en,
             "notes": po.notes,
             "lines": [{"id": str(ln.id), "line_no": ln.line_no, "sku": ln.sku, "description": ln.description,
-                       "quantity": dec(ln.quantity), "unit_price": money(ln.unit_price),
+                       "quantity": dec(ln.quantity), "unit_price": price(ln.unit_price),
                        "line_total": money(ln.quantity * ln.unit_price),
                        "received": dec(received.get(ln.id, Decimal(0))),
                        "invoiced": dec(billed.get(ln.id, Decimal(0)))} for ln in po.lines],

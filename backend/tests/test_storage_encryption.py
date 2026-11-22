@@ -21,6 +21,7 @@ def test_sse_s3_and_sse_kms_headers():
 
 
 def test_production_with_s3_requires_server_side_encryption():
+    safe = {"cookie_secure": True, "cors_origins": ["https://invoiceflow.example.com"]}  # the other production gates
     with pytest.raises(ValidationError, match="S3_SSE"):
-        Settings(jwt_secret=SECRET, environment="production", storage_backend="s3")
-    Settings(jwt_secret=SECRET, environment="production", storage_backend="s3", s3_sse="aws:kms")
+        Settings(jwt_secret=SECRET, environment="production", storage_backend="s3", **safe)
+    Settings(jwt_secret=SECRET, environment="production", storage_backend="s3", s3_sse="aws:kms", **safe)

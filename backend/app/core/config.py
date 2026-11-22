@@ -5,12 +5,14 @@ environment and are never logged or returned by the API.
 """
 from __future__ import annotations
 
+import re
 import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic_core import PydanticUseDefault
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -81,8 +83,11 @@ class Settings(BaseSettings):
 
     # --- retrieval ---
     embedding_backend: Literal["fastembed", "hash"] = "fastembed"
-    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    embedding_dim: int = 384
+    # multilingual-e5-large: dense MRR 0.642 -> 0.879 over MiniLM on the RAG benchmark
+    # (eval/results/rag_e5_latest.json). Changing the model changes the dimension: run
+    # `python -m app.cli migrate` (resizes the column) and `python -m app.cli reindex-embeddings`.
+    embedding_model: str = "intfloat/multilingual-e5-large"
+    embedding_dim: int = 1024
     reranker_backend: Literal["none", "fastembed"] = "fastembed"
     reranker_model: str = "jinaai/jina-reranker-v2-base-multilingual"
     model_cache_dir: Path = REPO_ROOT / ".data" / "models"
@@ -104,12 +109,41 @@ class Settings(BaseSettings):
     rate_limit_upload_per_minute: int = 30
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def _strip_env_comments(cls, v: object) -> object:
+        """Docker's env_file keeps "KEY=value  # note" as the whole value: drop such comments.
+        A '#' only starts a comment at the start or after whitespace, so 'a#b' is kept."""
+        if isinstance(v, str):
+            if v.lstrip().startswith("#"):
+                raise PydanticUseDefault  # e.g. OPENAI_BASE_URL=# e.g. http://... -> the field's default
+            return re.split(r"\s+#", v, maxsplit=1)[0].strip()
+        return v
+
     @field_validator("jwt_secret")
     @classmethod
     def _secret_length(cls, v: SecretStr) -> SecretStr:
         if len(v.get_secret_value()) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters")
         return v
+
+    @model_validator(mode="after")
+    def _production_is_safe(self) -> Settings:
+        """Refuse to start a production deployment on development defaults (audit SEC-02)."""
+        if self.environment != "production":
+            return self
+        problems = []
+        if self.jwt_secret.get_secret_value().startswith("dev-only"):
+            problems.append("JWT_SECRET is the development placeholder")
+        if not self.cookie_secure:
+            problems.append("COOKIE_SECURE must be true (cookies only over HTTPS)")
+        if self.storage_backend == "local":
+            problems.append("STORAGE_BACKEND=local is not durable; use s3")
+        if any("localhost" in o or "127.0.0.1" in o or o == "*" for o in self.cors_origins):
+            problems.append("CORS_ORIGINS must list the real HTTPS origins, not localhost or *")
+        if problems:
+            raise ValueError("Unsafe production configuration: " + "; ".join(problems))
+        return self
 
     @model_validator(mode="after")
     def _production_encrypts_documents(self) -> Settings:

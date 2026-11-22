@@ -65,16 +65,25 @@ def correct_invoice(session: Session, inv: Invoice, user: User, header: dict, li
         sources["_supplier_confirmed"] = {"by": str(user.id), "supplier_id": str(supplier_id)}
     inv.field_sources = sources
     if lines is not None:
-        old_sources = {ln.line_no: ln.source for ln in inv.lines}
+        # Provenance follows the line's identity, not its position (audit FIN-08): deleting row 1 must not
+        # hand row 1's highlight to the row that moves up. Rows without an id are new and have no source.
+        by_id = {str(ln.id): ln.source for ln in inv.lines}
+        by_no = {ln.line_no: ln.source for ln in inv.lines}
+        uses_ids = any(ln.get("id") for ln in lines)
         for ln in list(inv.lines):
             session.delete(ln)
         session.flush()
         for i, ln in enumerate(lines, start=1):
+            if uses_ids:
+                old = by_id.get(str(ln.get("id"))) if ln.get("id") else None
+                source = {**old, "corrected_by": str(user.id)} if old is not None else \
+                    {"manual": True, "corrected_by": str(user.id)}
+            else:  # older clients that send no ids
+                source = {**(by_no.get(ln.get("line_no") or i) or {}), "corrected_by": str(user.id)}
             session.add(InvoiceLine(
                 organization_id=inv.organization_id, invoice_id=inv.id, line_no=i, sku=ln.get("sku") or None,
                 description=ln["description"], quantity=_dec(ln.get("quantity")), unit_price=_dec(ln.get("unit_price")),
-                discount=_dec(ln.get("discount")), line_total=_dec(ln.get("line_total")),
-                source={**(old_sources.get(ln.get("line_no") or i) or {}), "corrected_by": str(user.id)}))
+                discount=_dec(ln.get("discount")), line_total=_dec(ln.get("line_total")), source=source))
     inv.reviewed_by = user.id
     inv.missing_fields = [f for f in ("supplier_name_raw", "invoice_number", "invoice_date", "total", "currency")
                           if getattr(inv, f) in (None, "")]
@@ -182,9 +191,17 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
 def decide_approval(session: Session, inv: Invoice, user: User, role: str, decision: str, comment: str | None) -> Approval:
     if decision not in ("approve", "reject"):
         raise HTTPException(422, "decision must be approve or reject")
+    # Lock the invoice and its active steps so two reviewers cannot act on the same step; re-read under
+    # the lock so a stale page sees the committed state (audit FIN-02).
+    inv = session.scalars(select(Invoice).where(Invoice.id == inv.id, Invoice.organization_id == inv.organization_id)
+                          .with_for_update().execution_options(populate_existing=True)).first()
+    if inv is None:
+        raise HTTPException(404, "Invoice not found")
     if inv.status != "reconciled":
         raise HTTPException(409, "Only reconciled invoices without open exceptions can be approved for payment.")
-    steps = session.scalars(select(Approval).where(Approval.invoice_id == inv.id).order_by(Approval.step)).all()
+    steps = session.scalars(select(Approval).where(Approval.invoice_id == inv.id, Approval.status != "superseded")
+                            .order_by(Approval.step).with_for_update()
+                            .execution_options(populate_existing=True)).all()
     pending = next((s for s in steps if s.status == "pending"), None)
     if pending is None:
         raise HTTPException(409, "No pending approval step.")

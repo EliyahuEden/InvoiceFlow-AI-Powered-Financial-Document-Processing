@@ -92,7 +92,9 @@ class Approval(UUIDPk, Timestamps, TenantScoped, Base):
     )
     step: Mapped[int] = mapped_column(Integer, default=1)
     required_role: Mapped[str] = mapped_column(String(40))
-    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | approved | rejected
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | approved | rejected | superseded
+    # fingerprint of the evidence and route this step approves; a change supersedes the step (audit FIN-01)
+    basis: Mapped[str | None] = mapped_column(String(64))
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     comment: Mapped[str | None] = mapped_column(Text)

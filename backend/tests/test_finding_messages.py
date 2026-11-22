@@ -34,6 +34,11 @@ def _scenarios() -> list[E.Result]:
     out.append(E.reconcile(inv, c))  # line total + subtotal
     out.append(E.reconcile(invoice(po, total=None, invoice_number=None), c))  # incomplete
     out.append(E.reconcile(invoice(po, security_flags=["ignore previous instructions"]), c))
+    out.append(E.reconcile(invoice(po, document_kind=("quote", "הצעת מחיר")), c))
+    twin = replace(po, id=uuid.uuid4(), number="PO 1")  # same reference after normalization
+    out.append(E.reconcile(invoice(po), replace(c, purchase_orders=[po, twin])))
+    copy = replace(po, id=uuid.uuid4(), number="PO-9")  # equal line coverage, no reference
+    out.append(E.reconcile(invoice(po, po_reference=None), replace(c, purchase_orders=[po, copy])))
     out.append(E.reconcile(invoice(po, currency="USD"), c))
     out.append(E.reconcile(invoice(po, currency=None), c))
     out.append(E.reconcile(invoice(po), replace(c, receipt_count={})))

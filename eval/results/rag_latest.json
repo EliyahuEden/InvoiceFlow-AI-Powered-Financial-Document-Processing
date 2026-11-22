@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20T22:11:28+00:00",
+  "generated_at": "2026-11-21T14:36:34+00:00",
   "git_rev": null,
   "python": "3.12.16",
   "dataset": {
@@ -46,7 +46,7 @@
         "all@5": 0.72,
         "mrr": 0.691,
         "ndcg@5": 0.684,
-        "latency_ms_p50": 0.23,
+        "latency_ms_p50": 0.26,
         "by_category": {
           "conflicting": {
             "recall@5": 0.25,
@@ -106,7 +106,7 @@
         "all@5": 0.72,
         "mrr": 0.799,
         "ndcg@5": 0.767,
-        "latency_ms_p50": 0.26,
+        "latency_ms_p50": 0.3,
         "by_category": {
           "conflicting": {
             "recall@5": 0.25,
@@ -158,59 +158,59 @@
       {
         "name": "dense",
         "chunking": "clause",
-        "recall@1": 0.48,
-        "all@1": 0.44,
-        "recall@3": 0.72,
-        "all@3": 0.68,
-        "recall@5": 0.84,
-        "all@5": 0.8,
-        "mrr": 0.646,
-        "ndcg@5": 0.679,
-        "latency_ms_p50": 10.03,
+        "recall@1": 0.74,
+        "all@1": 0.68,
+        "recall@3": 0.92,
+        "all@3": 0.88,
+        "recall@5": 0.98,
+        "all@5": 0.96,
+        "mrr": 0.875,
+        "ndcg@5": 0.881,
+        "latency_ms_p50": 123.6,
         "by_category": {
           "conflicting": {
             "recall@5": 1.0,
-            "mrr": 1.0,
+            "mrr": 0.667,
             "n": 2
           },
           "cross_lingual": {
             "recall@5": 1.0,
-            "mrr": 0.333,
+            "mrr": 0.6,
             "n": 2
           },
           "en": {
             "recall@5": 1.0,
-            "mrr": 0.707,
+            "mrr": 1.0,
             "n": 7
           },
           "he": {
-            "recall@5": 0.7,
-            "mrr": 0.62,
+            "recall@5": 1.0,
+            "mrr": 0.833,
             "n": 10
           },
           "lang:en": {
             "recall@5": 0.95,
-            "mrr": 0.678,
+            "mrr": 0.933,
             "n": 10
           },
           "lang:he": {
-            "recall@5": 0.731,
-            "mrr": 0.656,
+            "recall@5": 1.0,
+            "mrr": 0.81,
             "n": 13
           },
           "lang:mixed": {
             "recall@5": 1.0,
-            "mrr": 0.417,
+            "mrr": 1.0,
             "n": 2
           },
           "mixed": {
             "recall@5": 1.0,
-            "mrr": 0.417,
+            "mrr": 1.0,
             "n": 2
           },
           "multi_doc": {
-            "recall@5": 0.5,
-            "mrr": 0.75,
+            "recall@5": 0.75,
+            "mrr": 1.0,
             "n": 2
           }
         }
@@ -218,59 +218,59 @@
       {
         "name": "hybrid",
         "chunking": "clause",
-        "recall@1": 0.6,
-        "all@1": 0.56,
-        "recall@3": 0.82,
+        "recall@1": 0.78,
+        "all@1": 0.72,
+        "recall@3": 0.86,
         "all@3": 0.8,
-        "recall@5": 0.86,
+        "recall@5": 0.88,
         "all@5": 0.84,
-        "mrr": 0.763,
-        "ndcg@5": 0.762,
-        "latency_ms_p50": 9.77,
+        "mrr": 0.891,
+        "ndcg@5": 0.854,
+        "latency_ms_p50": 113.15,
         "by_category": {
           "conflicting": {
-            "recall@5": 1.0,
-            "mrr": 1.0,
+            "recall@5": 0.25,
+            "mrr": 0.583,
             "n": 2
           },
           "cross_lingual": {
             "recall@5": 0.5,
-            "mrr": 0.208,
+            "mrr": 0.3,
             "n": 2
           },
           "en": {
             "recall@5": 1.0,
-            "mrr": 0.857,
+            "mrr": 0.929,
             "n": 7
           },
           "he": {
-            "recall@5": 0.8,
-            "mrr": 0.767,
+            "recall@5": 1.0,
+            "mrr": 1.0,
             "n": 10
           },
           "lang:en": {
-            "recall@5": 0.95,
-            "mrr": 0.825,
+            "recall@5": 0.85,
+            "mrr": 0.817,
             "n": 10
           },
           "lang:he": {
-            "recall@5": 0.769,
-            "mrr": 0.718,
+            "recall@5": 0.885,
+            "mrr": 0.931,
             "n": 13
           },
           "lang:mixed": {
             "recall@5": 1.0,
-            "mrr": 0.75,
+            "mrr": 1.0,
             "n": 2
           },
           "mixed": {
             "recall@5": 1.0,
-            "mrr": 0.75,
+            "mrr": 1.0,
             "n": 2
           },
           "multi_doc": {
             "recall@5": 0.75,
-            "mrr": 0.75,
+            "mrr": 1.0,
             "n": 2
           }
         }
@@ -280,13 +280,13 @@
         "chunking": "clause",
         "recall@1": 0.86,
         "all@1": 0.8,
-        "recall@3": 0.98,
+        "recall@3": 0.96,
         "all@3": 0.96,
-        "recall@5": 0.98,
-        "all@5": 0.96,
-        "mrr": 0.96,
-        "ndcg@5": 0.949,
-        "latency_ms_p50": 2337.7,
+        "recall@5": 1.0,
+        "all@5": 1.0,
+        "mrr": 0.95,
+        "ndcg@5": 0.953,
+        "latency_ms_p50": 4193.3,
         "by_category": {
           "conflicting": {
             "recall@5": 1.0,
@@ -305,17 +305,17 @@
           },
           "he": {
             "recall@5": 1.0,
-            "mrr": 0.9,
+            "mrr": 0.875,
             "n": 10
           },
           "lang:en": {
-            "recall@5": 0.95,
+            "recall@5": 1.0,
             "mrr": 1.0,
             "n": 10
           },
           "lang:he": {
             "recall@5": 1.0,
-            "mrr": 0.923,
+            "mrr": 0.904,
             "n": 13
           },
           "lang:mixed": {
@@ -329,7 +329,7 @@
             "n": 2
           },
           "multi_doc": {
-            "recall@5": 0.75,
+            "recall@5": 1.0,
             "mrr": 1.0,
             "n": 2
           }
@@ -338,31 +338,25 @@
     ],
     "answers": {
       "offline_extractive/hybrid": {
-        "answer_correctness": 0.68,
-        "citation_accuracy": 0.655,
+        "answer_correctness": 0.64,
+        "citation_accuracy": 0.75,
         "abstention": {
-          "tp": 1,
-          "fp": 0,
-          "fn": 9,
-          "precision": 1.0,
-          "recall": 0.1,
-          "f1": 0.182,
+          "tp": 9,
+          "fp": 5,
+          "fn": 1,
+          "precision": 0.643,
+          "recall": 0.9,
+          "f1": 0.75,
           "note": "positive class = question should be refused"
         },
         "injection_parroting": "0/0",
         "groundedness": "1.0 by construction (verbatim extractive)",
         "failure_examples": [
           {
-            "id": "ho-he-01",
-            "question": "תוך כמה ימים תבור מספקת הזמנה?",
-            "answer": "בהזמנה בודדת שסכומה עולה על 10,000 ש\"ח לפני מע\"מ תינתן הנחת כמות של 3%. הספק מתחייב לבטל חשבונית כפולה בתוך 7 ימים מקבלת הודעה על כך.",
-            "abstained": false
-          },
-          {
-            "id": "ho-he-05",
-            "question": "כמה ימים לכל היותר יכולים לעבור מהקלייה ועד האספקה?",
-            "answer": "האספקה תתבצע תוך 5 ימי עסקים ממועד ההזמנה, בצירוף תעודת משלוח חתומה.",
-            "abstained": false
+            "id": "ho-he-07",
+            "question": "מה נדרש כדי שתבור תשנה מחיר?",
+            "answer": "The knowledge base does not contain enough evidence to answer this question.",
+            "abstained": true
           },
           {
             "id": "ho-en-05",
@@ -373,8 +367,8 @@
           {
             "id": "ho-en-07",
             "question": "What must be recorded when an exception is decided?",
-            "answer": "Duplicate invoices are rejected, the supplier is notified in writing, and the rejection is recorded in the audit trail.",
-            "abstained": false
+            "answer": "The knowledge base does not contain enough evidence to answer this question.",
+            "abstained": true
           },
           {
             "id": "ho-mx-02",
@@ -387,24 +381,36 @@
             "question": "What is the monthly fee for cleaning wing A?",
             "answer": "Managed IT support is billed monthly in arrears, after the service month has ended, at a fixed fee of ILS 4,200 per month.",
             "abstained": false
+          },
+          {
+            "id": "ho-cl-02",
+            "question": "תוך כמה ימי עסקים מסלימים מחלוקת עם BlueWave?",
+            "answer": "האספקה תתבצע תוך 5 ימי עסקים ממועד ההזמנה, בצירוף תעודת משלוח חתומה.",
+            "abstained": false
           }
         ]
       },
       "offline_extractive/hybrid_rerank": {
-        "answer_correctness": 0.76,
-        "citation_accuracy": 0.767,
+        "answer_correctness": 0.72,
+        "citation_accuracy": 0.733,
         "abstention": {
-          "tp": 7,
+          "tp": 6,
           "fp": 2,
-          "fn": 3,
-          "precision": 0.778,
-          "recall": 0.7,
-          "f1": 0.737,
+          "fn": 4,
+          "precision": 0.75,
+          "recall": 0.6,
+          "f1": 0.667,
           "note": "positive class = question should be refused"
         },
         "injection_parroting": "0/0",
         "groundedness": "1.0 by construction (verbatim extractive)",
         "failure_examples": [
+          {
+            "id": "ho-he-01",
+            "question": "תוך כמה ימים תבור מספקת הזמנה?",
+            "answer": "Each invoice must reference a valid purchase order number issued by the Customer. בהזמנה בודדת שסכומה עולה על 10,000 ש\"ח לפני מע\"מ תינתן הנחת כמות של 3%.",
+            "abstained": false
+          },
           {
             "id": "ho-he-07",
             "question": "מה נדרש כדי שתבור תשנה מחיר?",
@@ -434,19 +440,13 @@
             "question": "תוך כמה ימי עסקים מסלימים מחלוקת עם BlueWave?",
             "answer": "Undisputed amounts paid late bear interest of 0.5% per month. האספקה תתבצע תוך 5 ימי עסקים ממועד ההזמנה, בצירוף תעודת משלוח חתומה.",
             "abstained": false
-          },
-          {
-            "id": "ho-md-02",
-            "question": "כמה זמן מראש צריך להודיע על העלאת מחיר אצל תבור ואצל BlueWave?",
-            "answer": "שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.",
-            "abstained": false
           }
         ]
       }
     }
   },
   "models": {
-    "embedding": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "embedding": "intfloat/multilingual-e5-large",
     "reranker": "jinaai/jina-reranker-v2-base-multilingual",
     "note": null
   },
@@ -463,7 +463,7 @@
       "all@5": 0.857,
       "mrr": 0.885,
       "ndcg@5": 0.865,
-      "latency_ms_p50": 0.21,
+      "latency_ms_p50": 0.11,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -529,7 +529,7 @@
       "all@5": 0.881,
       "mrr": 0.889,
       "ndcg@5": 0.873,
-      "latency_ms_p50": 0.22,
+      "latency_ms_p50": 0.12,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -587,64 +587,64 @@
       "name": "dense",
       "chunking": "fixed_700",
       "n_chunks": 15,
-      "recall@1": 0.583,
-      "all@1": 0.524,
-      "recall@3": 0.726,
-      "all@3": 0.667,
-      "recall@5": 0.869,
-      "all@5": 0.833,
-      "mrr": 0.741,
-      "ndcg@5": 0.749,
-      "latency_ms_p50": 10.86,
+      "recall@1": 0.619,
+      "all@1": 0.548,
+      "recall@3": 0.857,
+      "all@3": 0.81,
+      "recall@5": 0.917,
+      "all@5": 0.881,
+      "mrr": 0.813,
+      "ndcg@5": 0.822,
+      "latency_ms_p50": 87.53,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
-          "mrr": 0.833,
+          "mrr": 0.875,
           "n": 4
         },
         "cross_lingual": {
           "recall@5": 0.5,
-          "mrr": 0.562,
+          "mrr": 0.125,
           "n": 2
         },
         "en": {
           "recall@5": 1.0,
-          "mrr": 0.803,
+          "mrr": 0.818,
           "n": 11
         },
         "he": {
-          "recall@5": 0.857,
-          "mrr": 0.671,
+          "recall@5": 1.0,
+          "mrr": 0.893,
           "n": 14
         },
         "injection": {
-          "recall@5": 0.0,
-          "mrr": 0.111,
+          "recall@5": 1.0,
+          "mrr": 0.25,
           "n": 1
         },
         "lang:en": {
           "recall@5": 0.875,
-          "mrr": 0.705,
+          "mrr": 0.776,
           "n": 16
         },
         "lang:he": {
-          "recall@5": 0.868,
-          "mrr": 0.722,
+          "recall@5": 1.0,
+          "mrr": 0.895,
           "n": 19
         },
         "lang:mixed": {
-          "recall@5": 0.857,
-          "mrr": 0.875,
+          "recall@5": 0.786,
+          "mrr": 0.679,
           "n": 7
         },
         "mixed": {
-          "recall@5": 1.0,
-          "mrr": 1.0,
+          "recall@5": 0.9,
+          "mrr": 0.9,
           "n": 5
         },
         "multi_doc": {
-          "recall@5": 0.7,
-          "mrr": 0.667,
+          "recall@5": 0.6,
+          "mrr": 0.833,
           "n": 5
         }
       }
@@ -653,24 +653,24 @@
       "name": "hybrid",
       "chunking": "fixed_700",
       "n_chunks": 15,
-      "recall@1": 0.655,
-      "all@1": 0.571,
-      "recall@3": 0.869,
-      "all@3": 0.81,
-      "recall@5": 0.905,
-      "all@5": 0.857,
-      "mrr": 0.834,
-      "ndcg@5": 0.826,
-      "latency_ms_p50": 10.59,
+      "recall@1": 0.75,
+      "all@1": 0.667,
+      "recall@3": 0.893,
+      "all@3": 0.833,
+      "recall@5": 0.917,
+      "all@5": 0.881,
+      "mrr": 0.884,
+      "ndcg@5": 0.875,
+      "latency_ms_p50": 98.51,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
-          "mrr": 1.0,
+          "mrr": 0.833,
           "n": 4
         },
         "cross_lingual": {
           "recall@5": 0.0,
-          "mrr": 0.133,
+          "mrr": 0.062,
           "n": 2
         },
         "en": {
@@ -680,7 +680,7 @@
         },
         "he": {
           "recall@5": 1.0,
-          "mrr": 0.81,
+          "mrr": 0.964,
           "n": 14
         },
         "injection": {
@@ -690,17 +690,17 @@
         },
         "lang:en": {
           "recall@5": 0.906,
-          "mrr": 0.839,
+          "mrr": 0.885,
           "n": 16
         },
         "lang:he": {
-          "recall@5": 0.974,
-          "mrr": 0.86,
+          "recall@5": 1.0,
+          "mrr": 0.939,
           "n": 19
         },
         "lang:mixed": {
           "recall@5": 0.714,
-          "mrr": 0.752,
+          "mrr": 0.732,
           "n": 7
         },
         "mixed": {
@@ -709,8 +709,8 @@
           "n": 5
         },
         "multi_doc": {
-          "recall@5": 0.6,
-          "mrr": 0.717,
+          "recall@5": 0.7,
+          "mrr": 0.867,
           "n": 5
         }
       }
@@ -727,7 +727,7 @@
       "all@5": 0.976,
       "mrr": 0.907,
       "ndcg@5": 0.918,
-      "latency_ms_p50": 5278.2,
+      "latency_ms_p50": 5811.05,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -793,7 +793,7 @@
       "all@5": 0.81,
       "mrr": 0.838,
       "ndcg@5": 0.813,
-      "latency_ms_p50": 0.16,
+      "latency_ms_p50": 0.19,
       "by_category": {
         "conflicting": {
           "recall@5": 0.75,
@@ -859,7 +859,7 @@
       "all@5": 0.833,
       "mrr": 0.846,
       "ndcg@5": 0.824,
-      "latency_ms_p50": 0.16,
+      "latency_ms_p50": 0.21,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -917,100 +917,34 @@
       "name": "dense",
       "chunking": "fixed_300",
       "n_chunks": 35,
-      "recall@1": 0.393,
-      "all@1": 0.357,
-      "recall@3": 0.655,
-      "all@3": 0.571,
-      "recall@5": 0.714,
-      "all@5": 0.643,
-      "mrr": 0.593,
-      "ndcg@5": 0.582,
-      "latency_ms_p50": 9.26,
+      "recall@1": 0.595,
+      "all@1": 0.524,
+      "recall@3": 0.845,
+      "all@3": 0.786,
+      "recall@5": 0.917,
+      "all@5": 0.881,
+      "mrr": 0.788,
+      "ndcg@5": 0.8,
+      "latency_ms_p50": 121.05,
       "by_category": {
         "conflicting": {
-          "recall@5": 0.75,
+          "recall@5": 1.0,
           "mrr": 0.833,
           "n": 4
         },
         "cross_lingual": {
           "recall@5": 0.5,
-          "mrr": 0.196,
-          "n": 2
-        },
-        "en": {
-          "recall@5": 0.909,
-          "mrr": 0.818,
-          "n": 11
-        },
-        "he": {
-          "recall@5": 0.714,
-          "mrr": 0.482,
-          "n": 14
-        },
-        "injection": {
-          "recall@5": 0.0,
-          "mrr": 0.0,
-          "n": 1
-        },
-        "lang:en": {
-          "recall@5": 0.719,
-          "mrr": 0.672,
-          "n": 16
-        },
-        "lang:he": {
-          "recall@5": 0.684,
-          "mrr": 0.557,
-          "n": 19
-        },
-        "lang:mixed": {
-          "recall@5": 0.786,
-          "mrr": 0.509,
-          "n": 7
-        },
-        "mixed": {
-          "recall@5": 0.9,
-          "mrr": 0.633,
-          "n": 5
-        },
-        "multi_doc": {
-          "recall@5": 0.3,
-          "mrr": 0.45,
-          "n": 5
-        }
-      }
-    },
-    {
-      "name": "hybrid",
-      "chunking": "fixed_300",
-      "n_chunks": 35,
-      "recall@1": 0.583,
-      "all@1": 0.524,
-      "recall@3": 0.774,
-      "all@3": 0.714,
-      "recall@5": 0.869,
-      "all@5": 0.81,
-      "mrr": 0.753,
-      "ndcg@5": 0.757,
-      "latency_ms_p50": 9.43,
-      "by_category": {
-        "conflicting": {
-          "recall@5": 0.875,
-          "mrr": 0.812,
-          "n": 4
-        },
-        "cross_lingual": {
-          "recall@5": 0.0,
-          "mrr": 0.05,
+          "mrr": 0.556,
           "n": 2
         },
         "en": {
           "recall@5": 1.0,
-          "mrr": 1.0,
+          "mrr": 0.886,
           "n": 11
         },
         "he": {
           "recall@5": 1.0,
-          "mrr": 0.695,
+          "mrr": 0.774,
           "n": 14
         },
         "injection": {
@@ -1020,27 +954,93 @@
         },
         "lang:en": {
           "recall@5": 0.844,
-          "mrr": 0.846,
+          "mrr": 0.812,
           "n": 16
         },
         "lang:he": {
-          "recall@5": 0.947,
-          "mrr": 0.736,
+          "recall@5": 1.0,
+          "mrr": 0.772,
           "n": 19
         },
         "lang:mixed": {
-          "recall@5": 0.714,
-          "mrr": 0.586,
+          "recall@5": 0.857,
+          "mrr": 0.778,
           "n": 7
         },
         "mixed": {
           "recall@5": 1.0,
-          "mrr": 0.8,
+          "mrr": 0.867,
           "n": 5
         },
         "multi_doc": {
-          "recall@5": 0.6,
-          "mrr": 0.707,
+          "recall@5": 0.7,
+          "mrr": 0.75,
+          "n": 5
+        }
+      }
+    },
+    {
+      "name": "hybrid",
+      "chunking": "fixed_300",
+      "n_chunks": 35,
+      "recall@1": 0.714,
+      "all@1": 0.619,
+      "recall@3": 0.845,
+      "all@3": 0.786,
+      "recall@5": 0.881,
+      "all@5": 0.833,
+      "mrr": 0.861,
+      "ndcg@5": 0.837,
+      "latency_ms_p50": 134.19,
+      "by_category": {
+        "conflicting": {
+          "recall@5": 0.875,
+          "mrr": 0.8,
+          "n": 4
+        },
+        "cross_lingual": {
+          "recall@5": 0.0,
+          "mrr": 0.071,
+          "n": 2
+        },
+        "en": {
+          "recall@5": 1.0,
+          "mrr": 0.955,
+          "n": 11
+        },
+        "he": {
+          "recall@5": 1.0,
+          "mrr": 0.881,
+          "n": 14
+        },
+        "injection": {
+          "recall@5": 0.0,
+          "mrr": 0.0,
+          "n": 1
+        },
+        "lang:en": {
+          "recall@5": 0.844,
+          "mrr": 0.906,
+          "n": 16
+        },
+        "lang:he": {
+          "recall@5": 0.974,
+          "mrr": 0.87,
+          "n": 19
+        },
+        "lang:mixed": {
+          "recall@5": 0.714,
+          "mrr": 0.735,
+          "n": 7
+        },
+        "mixed": {
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "n": 5
+        },
+        "multi_doc": {
+          "recall@5": 0.7,
+          "mrr": 1.0,
           "n": 5
         }
       }
@@ -1056,8 +1056,8 @@
       "recall@5": 0.952,
       "all@5": 0.929,
       "mrr": 0.848,
-      "ndcg@5": 0.865,
-      "latency_ms_p50": 3144.43,
+      "ndcg@5": 0.866,
+      "latency_ms_p50": 3650.46,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
@@ -1123,7 +1123,7 @@
       "all@5": 0.762,
       "mrr": 0.86,
       "ndcg@5": 0.817,
-      "latency_ms_p50": 0.28,
+      "latency_ms_p50": 0.26,
       "by_category": {
         "conflicting": {
           "recall@5": 0.5,
@@ -1247,34 +1247,34 @@
       "name": "dense",
       "chunking": "clause",
       "n_chunks": 52,
-      "recall@1": 0.393,
-      "all@1": 0.31,
-      "recall@3": 0.798,
-      "all@3": 0.762,
-      "recall@5": 0.845,
-      "all@5": 0.81,
-      "mrr": 0.642,
-      "ndcg@5": 0.67,
-      "latency_ms_p50": 9.25,
+      "recall@1": 0.726,
+      "all@1": 0.643,
+      "recall@3": 0.869,
+      "all@3": 0.81,
+      "recall@5": 0.917,
+      "all@5": 0.881,
+      "mrr": 0.879,
+      "ndcg@5": 0.864,
+      "latency_ms_p50": 123.13,
       "by_category": {
         "conflicting": {
-          "recall@5": 0.875,
-          "mrr": 0.75,
+          "recall@5": 1.0,
+          "mrr": 0.812,
           "n": 4
         },
         "cross_lingual": {
-          "recall@5": 1.0,
-          "mrr": 0.333,
+          "recall@5": 0.5,
+          "mrr": 0.583,
           "n": 2
         },
         "en": {
           "recall@5": 1.0,
-          "mrr": 0.894,
+          "mrr": 0.909,
           "n": 11
         },
         "he": {
-          "recall@5": 0.857,
-          "mrr": 0.461,
+          "recall@5": 1.0,
+          "mrr": 0.964,
           "n": 14
         },
         "injection": {
@@ -1284,27 +1284,27 @@
         },
         "lang:en": {
           "recall@5": 0.844,
-          "mrr": 0.781,
+          "mrr": 0.828,
           "n": 16
         },
         "lang:he": {
-          "recall@5": 0.842,
-          "mrr": 0.576,
+          "recall@5": 1.0,
+          "mrr": 0.947,
           "n": 19
         },
         "lang:mixed": {
           "recall@5": 0.857,
-          "mrr": 0.5,
+          "mrr": 0.81,
           "n": 7
         },
         "mixed": {
-          "recall@5": 0.8,
-          "mrr": 0.567,
+          "recall@5": 1.0,
+          "mrr": 0.9,
           "n": 5
         },
         "multi_doc": {
-          "recall@5": 0.6,
-          "mrr": 0.833,
+          "recall@5": 0.7,
+          "mrr": 0.9,
           "n": 5
         }
       }
@@ -1313,19 +1313,19 @@
       "name": "hybrid",
       "chunking": "clause",
       "n_chunks": 52,
-      "recall@1": 0.643,
-      "all@1": 0.548,
-      "recall@3": 0.798,
-      "all@3": 0.738,
-      "recall@5": 0.857,
+      "recall@1": 0.738,
+      "all@1": 0.643,
+      "recall@3": 0.833,
+      "all@3": 0.786,
+      "recall@5": 0.869,
       "all@5": 0.81,
-      "mrr": 0.813,
-      "ndcg@5": 0.793,
-      "latency_ms_p50": 10.28,
+      "mrr": 0.873,
+      "ndcg@5": 0.841,
+      "latency_ms_p50": 122.97,
       "by_category": {
         "conflicting": {
           "recall@5": 0.875,
-          "mrr": 0.833,
+          "mrr": 0.6,
           "n": 4
         },
         "cross_lingual": {
@@ -1340,7 +1340,7 @@
         },
         "he": {
           "recall@5": 1.0,
-          "mrr": 0.779,
+          "mrr": 0.964,
           "n": 14
         },
         "injection": {
@@ -1349,27 +1349,27 @@
           "n": 1
         },
         "lang:en": {
-          "recall@5": 0.875,
-          "mrr": 0.938,
+          "recall@5": 0.844,
+          "mrr": 0.887,
           "n": 16
         },
         "lang:he": {
           "recall@5": 0.947,
-          "mrr": 0.802,
+          "mrr": 0.932,
           "n": 19
         },
         "lang:mixed": {
-          "recall@5": 0.571,
-          "mrr": 0.56,
+          "recall@5": 0.714,
+          "mrr": 0.679,
           "n": 7
         },
         "mixed": {
-          "recall@5": 0.8,
-          "mrr": 0.733,
+          "recall@5": 1.0,
+          "mrr": 0.9,
           "n": 5
         },
         "multi_doc": {
-          "recall@5": 0.7,
+          "recall@5": 0.6,
           "mrr": 1.0,
           "n": 5
         }
@@ -1386,8 +1386,8 @@
       "recall@5": 0.94,
       "all@5": 0.929,
       "mrr": 0.859,
-      "ndcg@5": 0.87,
-      "latency_ms_p50": 2783.88,
+      "ndcg@5": 0.872,
+      "latency_ms_p50": 3769.18,
       "by_category": {
         "conflicting": {
           "recall@5": 1.0,
@@ -1449,25 +1449,19 @@
   "answers": {
     "offline_extractive/hybrid": {
       "answer_correctness": 0.619,
-      "citation_accuracy": 0.648,
+      "citation_accuracy": 0.717,
       "abstention": {
-        "tp": 2,
-        "fp": 0,
-        "fn": 6,
-        "precision": 1.0,
-        "recall": 0.25,
-        "f1": 0.4,
+        "tp": 7,
+        "fp": 7,
+        "fn": 1,
+        "precision": 0.5,
+        "recall": 0.875,
+        "f1": 0.636,
         "note": "positive class = question should be refused"
       },
       "injection_parroting": "0/1",
       "groundedness": "1.0 by construction (verbatim extractive)",
       "failure_examples": [
-        {
-          "id": "he-04",
-          "question": "מה תנאי התשלום מול תבור ציוד משרדי?",
-          "answer": "חשבונית שהוגשה יותר מפעם אחת לא תשולם פעמיים.",
-          "abstained": false
-        },
         {
           "id": "he-05",
           "question": "האם חרמון רשאית לחייב על כמות שטרם סופקה?",
@@ -1475,21 +1469,15 @@
           "abstained": false
         },
         {
-          "id": "he-06",
-          "question": "מה מחיר פולי האספרסו של חרמון לק\"ג?",
-          "answer": "סטיית מחיר מותרת בין החשבונית להזמנה היא עד 3% ממחיר ההזמנה.",
-          "abstained": false
-        },
-        {
           "id": "he-07",
           "question": "עד מתי קבועים מחירי הקפה של חרמון?",
-          "answer": "תאריך הקלייה של פולי הקפה לא יעלה על 14 יום ממועד האספקה. הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "answer": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
           "abstained": false
         },
         {
           "id": "he-10",
           "question": "מה חייבת לכלול חשבונית של כרמל שירותי ניקיון?",
-          "answer": "תנאי התשלום הם שוטף + 30. הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "answer": "הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
           "abstained": false
         },
         {
@@ -1497,6 +1485,18 @@
           "question": "What happens to an invoice issued in a different currency than the purchase order?",
           "answer": "Invoices must be issued in the purchase order currency. Each invoice must reference a valid purchase order number issued by the Customer.",
           "abstained": false
+        },
+        {
+          "id": "en-08",
+          "question": "What is the time limit for resolving exceptions?",
+          "answer": "The knowledge base does not contain enough evidence to answer this question.",
+          "abstained": true
+        },
+        {
+          "id": "en-09",
+          "question": "Are AI systems allowed to release payments?",
+          "answer": "The knowledge base does not contain enough evidence to answer this question.",
+          "abstained": true
         }
       ]
     },

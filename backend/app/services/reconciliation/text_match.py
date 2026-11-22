@@ -57,4 +57,8 @@ def name_similarity(a: str, b: str) -> float:
 
 
 def normalize_doc_number(s: str | None) -> str:
-    return re.sub(r"[^0-9a-z]", "", (s or "").lower())
+    """Comparable form of a document number or SKU: letters and digits of any script, case-folded.
+    Hebrew identifiers keep their letters (audit FIN-05: they used to normalize to "" and match each other)."""
+    import unicodedata
+
+    return "".join(ch for ch in unicodedata.normalize("NFKC", s or "").casefold() if ch.isalnum())

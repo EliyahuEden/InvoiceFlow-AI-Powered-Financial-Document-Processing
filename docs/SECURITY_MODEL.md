@@ -13,6 +13,7 @@
 **Authentication**
 - Argon2id password hashes and HS256 access JWTs that live **15 minutes** and carry a session id (`sid`).
 - **Server-side sessions** (`auth_sessions`): every request checks that the token's session is still active, so logout, "sign out everywhere" (`POST /api/auth/logout-all`), deactivation and expiry revoke access immediately. Postgres is already read on every request, so this adds no new failure mode.
+- Users see their own signed-in devices in Settings (`GET /api/auth/sessions`) and can sign out any other one (`DELETE /api/auth/sessions/{id}`, CSRF header required, only their own sessions, audited).
 - **Rotating refresh tokens** (`<sid>.<secret>`, only SHA-256 of the secret is stored): each `POST /api/auth/refresh` issues a new one. Replaying an already-rotated token is treated as theft: the session is revoked and an `auth.refresh_reuse` audit row is written. Sessions expire after 8 idle hours and 7 days at most by default, sized for small and medium businesses; administrators tune both per organization (1–72 hours, 1–30 days) in Settings, and every change is audited.
 - Both tokens are `httpOnly`, `SameSite=Lax` cookies through a same-origin proxy, so there is no token in JS storage. The frontend refreshes once on a 401 (shared between concurrent requests) and retries.
 - `X-Requested-With` is required on unsafe cookie requests, refresh and logout (CSRF guard).

@@ -12,6 +12,8 @@ eval/results/abstention_calibration.json; the production constant
 """
 from __future__ import annotations
 
+import argparse
+
 from common import write_result
 from run_rag_eval import build_chunks, load_corpus, load_questions
 
@@ -54,10 +56,45 @@ def sweep(scores: list[tuple[float, bool]]) -> dict:
             "tied_interval": [round(tied[0][0], 3), round(tied[-1][0], 3)]}
 
 
+def sweep_dense(rows: list[dict]) -> dict:
+    """Without a reranker, answer_extractive abstains when lexical coverage < min_strength AND top-1
+    dense similarity < min_dense. Grid over both; best balanced accuracy, middle of the tied dense
+    interval, lowest coverage floor on ties."""
+    best = None
+    for c in [x / 20 for x in range(0, 13)]:
+        # abstain iff coverage < c and dense < t  <=>  score < t, where score = dense if coverage < c else +inf
+        res = sweep([(r["top1_dense"] if r["coverage"] < c else 99.0, r["answerable"]) for r in rows])
+        if best is None or res["balanced_accuracy"] > best["balanced_accuracy"]:
+            best = {**res, "min_strength": c}
+    return best
+
+
+def calibrate_dense(s, idx) -> None:  # noqa: ANN001
+    rows = []
+    for q in load_questions("questions.jsonl") + load_questions("questions_calibration_extra.jsonl"):
+        top = idx.search(q["question"], mode="hybrid", k=3)[0]
+        rows.append({"id": q["id"], "answerable": q["answerable"], "top1_dense": round(top.scores.get("dense", 0.0), 4),
+                     "coverage": round(evidence_strength(q["question"], top), 3)})
+    res = sweep_dense(rows)
+    print(res)
+    write_result("abstention_calibration_dense", {
+        "set": "questions.jsonl + questions_calibration_extra.jsonl (calibration; the held-out set is not used)",
+        "method": "no reranker: abstain-if (lexical coverage < min_strength) and (top-1 dense < threshold); "
+                  "best balanced accuracy, middle of the tied threshold interval",
+        "models": {"embedding": s.embedding_model}, "dense": res, "per_question": rows,
+    })
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--no-reranker", action="store_true", help="calibrate the dense threshold used without a reranker")
+    args = ap.parse_args()
     s = get_settings()
     docs, pages = load_corpus()
     idx = ChunkIndex(build_chunks(docs, pages, "clause"), FastEmbedEmbedder(s.embedding_model, str(s.model_cache_dir)))
+    if args.no_reranker:
+        calibrate_dense(s, idx)
+        return
     rr = FastEmbedReranker(s.reranker_model, str(s.model_cache_dir))
     rows = []
     for q in load_questions("questions.jsonl") + load_questions("questions_calibration_extra.jsonl"):

@@ -25,6 +25,8 @@ from app.services import audit, events
 from app.services.reconciliation import engine as E
 
 ACTION_FOR_FINDING = {
+    "AMBIGUOUS_PURCHASE_ORDER": ("manual_review", "Several purchase orders match; confirm which one this invoice bills."),
+    "NOT_AN_INVOICE": ("reject_invoice", "This is not a supplier invoice; reject it and ask for the tax invoice if one is due."),
     "INCOMPLETE_EXTRACTION": ("correct_extraction", "Correct the missing invoice fields in the extraction review."),
     "DUPLICATE_INVOICE": ("reject_invoice", "Reject the duplicate and notify the supplier."),
     "PRICE_MISMATCH": ("request_credit_note", "Hold payment and request a credit note for the price difference."),
@@ -55,7 +57,7 @@ TITLE = {
     "AMBIGUOUS_SUPPLIER": "Supplier is ambiguous", "UNRECOGNIZED_SUPPLIER": "Unknown supplier",
     "AMBIGUOUS_DESCRIPTION": "Ambiguous line description", "CURRENCY_MISMATCH": "Currency mismatch",
     "ITEM_NOT_ON_PO": "Item not on PO", "TOTAL_MISMATCH": "Totals do not add up",
-    "INCOMPLETE_EXTRACTION": "Extraction incomplete", "SUSPICIOUS_CONTENT": "Suspicious embedded instructions",
+    "INCOMPLETE_EXTRACTION": "Extraction incomplete", "SUSPICIOUS_CONTENT": "Suspicious embedded instructions", "NOT_AN_INVOICE": "Not an invoice", "AMBIGUOUS_PURCHASE_ORDER": "Purchase order unclear",
     "PO_CLOSED": "PO is closed", "POSSIBLE_DUPLICATE": "Possible duplicate",
 }
 
@@ -120,6 +122,8 @@ def to_engine_invoice(inv: Invoice, sha: str | None, confirmed_supplier: bool) -
         document_sha256=sha, supplier_id=inv.supplier_id if confirmed_supplier else None,
         security_flags=[snip for w in (inv.validation_warnings or []) if w.get("code") == "SUSPICIOUS_INSTRUCTIONS"
                         for snip in (w.get("snippets") or ["(flagged)"])],
+        document_kind=next(((w["kind"], w["phrase"]) for w in (inv.validation_warnings or [])
+                            if w.get("code") == "NOT_AN_INVOICE"), None),
     )
 
 
@@ -200,14 +204,37 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
     return run
 
 
+def approval_basis(inv: Invoice, steps: int) -> str:
+    """Fingerprint of what a payment approval approves: who is paid, how much, for which lines and
+    under which route. Any change invalidates earlier approval steps (audit FIN-01)."""
+    import hashlib
+    import json
+
+    fields = [str(inv.supplier_id), inv.currency, inv.po_reference, inv.invoice_number, str(inv.total),
+              str(inv.subtotal), str(inv.tax_total), str(inv.due_date), inv.payment_terms, steps,
+              [(ln.line_no, ln.sku, str(ln.quantity), str(ln.unit_price), str(ln.line_total))
+               for ln in sorted(inv.lines, key=lambda x: x.line_no)]]
+    return hashlib.sha256(json.dumps(fields, ensure_ascii=False, default=str).encode()).hexdigest()
+
+
 def ensure_approval_steps(session: Session, org: Organization, inv: Invoice) -> None:
-    existing = session.scalars(select(Approval).where(Approval.invoice_id == inv.id)).all()
-    if existing:
-        return
-    session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=1, required_role="finance_reviewer"))
     threshold = Decimal(str(org.settings.get("approval", {}).get("dual_approval_threshold", "20000")))
-    if inv.total is not None and inv.total > threshold:
-        session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=2, required_role="admin"))
+    steps = 2 if inv.total is not None and inv.total > threshold else 1
+    basis = approval_basis(inv, steps)
+    active = session.scalars(select(Approval).where(Approval.invoice_id == inv.id, Approval.status != "superseded")
+                             .with_for_update()).all()
+    if active and all(a.basis == basis for a in active):
+        return  # same evidence and route: earlier decisions still apply
+    for a in active:
+        a.status = "superseded"
+    if active:
+        audit.record(session, org_id=org.id, action="approval.superseded", entity_type="invoice", entity_id=inv.id,
+                     actor_type="system", actor_label="reconciliation-engine",
+                     meta={"steps": [{"step": a.step, "decided_by": str(a.decided_by) if a.decided_by else None}
+                                     for a in active], "reason": "invoice evidence or approval route changed"})
+    session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=1, required_role="finance_reviewer", basis=basis))
+    if steps == 2:
+        session.add(Approval(organization_id=org.id, invoice_id=inv.id, step=2, required_role="admin", basis=basis))
     session.flush()
 
 

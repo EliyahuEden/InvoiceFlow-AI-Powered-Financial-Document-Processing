@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import Principal, dec, get_db, money, page_params, paginated, require
+from app.api.deps import Principal, dec, get_db, money, page_params, paginated, price, require
 from app.core.config import get_settings
 from app.models import (
     AgentRun,
@@ -122,7 +122,8 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
     discrepancies = db.scalars(select(Discrepancy).where(Discrepancy.run_id == run.id)).all() if run else []
     exc = db.scalars(select(ExceptionCase).where(ExceptionCase.invoice_id == inv.id)
                      .order_by(ExceptionCase.created_at.desc()).limit(1)).first()
-    approvals = db.scalars(select(Approval).where(Approval.invoice_id == inv.id).order_by(Approval.step)).all()
+    approvals = db.scalars(select(Approval).where(Approval.invoice_id == inv.id, Approval.status != "superseded")
+                           .order_by(Approval.step)).all()
     agent_runs = db.scalars(select(AgentRun).where(AgentRun.invoice_id == inv.id)
                             .order_by(AgentRun.created_at.desc()).limit(5)).all()
     job = db.scalars(select(Job).where(Job.entity_id == inv.id, Job.type == "invoice.process")
@@ -142,7 +143,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
         "tax_rate": dec(inv.tax_rate), "field_sources": inv.field_sources, "missing_fields": inv.missing_fields,
         "validation_warnings": inv.validation_warnings,
         "lines": [{"id": str(ln.id), "line_no": ln.line_no, "sku": ln.sku, "description": ln.description,
-                   "quantity": dec(ln.quantity), "unit_price": money(ln.unit_price), "discount": money(ln.discount),
+                   "quantity": dec(ln.quantity), "unit_price": price(ln.unit_price), "discount": money(ln.discount),
                    "line_total": money(ln.line_total), "source": ln.source} for ln in inv.lines],
         "document": {"id": str(doc.id), "filename": doc.filename, "mime_type": doc.mime_type, "page_count": doc.page_count,
                      "text_method": doc.text_method, "language": doc.language, "status": doc.status,
@@ -151,7 +152,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
                      "tax_id": supplier.tax_id} if supplier else None,
         "purchase_order": {"id": str(po.id), "po_number": po.po_number, "currency": po.currency, "status": po.status,
                            "lines": [{"id": str(ln.id), "line_no": ln.line_no, "sku": ln.sku, "description": ln.description,
-                                      "quantity": dec(ln.quantity), "unit_price": money(ln.unit_price),
+                                      "quantity": dec(ln.quantity), "unit_price": price(ln.unit_price),
                                       "received": dec(received.get(ln.id, Decimal(0)))} for ln in po.lines]} if po else None,
         "reconciliation": {"id": str(run.id), "outcome": run.outcome, "mode": run.mode,
                            "engine_version": run.engine_version, "created_at": run.created_at.isoformat(),
@@ -174,6 +175,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
 
 
 class LineIn(BaseModel):
+    id: uuid.UUID | None = None  # the existing line this row edits; empty for a newly added row
     line_no: int | None = None
     sku: str | None = None
     description: str = Field(..., min_length=1, max_length=1000)

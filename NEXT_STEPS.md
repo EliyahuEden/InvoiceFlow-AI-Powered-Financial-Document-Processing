@@ -59,13 +59,69 @@
 - `EXTRACTION_MODE=rules_first` (default): rules read every invoice; the LLM is asked only for open fields and its answer is kept only if it leaves fewer problems (`backend/app/services/extraction/hybrid.py`, `processing.choose_extraction`, tests in `backend/tests/test_rules_first.py`). Measured with Groq's free `openai/gpt-oss-20b`: 12 of 73 invoices call the model (all of them invoices the rules got wrong), field accuracy 0.920 → 0.924, about 1.7K tokens per call. See `docs/EVALUATION_PLAN.md`.
 - The benchmark scores `llm` and `rules_first` with `--llm`, records the model and endpoint, and supports `--pace`, `--limit` and `LLM_MAX_OUTPUT_TOKENS` for free-tier APIs.
 
+## Done: live AI mode
+- The whole app ran with a real model (Groq): agent tool calls, cited explanations and RAG answers work. Agent v5 writes bilingual reports checked by a deterministic faithfulness guard (one retry with feedback, template on failure); with `openai/gpt-oss-120b` 9 of 9 demo investigations passed on the first attempt. See `docs/EVALUATION_PLAN.md` section C2.
+- Settings ignore `# comments` after a value (Docker keeps them in env files: a real `.env` had `OPENAI_BASE_URL=# e.g. ...`, which would have broken every OpenAI call), and `.env.example` keeps comments on their own lines.
+- Run the normal stack in AI mode with Groq, without editing `.env` (later env files win): `docker compose --env-file .env --env-file .env.groq up -d api worker`. Put `LLM_MODEL=openai/gpt-oss-120b` and `LLM_MAX_RETRIES=6` in `.env.groq` for the agent; switch back with `docker compose up -d api worker`.
+
+## Done: sessions, e5, non-invoice documents
+- **Signed-in devices** (Settings): each user sees their own active sessions (browser, system, IP, last activity, "this device") and can sign out any other one. `GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}` (CSRF header, own sessions only, audited as `auth.session_revoked`).
+- **e5-large is the default embedder** with a per-model abstention floor; migration 0004 and `python -m app.cli reindex-embeddings`. Measured trade-off in `docs/EVALUATION_PLAN.md` (equal with the reranker, much better without it). **After pulling: rebuild the images** (`docker compose build`): the containers mount `backend/app` but take `backend/alembic` from the image, so migration 0004 only runs after a rebuild; then run `docker compose exec api python -m app.cli reindex-embeddings`.
+- **Not-an-invoice detection** (`backend/app/services/documents/classify.py`): order and booking confirmations, quotes, pro-forma (חשבון עסקה), receipts, credit notes, delivery notes, customs declarations and statements are recognised from the document title. They get one blocking finding, `NOT_AN_INVOICE` (no PO matching noise), whose proposed action is reject. Checked: 0 of 73 benchmark invoices flagged; on the 14 readable real documents, the order printout, the hotel booking and the payment receipt were flagged and the 11 invoices were not.
+
+## Done: audit P0 fixes and AP Copilot
+The external review in `docs/audits/FULL_SYSTEM_AUDIT.md` was checked finding by finding against the code.
+All six P0 items were confirmed and fixed, each with a regression test in `backend/tests/test_audit_fixes.py`:
+- **FIN-03** (reproduced): a line without quantity, unit price or line total reconciled as `matched`. It now
+  blocks with `INCOMPLETE_EXTRACTION` naming the line; zero stays a value.
+- **FIN-01**: approval steps survived corrections and threshold changes. Steps now store a fingerprint of what
+  they approve (`approvals.basis`, migration 0005); a change supersedes them (kept, audited as
+  `approval.superseded`) and creates a fresh route; an unchanged rerun (e.g. by the agent) keeps them.
+- **FIN-02**: payment-approval decisions now lock the invoice and its steps (`SELECT ... FOR UPDATE`).
+- **FIN-04**: unit prices were sent to the UI rounded to cents and saved back that way; they now keep every
+  stored digit.
+- **SEC-01**: Next.js 15.1.6 -> 15.5.29 (the first 15.x release without the critical advisories; also fixes the
+  bundled sharp). Remaining: the PostCSS copy inside Next (only exploitable on untrusted CSS; fixed in Next 16)
+  and the dev-only Playwright browser-download advisory.
+- **SEC-02**: `ENVIRONMENT=production` now refuses to start with the development JWT secret, non-secure
+  cookies, local file storage or localhost/`*` CORS origins.
+
+The **AP Copilot** is built: see `docs/COPILOT.md`.
+
+### Audit items still open
+- **Fixed (tests in `backend/tests/test_matching_exposure.py`, `test_audit_fixes.py`):**
+  - FIN-05: document numbers and SKUs keep Hebrew letters when normalized; a PO reference shared by several
+    POs prefers the invoice supplier's and is otherwise `AMBIGUOUS_PURCHASE_ORDER` (blocking); equal line
+    coverage across open POs is ambiguous instead of "the first one"; a SKU repeated on several PO lines is
+    decided only by an identical unit price. Every scenario is checked with the PO order reversed.
+  - FIN-07: one exposure per line: units over the ordered or received quantity count once (capped at this
+    invoice's quantity), a price difference counts only on the remaining units, and with no goods receipt
+    the whole-subtotal finding carries it. The dashboard reports money at risk per currency.
+  - FIN-08: corrections send each line's id; provenance follows the line, and new rows are marked manual.
+  - Reconciliation benchmark unchanged: 348/348 controlled cases, 13/13 end to end.
+- **Fix next:** TECH-01 (a revision check so two people's corrections cannot overwrite each other), AI-03 (retrieve by
+  effective date and supplier precedence), UX-02 (unknown OCR confidence shown as 0%), UX-01 (draft guard on
+  programmatic navigation and refresh), UX-03 (queue refresh on events).
+- **Validate first (risks, not shown bugs):** REL-01/02/03 (worker failure closure, lease recovery, orphaned
+  files), FIN-09 (one active case under concurrent reruns), SEC-05 (tenant matrix), SEC-03 (upload limits before
+  parsing).
+- **Needs a decision from you:** FIN-06 (which roles may accept a variance over a blocking finding, and when
+  two-way matching is allowed).
+- **Deferred:** PERF-01/02, OPS-01/02, SEC-04/06, PROD-01..03 (deployment-specific or product scope).
+
+## Done: quality pass (no new features)
+Hostile-input fuzzing of every API route, upload type and Copilot/RAG question; the 61 server errors it found
+(NUL characters, huge page numbers) are fixed; Copilot router accuracy measured on tuned and held-out
+paraphrases; speed measured at 2,000 invoices (every screen and Copilot question under 135 ms p95). Benchmarks
+unchanged. Full report: `docs/QUALITY.md`.
+
 ## To do, in priority order
 1. **Push and re-check CI** after the rate-limit fix (the first run failed only on login 429s in the e2e job).
 2. **LLM benchmark.** Rules-first is measured (Groq free tier via the git-ignored `.env.groq`: `docker compose run --rm --no-deps --env-from-file .env.groq -v ./eval:/srv/eval -v ./backend/app:/srv/backend/app worker python /srv/eval/run_extraction_eval.py --llm --llm-systems rules_first --pace 25`). Still open: the every-invoice `llm` run (about 285K tokens, more than one free day; split it with `--limit` or use a paid key with permission), and page images for scans so a vision model can recover totals lost by OCR. `.env` already holds `LLM_PROVIDER=openai`, `LLM_MODEL=gpt-5.4-nano`. Run `python eval/run_extraction_eval.py --llm` (nano vs mini, about $1–2) and add LLM answering to `eval/run_rag_eval.py` (about $0.10) to fix near-miss refusals with verified citations. Report measured numbers only.
 3. **FX policy for prioritization:** dashboard totals are separated by currency, but priority thresholds and risk ordering still compare nominal amounts. Define a conversion policy before interpreting cross-currency ranks as comparable base-currency exposure.
 4. **Adopt e5-large embeddings** (migration 384 → 1024, re-index, recalibrate the no-reranker abstention) if the reranker may be off in production.
 5. **Extraction:** on the real invoices, an encrypted PDF is rejected at upload, one total and one tax ID are still wrong, and non-invoice documents (booking, order confirmation, customs sheet) should be classified and refused. On the benchmarks the remaining errors are OCR label loss (tax ID, currency on scans), bidi-reversed `Due:` terms lines, and unfamiliar header labels on v2. Any further held-out claim needs a new frozen set: v1 was inspected, and v2 has been scored, so treat both as used.
-6. **Security follow-ups:** a UI to list and revoke individual sessions; the event stream notices revocation within 60 s rather than instantly; a bucket policy denying unencrypted uploads as a second layer.
+6. **Security follow-ups:** the event stream notices revocation within 60 s rather than instantly; a bucket policy denying unencrypted uploads as a second layer.
 7. **Synthetic tax IDs fail the Israeli check digit.** Regenerate them with valid check digits, then let the rules-first router flag invalid supplier tax IDs.
 8. **Optional features:** ERP export, Israeli e-invoice allocation-number validation, a real (licensed or anonymized) invoice test set.
 
