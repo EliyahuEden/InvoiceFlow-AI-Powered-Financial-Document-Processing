@@ -197,3 +197,43 @@ def test_deleting_a_line_keeps_each_surviving_lines_own_source(client, as_user):
     assert after[0]["source"]["bbox"] == before[1]["source"]["bbox"]  # not line 1's box
     added = after[-1]
     assert added["source"].get("manual") is True and not added["source"].get("bbox")
+
+
+# ---------------------------------------------------------------- FIN-06: overrides need a justification
+def _blocking_case(client, as_user):
+    from tests.conftest import upload_invoice
+
+    inv = upload_invoice(client, as_user("procurement@kinneret.example"), "09_ambiguous_supplier_carmel_he.pdf")
+    fin = as_user("finance@kinneret.example")
+    d = client.get(f"/api/invoices/{inv['invoice_id']}", headers=fin).json()
+    return d["exception"]["id"], d["exception"]["proposed_action"], fin
+
+
+@pytest.mark.integration
+def test_overriding_the_proposed_action_requires_a_justification(client, as_user):
+    exc_id, proposed, fin = _blocking_case(client, as_user)
+    assert proposed != "accept_variance"
+    r = client.post(f"/api/exceptions/{exc_id}/decision", headers=fin,
+                    json={"decision": "approve", "action_override": "accept_variance"})
+    assert r.status_code == 422 and "justification" in r.json()["detail"].lower()
+
+
+@pytest.mark.integration
+def test_a_justified_override_is_allowed_and_audited(client, as_user):
+    exc_id, proposed, fin = _blocking_case(client, as_user)
+    r = client.post(f"/api/exceptions/{exc_id}/decision", headers=fin,
+                    json={"decision": "approve", "action_override": "accept_variance",
+                          "note": "Supplier confirmed by phone; registration number on file"})
+    assert r.status_code == 200, r.text
+    events = client.get(f"/api/audit?entity_id={exc_id}&action=exception.approve",
+                        headers=as_user("admin@kinneret.example")).json()["items"]
+    meta = events[0]["meta"]
+    assert meta["override"] is True and meta["overridden_action"] == proposed
+    assert meta["overridden_findings"] and "AMBIGUOUS_SUPPLIER" in meta["overridden_findings"]
+
+
+@pytest.mark.integration
+def test_approving_the_proposed_action_needs_no_extra_note(client, as_user):
+    exc_id, proposed, fin = _blocking_case(client, as_user)
+    r = client.post(f"/api/exceptions/{exc_id}/decision", headers=fin, json={"decision": "approve"})
+    assert r.status_code == 200, r.text

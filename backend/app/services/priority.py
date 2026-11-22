@@ -34,6 +34,9 @@ class PriorityInput:
     due_date: date | None
     created_at: datetime
     invoice_total: Decimal | None = None
+    # money at risk converted to the base currency (shekels) for ranking; None when it cannot be converted,
+    # in which case the nominal amount is used. The reason text always shows the original amount.
+    risk_base: Decimal | None = None
 
 
 @dataclass
@@ -51,7 +54,8 @@ def _reason(code: str, **params: object) -> dict:
 def compute(inp: PriorityInput, today: date, critical_amount: Decimal = DEFAULT_CRITICAL_AMOUNT,
             escalated: bool = False) -> Priority:
     types = set(inp.finding_types)
-    risk = inp.amount_at_risk or Decimal(0)
+    shown = inp.amount_at_risk or Decimal(0)
+    risk = inp.risk_base if inp.risk_base is not None else shown
     reasons: list[dict] = []
     blocking = sorted(types & BLOCKING)
     if blocking:
@@ -63,8 +67,8 @@ def compute(inp: PriorityInput, today: date, critical_amount: Decimal = DEFAULT_
         level = 1
     else:
         level = 2
-    if risk > 0:
-        reasons.append(_reason("amount_at_risk", amount=f"{risk:.2f}"))
+    if shown > 0:
+        reasons.append(_reason("amount_at_risk", amount=f"{shown:.2f}"))
     if "MISSING_GOODS_RECEIPT" in types:
         reasons.append(_reason("unconfirmed_delivery"))
     if "SUSPICIOUS_CONTENT" in types:

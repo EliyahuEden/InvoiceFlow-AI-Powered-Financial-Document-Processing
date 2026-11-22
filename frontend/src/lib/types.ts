@@ -5,6 +5,7 @@ export type ReviewQueueItem = {
   exception_id: string; invoice_id: string; invoice_number: string | null;
   supplier_id: string | null; supplier_name: string | null; supplier_name_en: string | null;
   total: string | null; currency: string | null; amount_at_risk: string;
+  amount_at_risk_base?: string | null; fx_as_of?: string | null; // shekel value for ranking (Bank of Israel rate)
   due_date: string | null; due_in_days: number | null; status: string; finding_types: string[];
   priority: { level: string; reasons: PriorityReason[]; rank: number };
   proposed_action: string | null; has_ai_summary: boolean; escalated_by: string | null; created_at: string;
@@ -46,6 +47,7 @@ export type InvoiceDetail = {
   subtotal: string | null; discount_total: string | null; tax_total: string | null; tax_rate: string | null;
   field_sources: Record<string, Source>; missing_fields: string[];
   validation_warnings: { code: string; message: string; severity?: string; field?: string; snippets?: string[] }[];
+  revision?: string;
   lines: InvoiceLine[];
   document: { id: string; filename: string; mime_type: string; page_count: number | null; text_method: string | null;
     language: string | null; status: string; error: string | null; size_bytes: number; sha256: string } | null;

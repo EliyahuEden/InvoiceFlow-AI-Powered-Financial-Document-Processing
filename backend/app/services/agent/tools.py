@@ -300,7 +300,8 @@ def review_queue(ctx: ToolContext, inp: QueueIn) -> dict:
     if inp.finding_type:
         items = [i for i in items if inp.finding_type.upper() in i["finding_types"]]
     keep = ("exception_id", "invoice_id", "invoice_number", "supplier_name", "supplier_name_en", "total", "currency",
-            "amount_at_risk", "due_date", "due_in_days", "status", "finding_types", "proposed_action")
+            "amount_at_risk", "amount_at_risk_base", "due_date", "due_in_days", "status", "finding_types",
+            "proposed_action")
     return {"count": len(items), "items": [{**{k: i[k] for k in keep}, "priority": i["priority"]["level"],
                                             "rank": i["priority"]["rank"]} for i in items[:inp.limit]]}
 

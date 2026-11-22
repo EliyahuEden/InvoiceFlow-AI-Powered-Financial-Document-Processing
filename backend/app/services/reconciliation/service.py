@@ -246,7 +246,10 @@ def _priority_level(org, inv, findings) -> str:  # noqa: ANN001
     from app.api.routes.queue import critical_amount
     from app.services import priority as P
 
+    from app.services import fx
+
     risk = sum((Decimal(f.amount_at_risk) for f in findings if f.amount_at_risk), Decimal(0))
     inp = P.PriorityInput(exception_id=inv.id, finding_types=[f.type for f in findings], amount_at_risk=risk,
-                          due_date=inv.due_date, created_at=datetime.now(UTC), invoice_total=inv.total)
+                          due_date=inv.due_date, created_at=datetime.now(UTC), invoice_total=inv.total,
+                          risk_base=fx.to_base(risk, inv.currency, fx.current_rates()))
     return P.compute(inp, date.today(), critical_amount(org)).level

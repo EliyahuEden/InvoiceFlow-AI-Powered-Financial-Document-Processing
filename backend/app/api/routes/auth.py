@@ -10,8 +10,8 @@ from sqlalchemy import select
 from app.api.deps import COOKIE_NAME, REFRESH_COOKIE, Principal, get_principal
 from app.core.config import get_settings
 from app.core.db import new_session, set_session_org
-from app.core.security import create_access_token, verify_password
-from app.models import AuthSession, Membership, Organization, User
+from app.core.security import create_access_token, hash_password, verify_password
+from app.models import AuthSession, Membership, Organization, Role, User
 from app.services import audit, auth_sessions
 from app.services.llm.provider import mode_label
 from app.services.ratelimit import check_rate_limit
@@ -25,6 +25,20 @@ class LoginIn(BaseModel):
     email: str = Field(..., min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+$")
     password: str = Field(..., min_length=1, max_length=200)
     organization_slug: str | None = None
+
+
+class SignupIn(BaseModel):
+    company_name: str = Field(..., min_length=2, max_length=200)
+    full_name: str = Field(..., min_length=2, max_length=200)
+    email: str = Field(..., min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(..., min_length=12, max_length=200)
+    tax_id: str | None = Field(None, pattern=r"^\d{9}$", description="the business's own company/VAT number")
+    locale: str = Field("he", pattern="^(he|en)$")
+
+
+class PasswordIn(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=200)
+    new_password: str = Field(..., min_length=12, max_length=200)
 
 
 class SwitchIn(BaseModel):
@@ -96,6 +110,77 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
         _set_cookies(response, token, issued.refresh_token)
         return {"access_token": token, "token_type": "bearer", "expires_in": get_settings().access_token_minutes * 60,
                 **_me_payload(user, org, m.role.value, orgs)}
+    finally:
+        s.close()
+
+
+def _slug(name: str) -> str:
+    import re
+    import secrets
+
+    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "org"
+    return f"{base}-{secrets.token_hex(3)}"
+
+
+@router.post("/signup", status_code=201)
+def signup(body: SignupIn, request: Request, response: Response) -> dict:
+    """Create a business: an isolated organization (row-level security keeps its data apart) and its first
+    administrator, then sign in. The administrator adds the rest of the team from Settings."""
+    import copy
+
+    from app.models.tenancy import DEFAULT_ORG_SETTINGS
+
+    s_cfg = get_settings()
+    if not s_cfg.allow_signup:
+        raise HTTPException(403, "Sign-up is disabled on this installation.")
+    ip = _ip(request)
+    check_rate_limit(f"signup:{ip}", s_cfg.rate_limit_signup_per_hour, window_seconds=3600)
+    email = body.email.lower().strip()
+    s = new_session()
+    try:
+        if s.scalars(select(User).where(User.email == email)).first():
+            raise HTTPException(409, "An account with this email already exists. Please sign in instead.")
+        settings = copy.deepcopy(DEFAULT_ORG_SETTINGS)
+        settings.update({"tax_id": body.tax_id, "base_currency": "ILS"})
+        org = Organization(name=body.company_name.strip(), slug=_slug(body.company_name), settings=settings)
+        user = User(email=email, full_name=body.full_name.strip(), password_hash=hash_password(body.password),
+                    locale=body.locale)
+        s.add_all([org, user])
+        s.flush()
+        s.add(Membership(user_id=user.id, organization_id=org.id, role=Role.ADMIN))
+        issued = auth_sessions.create(s, user_id=user.id, org_id=org.id, ip=ip, user_agent=request.headers.get("user-agent"))
+        token = create_access_token(user.id, org.id, Role.ADMIN.value, issued.session.id)
+        set_session_org(s, org.id)
+        audit.record(s, org_id=org.id, action="org.created", entity_type="organization", entity_id=org.id,
+                     actor_id=user.id, actor_label=user.email, after={"name": org.name})
+        s.commit()
+        _set_cookies(response, token, issued.refresh_token)
+        return {"access_token": token, "token_type": "bearer", "expires_in": s_cfg.access_token_minutes * 60,
+                **_me_payload(user, org, Role.ADMIN.value, [{"id": str(org.id), "name": org.name, "role": "admin"}])}
+    finally:
+        s.close()
+
+
+@router.post("/password")
+def change_password(body: PasswordIn, request: Request, p: Principal = Depends(get_principal)) -> dict:
+    """Change your own password; every other signed-in device is signed out."""
+    _require_csrf(request)
+    check_rate_limit(f"password:{p.user.id}", get_settings().rate_limit_login_per_minute)
+    s = new_session()
+    try:
+        user = s.get(User, p.user.id)
+        if not verify_password(body.current_password, user.password_hash):
+            raise HTTPException(400, "The current password is not correct.")
+        user.password_hash = hash_password(body.new_password)
+        current = _session_id_from_request(request)
+        others = [a for a in auth_sessions.active_sessions(s, user.id) if a.id != current]
+        for a in others:
+            auth_sessions.revoke(s, a.id, "password_changed")
+        set_session_org(s, p.org_id)
+        audit.record(s, org_id=p.org_id, action="auth.password_changed", entity_type="user", entity_id=user.id,
+                     actor_id=user.id, actor_label=user.email, meta={"other_sessions_signed_out": len(others)})
+        s.commit()
+        return {"ok": True, "other_sessions_signed_out": len(others)}
     finally:
         s.close()
 

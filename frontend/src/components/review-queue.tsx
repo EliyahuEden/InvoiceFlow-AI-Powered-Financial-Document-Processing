@@ -41,20 +41,24 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
     item, href: `/exceptions/${item.exception_id}`,
     done: reviewed.includes(item.exception_id), current: current === item.exception_id,
     supplier: (locale === "en" && item.supplier_name_en) || item.supplier_name || t.common.unknown,
-    amount: money(item.amount_at_risk, item.currency),
+    amount: item.amount_at_risk_base
+      ? `${money(item.amount_at_risk, item.currency)} (≈ ${money(item.amount_at_risk_base, "ILS")})`
+      : money(item.amount_at_risk, item.currency),
+    amountTitle: item.amount_at_risk_base
+      ? t.review.fxNote.replace("{date}", item.fx_as_of ? date(item.fx_as_of, locale) : "—") : undefined,
     due: item.due_date ? date(item.due_date, locale) : t.review.undated,
     action: ["open", "escalated", "pending_info", "draft"].includes(item.status) ? t.review.investigate : t.review.viewDecision,
   }));
 
   if (compact) return <ol className="divide-y divide-line">
-    {rows.map(({ item, href, done, current: active, supplier, amount }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
+    {rows.map(({ item, href, done, current: active, supplier, amount, amountTitle }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
       <Link href={href} aria-current={active || undefined} className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-4 py-4 hover:bg-sunken/70 sm:px-5">
         <Rank priority={item.priority} />
         <div className="min-w-0 space-y-1.5">
           <p dir="auto" className="break-words font-semibold leading-snug text-ink">{supplier}</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2"><bdi className={done ? "line-through" : undefined}>{item.invoice_number ?? "—"}</bdi><PriorityBadge level={item.priority.level} /></p>
           {item.priority.reasons[0] && <p className="text-sm text-ink-2"><ReasonText reason={item.priority.reasons[0]} currency={item.currency} /></p>}
-          <p className="text-xs text-ink-3">{t.review.atRisk} <bdi className="ms-1 font-semibold text-ink num">{amount}</bdi></p>
+          <p className="text-xs text-ink-3">{t.review.atRisk} <bdi className="ms-1 font-semibold text-ink num" title={amountTitle}>{amount}</bdi></p>
           {(done || active) && <div className="flex flex-wrap gap-2"><SessionState done={done} current={active} /></div>}
         </div>
         <ChevronRight className="mt-1 h-4 w-4 text-ink-3 group-hover:text-ink rtl:rotate-180" aria-hidden />
@@ -64,7 +68,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
 
   return <>
     <ol data-testid="mobile-review-queue" className="divide-y divide-line lg:hidden">
-      {rows.map(({ item, href, done, current: active, supplier, amount, due, action }, index) => <li key={item.exception_id} style={stagger(index)}
+      {rows.map(({ item, href, done, current: active, supplier, amount, amountTitle, due, action }, index) => <li key={item.exception_id} style={stagger(index)}
         className="animate-rise space-y-3 p-4 [animation-fill-mode:both]" aria-current={active || undefined}>
         <div className="flex items-start gap-3">
           <Rank priority={item.priority} />
@@ -75,7 +79,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
         <ul className="space-y-1 text-sm text-ink-2">{item.priority.reasons.map((reason, index) =>
           <li key={`${reason.code}-${index}`}><ReasonText reason={reason} currency={item.currency} /></li>)}</ul>
         <dl className="grid grid-cols-2 gap-3 rounded-md bg-sunken px-3 py-2 text-sm">
-          <div><dt className="text-xs text-ink-3">{t.review.atRisk}</dt><dd className="mt-0.5 break-words font-semibold num"><bdi>{amount}</bdi></dd></div>
+          <div><dt className="text-xs text-ink-3">{t.review.atRisk}</dt><dd className="mt-0.5 break-words font-semibold num"><bdi title={amountTitle}>{amount}</bdi></dd></div>
           <div><dt className="text-xs text-ink-3">{t.review.due}</dt><dd className="mt-0.5"><bdi>{due}</bdi></dd></div>
         </dl>
         <div className="flex flex-wrap items-center justify-between gap-2"><StatusPill status={item.status} />
@@ -87,7 +91,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
     <div className="hidden lg:block"><Table>
       <thead><tr><Th>{t.review.rank}</Th><Th>{t.review.priority}</Th><Th>{t.common.supplier} / {t.recon.invoice}</Th>
         <Th>{t.review.reason}</Th><Th className="text-end">{t.review.atRisk}</Th><Th>{t.review.due}</Th><Th>{t.common.status}</Th><Th>{t.review.nextAction}</Th></tr></thead>
-      <tbody>{rows.map(({ item, href, done, current: active, supplier, amount, due, action }, index) => <tr key={item.exception_id} style={stagger(index)}
+      <tbody>{rows.map(({ item, href, done, current: active, supplier, amount, amountTitle, due, action }, index) => <tr key={item.exception_id} style={stagger(index)}
         className={cx("animate-rise [animation-fill-mode:both]", active ? "bg-accent-soft/50" : "hover:bg-sunken/60")} aria-current={active || undefined}>
         <Td><Rank priority={item.priority} /></Td>
         <Td><PriorityBadge level={item.priority.level} /></Td>
@@ -97,7 +101,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
         </div></Td>
         <Td><ul className="min-w-28 space-y-1 text-sm leading-snug text-ink-2">{item.priority.reasons.map((reason, index) =>
           <li key={`${reason.code}-${index}`}><ReasonText reason={reason} currency={item.currency} /></li>)}</ul></Td>
-        <Td className="whitespace-nowrap text-end font-semibold num"><bdi>{amount}</bdi></Td>
+        <Td className="whitespace-nowrap text-end font-semibold num"><bdi title={amountTitle}>{amount}</bdi></Td>
         <Td className={cx("text-sm", item.due_in_days !== null && item.due_in_days < 0 ? "text-warn" : "text-ink-2")}><bdi>{due}</bdi></Td>
         <Td><StatusPill status={item.status} /></Td>
         <Td><Button variant="secondary" size="sm" asChild><Link href={href}>{action}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden /></Link></Button></Td>

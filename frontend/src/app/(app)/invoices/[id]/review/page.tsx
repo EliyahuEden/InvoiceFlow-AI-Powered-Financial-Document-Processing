@@ -65,12 +65,14 @@ export default function ReviewPage() {
           discount: l.discount || null, line_total: l.line_total || null })) : null,
         supplier_id: supplierChanged && supplierId ? supplierId : null,
         reason: reason || null,
+        revision: inv.revision ?? null,
       });
       toast.success(t.invoice.saveCorrections);
       setReason("");
       await mutate();
     } catch (e) {
-      toast.error(e instanceof ApiError ? String(e.message) : t.common.error);
+      toast.error(e instanceof ApiError && e.status === 409 ? t.review.staleRevision
+        : e instanceof ApiError ? String(e.message) : t.common.error);
     } finally { setSaving(false); }
   };
 

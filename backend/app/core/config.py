@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     session_max_days: int = 7
     sse_ticket_seconds: int = 30
     rate_limit_refresh_per_minute: int = 60
+    # self-service business sign-up (each sign-up creates an isolated organization and its first administrator)
+    allow_signup: bool = True
+    rate_limit_signup_per_hour: int = 10
     cookie_secure: bool = False
 
     # --- storage ---
@@ -75,6 +78,13 @@ class Settings(BaseSettings):
     # Cap on answer tokens per extraction call. Lower it for providers whose free tier counts the
     # requested maximum against a small tokens-per-minute budget (e.g. Groq: 3000).
     llm_max_output_tokens: int = 8000
+
+    # --- exchange rates (ranking money at risk across currencies) ---
+    # boi: Bank of Israel representative rates (public API); static: fx_static_rates (tests, offline); none: no conversion
+    fx_provider: Literal["boi", "static", "none"] = "boi"
+    fx_static_rates: str = '{"USD": "3.33", "EUR": "3.65", "GBP": "4.36"}'
+    fx_cache_hours: int = 6
+    fx_timeout_seconds: float = 5.0
     llm_max_retries: int = 2
     # Optional price table for cost estimation, USD per 1M tokens:
     # {"model-id": {"input": 3.0, "output": 15.0}}. No prices are hard-coded: if a

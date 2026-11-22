@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { Assistant, JetBrains_Mono } from "next/font/google";
+// Fonts ship with the app (@fontsource), so building never depends on a network call to Google Fonts
+// (next/font/google failed intermittently in Docker and CI). Each file covers Latin and Hebrew via unicode-range.
+import "@fontsource/assistant/400.css";
+import "@fontsource/assistant/500.css";
+import "@fontsource/assistant/600.css";
+import "@fontsource/assistant/700.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { I18nProvider } from "@/lib/i18n";
@@ -7,10 +14,6 @@ import { LOCALE_COOKIE } from "@/lib/i18n/constants";
 import type { Locale } from "@/lib/i18n/dictionaries";
 import "./globals.css";
 
-// One workhorse family for Hebrew and Latin (precise humanist forms, tabular figures);
-// a mono only for codes and hashes, never as decoration.
-const sans = Assistant({ subsets: ["latin", "hebrew"], weight: ["400", "500", "600", "700"], variable: "--font-sans", display: "swap" });
-const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "InvoiceFlow", template: "%s · InvoiceFlow" },
@@ -29,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${sans.variable} ${mono.variable}`}>
+      <body>
         <I18nProvider initial={locale}>
           {children}
           <Toaster position="bottom-center" closeButton toastOptions={{ className: "if-toast" }} />

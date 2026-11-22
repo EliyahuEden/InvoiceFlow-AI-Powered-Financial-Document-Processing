@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import Principal, get_db, money, page_params, paginated, require
 from app.core.money import D
 from app.models import Discrepancy, ExceptionCase, ExceptionComment, Invoice, Organization, Role, Supplier
+from app.services import fx
 from app.services import priority as P
 from app.services.rbac import Perm, has_perm
 
@@ -69,12 +70,14 @@ def ranked_items(db: Session, org: Organization, statuses: tuple[str, ...] = NEE
                 risk[inv_id] = risk.get(inv_id, Decimal(0)) + D(at_risk)
     esc = escalators(db, [r[0] for r in rows])
     limit = critical_amount(org)
+    rates = fx.current_rates()  # rank money at risk in shekels; amounts themselves stay in their currency
     scored = []
     for (e_id, e_status, e_created, e_types, e_action, e_has_ai,
          i_id, i_number, i_name_raw, i_total, i_currency, i_due, s_id, s_name, s_name_en) in rows:
+        at_risk = risk.get(i_id, Decimal(0))
         inp = P.PriorityInput(exception_id=e_id, finding_types=types.get(i_id, list(e_types or [])),
-                              amount_at_risk=risk.get(i_id, Decimal(0)), due_date=i_due, created_at=e_created,
-                              invoice_total=i_total)
+                              amount_at_risk=at_risk, due_date=i_due, created_at=e_created, invoice_total=i_total,
+                              risk_base=fx.to_base(at_risk, i_currency, rates))
         pr = P.compute(inp, today, limit, escalated=e_status == "escalated")
         scored.append((pr.sort_key, inp, pr, e_id, e_status, e_created, e_action, e_has_ai,
                        i_id, i_number, i_name_raw, i_total, i_currency, i_due, s_id, s_name, s_name_en))
@@ -84,6 +87,9 @@ def ranked_items(db: Session, org: Organization, statuses: tuple[str, ...] = NEE
         "supplier_id": str(s_id) if s_id else None, "supplier_name": s_name if s_id else i_name_raw,
         "supplier_name_en": s_name_en if s_id else None, "total": money(i_total), "currency": i_currency,
         "amount_at_risk": f"{inp.amount_at_risk:.2f}", "due_date": i_due.isoformat() if i_due else None,
+        "amount_at_risk_base": (f"{inp.risk_base:.2f}" if inp.risk_base is not None and inp.amount_at_risk
+                                and fx.ALIASES.get((i_currency or "").upper(), (i_currency or "").upper()) != fx.BASE else None),
+        "fx_as_of": rates.as_of.isoformat() if rates and rates.as_of else None,
         "due_in_days": pr.due_in_days, "status": e_status, "finding_types": inp.finding_types,
         "proposed_action": e_action, "has_ai_summary": bool(e_has_ai),
         "escalated_by": str(esc[e_id]) if e_id in esc else None, "created_at": e_created.isoformat(),

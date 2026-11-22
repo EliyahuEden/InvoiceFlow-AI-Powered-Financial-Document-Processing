@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -110,6 +111,40 @@ def add_member(body: MemberIn, p: Principal = Depends(require(Perm.ORG_MANAGE)))
                      actor_id=p.user.id, actor_label=p.user.email, after={"email": user.email, "role": body.role.value})
         s.commit()
         return {"id": str(user.id)}
+    finally:
+        s.close()
+
+
+@router.delete("/api/org/members/{user_id}")
+def remove_member(user_id: uuid.UUID, request: Request, p: Principal = Depends(require(Perm.ORG_MANAGE))) -> dict:
+    """Remove someone from this business. Their sessions here end at once; their account and any other
+    businesses they belong to are untouched. You cannot remove yourself or the last administrator."""
+    from app.models import AuthSession
+    from sqlalchemy import update
+
+    if request.headers.get("x-requested-with") != "invoiceflow":
+        raise HTTPException(403, "Missing CSRF header")
+    if user_id == p.user.id:
+        raise HTTPException(422, "You cannot remove yourself.")
+    s = new_session(p.org_id)
+    try:
+        m = s.scalars(select(Membership).where(Membership.user_id == user_id, Membership.organization_id == p.org_id)).first()
+        if not m:
+            raise HTTPException(404, "Member not found")
+        if m.role == Role.ADMIN:
+            admins = s.scalars(select(Membership).where(Membership.organization_id == p.org_id,
+                                                        Membership.role == Role.ADMIN)).all()
+            if len(admins) <= 1:
+                raise HTTPException(422, "A business needs at least one administrator.")
+        email = s.get(User, user_id).email
+        s.delete(m)
+        s.execute(update(AuthSession).where(AuthSession.user_id == user_id, AuthSession.organization_id == p.org_id,
+                                            AuthSession.revoked_at.is_(None))
+                  .values(revoked_at=datetime.now(UTC), revoked_reason="removed_from_organization"))
+        audit.record(s, org_id=p.org_id, action="member.removed", entity_type="user", entity_id=user_id,
+                     actor_id=p.user.id, actor_label=p.user.email, before={"email": email, "role": m.role.value})
+        s.commit()
+        return {"ok": True}
     finally:
         s.close()
 

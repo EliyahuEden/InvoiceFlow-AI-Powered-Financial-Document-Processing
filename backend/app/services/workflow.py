@@ -85,6 +85,7 @@ def correct_invoice(session: Session, inv: Invoice, user: User, header: dict, li
                 description=ln["description"], quantity=_dec(ln.get("quantity")), unit_price=_dec(ln.get("unit_price")),
                 discount=_dec(ln.get("discount")), line_total=_dec(ln.get("line_total")), source=source))
     inv.reviewed_by = user.id
+    inv.updated_at = datetime.now(UTC)  # a lines-only edit must still move the revision (TECH-01)
     inv.missing_fields = [f for f in ("supplier_name_raw", "invoice_number", "invoice_date", "total", "currency")
                           if getattr(inv, f) in (None, "")]
     session.flush()
@@ -150,9 +151,17 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
             raise HTTPException(403, "An escalated case is decided by another administrator.")
     inv = session.get(Invoice, exc.invoice_id)
     before = {"status": exc.status, "invoice_status": inv.status}
+    override: dict = {}
     if action_override:
         if action_override not in APPROVE_EFFECT:
             raise HTTPException(422, "Unknown action.")
+        if action_override != exc.proposed_action:
+            # Anyone who may decide cases may override the proposed action, even over blocking findings
+            # (audit FIN-06, owner's decision), but only with a written justification, recorded as an override.
+            if decision == "approve" and not (note and note.strip()):
+                raise HTTPException(422, "A written justification is required to override the proposed action.")
+            override = {"override": True, "overridden_action": exc.proposed_action,
+                        "overridden_findings": list(exc.discrepancy_types or [])}
         exc.proposed_action = action_override
     if decision == "request_info":
         exc.status = "pending_info"
@@ -174,7 +183,7 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
                  entity_id=exc.id, actor_id=user.id, actor_label=user.email, before=before,
                  after={"status": exc.status, "invoice_status": inv.status, "proposed_action": exc.proposed_action},
                  meta={"note": note, "target": target, "ai_summary_present": exc.ai_summary is not None,
-                       "ai_recommended": (exc.ai_summary or {}).get("deterministic_action")})
+                       "ai_recommended": (exc.ai_summary or {}).get("deterministic_action"), **override})
     # Resume the paused agent workflow so its run records the human decision.
     if exc.agent_run_id and decision in ("approve", "reject"):
         run = session.get(AgentRun, exc.agent_run_id)

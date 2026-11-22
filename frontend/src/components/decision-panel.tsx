@@ -14,6 +14,8 @@ export function DecisionPanel({ proposedAction, detail, allowedActions, note, ov
   onTarget: (value: string) => void; onDecide: (decision: Decision) => void; busy: string | null;
   canDecide: boolean; canRequestInfo: boolean; restricted: boolean;
 }) {
+  // approving with a different action than proposed is an override: it needs a written justification
+  const overriding = !!override && override !== proposedAction;
   const { t } = useI18n();
   return <Panel data-testid="decision-panel" className="command-panel min-w-0">
     <PanelHeader title={t.agent.decision} />
@@ -42,9 +44,10 @@ export function DecisionPanel({ proposedAction, detail, allowedActions, note, ov
             <option value="supplier">{t.review.supplier}</option>
           </Select>
         </Field>}
+        {overriding && !note.trim() && <p className="text-xs text-warn">{t.exceptions.overrideNeedsNote}</p>}
         <div className="grid gap-2 border-t border-line pt-3 sm:grid-cols-2 xl:grid-cols-1">
           {canDecide && <>
-            <Button variant="primary" className="h-auto min-h-10 justify-start whitespace-normal text-start" loading={busy === "approve"} disabled={!!busy} onClick={() => onDecide("approve")}>
+            <Button variant="primary" className="h-auto min-h-10 justify-start whitespace-normal text-start" loading={busy === "approve"} disabled={!!busy || (overriding && !note.trim())} onClick={() => onDecide("approve")}>
               <Check className="h-4 w-4 shrink-0" aria-hidden />{t.exceptions.approve}
             </Button>
             <Button variant="danger" className="h-auto min-h-10 justify-start whitespace-normal text-start" loading={busy === "reject"} disabled={!!busy || !note.trim()} onClick={() => onDecide("reject")}>

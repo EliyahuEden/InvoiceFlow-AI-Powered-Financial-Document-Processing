@@ -20,6 +20,15 @@ describe("review decision requirements", () => {
     expect(screen.getByRole("button", { name: /Escalate/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Approve/ })).toBeEnabled();
   });
+  it("requires a justification to approve with a different action", () => {
+    const { rerender } = show({ proposedAction: "request_credit_note", allowedActions: ["accept_variance", "request_credit_note"],
+      override: "accept_variance" });
+    expect(screen.getByRole("button", { name: /Approve/ })).toBeDisabled();
+    expect(screen.getByText(/justification/i)).toBeVisible();
+    rerender(<I18nProvider initial="en"><DecisionPanel {...base} proposedAction="request_credit_note"
+      allowedActions={["accept_variance", "request_credit_note"]} override="accept_variance" note="Agreed by phone" /></I18nProvider>);
+    expect(screen.getByRole("button", { name: /Approve/ })).toBeEnabled();
+  });
   it("requires both a note and a clarification target", () => {
     const { rerender } = show({ note: "Please confirm receipt" });
     expect(screen.getByRole("button", { name: /Request information/ })).toBeDisabled();

@@ -205,6 +205,16 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
           </span>
         </div>
       )}
+      {me && (me.organizations?.length ?? 0) > 1 && (
+        <select aria-label={t.common.organization} value={me.organization.id} dir="auto"
+          onChange={async (e) => {
+            await api.post("/api/auth/switch-organization", { organization_id: e.target.value });
+            window.location.assign("/");  // a full reload: no data or drafts carry over between businesses
+          }}
+          className="h-9 max-w-[12rem] truncate rounded-full border border-line bg-surface px-3 text-sm text-ink">
+          {me.organizations.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+      )}
       <Button variant="ghost" size="icon" onClick={logout} aria-label={t.common.logout} title={t.common.logout}>
         <LogOut className="h-4 w-4" />
       </Button>

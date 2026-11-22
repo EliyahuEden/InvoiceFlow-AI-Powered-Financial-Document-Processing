@@ -150,7 +150,8 @@ def ans_queue(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
     level = {"critical": "קריטי", "high": "גבוה", "normal": "רגיל"} if a.he else {}
     lines = []
     for i in items:
-        reason = (f"{money(i['amount_at_risk'], i['currency'])} {a.t('בסיכון', 'at risk')}"
+        base = f" (≈ {money(i['amount_at_risk_base'], 'ILS')})" if i.get("amount_at_risk_base") else ""
+        reason = (f"{money(i['amount_at_risk'], i['currency'])}{base} {a.t('בסיכון', 'at risk')}"
                   if i["amount_at_risk"] and float(i["amount_at_risk"]) > 0 else
                   next((LABELS[f][1 if a.he else 0] for f in i["finding_types"] if f in LABELS), a.t("חוסם", "blocking")))
         due = ""

@@ -206,3 +206,22 @@ def test_a_booking_confirmation_is_flagged_as_not_an_invoice_and_can_be_rejected
     assert exc["proposed_action"] == "reject_invoice"
     r = client.post(f"/api/exceptions/{exc['id']}/decision", headers=fin, json={"decision": "approve", "note": "not an invoice"})
     assert r.json()["invoice_status"] == "rejected"
+
+
+def test_stale_correction_is_refused_with_409(client, as_user):
+    """TECH-01: two reviewers open the same invoice; the second save must not silently overwrite the first."""
+    proc, fin = as_user("procurement@kinneret.example"), as_user("finance@kinneret.example")
+    inv = upload_invoice(client, proc, "02_qty_mismatch_hermon_he.pdf")
+    d = _detail(client, fin, inv["invoice_id"])
+    assert d["revision"]
+    first = client.patch(f"/api/invoices/{inv['invoice_id']}", headers=fin,
+                         json={"header": {"payment_terms": "Net 30"}, "revision": d["revision"]})
+    assert first.status_code == 200
+    stale = client.patch(f"/api/invoices/{inv['invoice_id']}", headers=fin,
+                         json={"header": {"payment_terms": "Net 60"}, "revision": d["revision"]})
+    assert stale.status_code == 409
+    assert _detail(client, fin, inv["invoice_id"])["payment_terms"] == "Net 30"
+    fresh = _detail(client, fin, inv["invoice_id"])["revision"]
+    ok = client.patch(f"/api/invoices/{inv['invoice_id']}", headers=fin,
+                      json={"header": {"payment_terms": "Net 60"}, "revision": fresh})
+    assert ok.status_code == 200

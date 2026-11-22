@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 /* Modern Financial Command Center. Business colors are independent of brand atmosphere. */
+/* One workhorse family for Hebrew and Latin (precise humanist forms, tabular figures); a mono only for codes and
+   hashes, never as decoration. Loaded from @fontsource in app/layout.tsx. */
+:root { --font-sans: "Assistant"; --font-mono: "JetBrains Mono"; }
+
 :root {
   --bg: 228 236 255;
   --surface: 252 253 255;

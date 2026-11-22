@@ -5,22 +5,21 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/components/session";
 import { SessionsPanel } from "@/components/sessions-panel";
+import { PasswordPanel, TeamPanel } from "@/components/team-panel";
 import { PageHeader } from "@/components/shell";
-import { Button, ErrorState, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, Th } from "@/components/ui";
+import { Button, ErrorState, Field, Input, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
 type Org = { id: string; name: string; settings: { tolerances: Record<string, string | number>; approval: Record<string, string>; auto_investigate?: boolean;
   priority?: { critical_amount?: string }; security?: { session_idle_hours?: number; session_max_days?: number } };
   ai_mode: string; roles: Record<string, string[]> };
-type Member = { id: string; email: string; full_name: string; role: string; is_active: boolean };
 
 export default function SettingsPage() {
   const { t } = useI18n();
   const { can, me } = useSession();
   const admin = can("org:manage");
   const { data: org, error, mutate } = useApi<Org>("/api/org");
-  const { data: members, mutate: mutateMembers } = useApi<{ items: Member[] }>("/api/org/members");
   const [tol, setTol] = useState<Record<string, string>>({});
   const [appr, setAppr] = useState<Record<string, string>>({});
   const [auto, setAuto] = useState(true);
@@ -46,10 +45,6 @@ export default function SettingsPage() {
       priority: { critical_amount: critical },
       security: { session_idle_hours: Number(idleHours), session_max_days: Number(maxDays) } }); toast.success(t.common.save); mutate(); }
     catch (e) { toast.error(e instanceof ApiError ? String(e.message) : t.common.error); } finally { setBusy(false); }
-  };
-  const changeRole = async (id: string, role: string) => {
-    try { await api.patch(`/api/org/members/${id}`, { role }); mutateMembers(); toast.success(t.common.save); }
-    catch (e) { toast.error(String((e as Error).message)); }
   };
   const allPerms = Array.from(new Set(Object.values(org.roles).flat())).sort();
 
@@ -95,21 +90,8 @@ export default function SettingsPage() {
         </Panel>
       </div>
       <SessionsPanel />
-      <Panel>
-        <PanelHeader title={t.settings.members} />
-        <Table>
-          <thead><tr><Th>Name</Th><Th>Email</Th><Th>{t.common.role}</Th></tr></thead>
-          <tbody>{members?.items.map((m) => (
-            <tr key={m.id}>
-              <Td className="font-medium">{m.full_name}</Td>
-              <Td><span className="ltr font-mono text-sm">{m.email}</span></Td>
-              <Td>{admin && m.id !== me?.user.id ? (
-                <Select aria-label={`${t.common.role} · ${m.full_name}`} value={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
-                  {Object.keys(org.roles).map((r) => <option key={r} value={r}>{(t.roles as Record<string, string>)[r]}</option>)}
-                </Select>) : (t.roles as Record<string, string>)[m.role]}</Td>
-            </tr>))}</tbody>
-        </Table>
-      </Panel>
+      <TeamPanel />
+      <PasswordPanel />
       <Panel>
         <PanelHeader title={t.settings.permissions} />
         <Table>

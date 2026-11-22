@@ -141,7 +141,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
         "due_date": inv.due_date.isoformat() if inv.due_date else None, "payment_terms": inv.payment_terms,
         "subtotal": money(inv.subtotal), "discount_total": money(inv.discount_total), "tax_total": money(inv.tax_total),
         "tax_rate": dec(inv.tax_rate), "field_sources": inv.field_sources, "missing_fields": inv.missing_fields,
-        "validation_warnings": inv.validation_warnings,
+        "validation_warnings": inv.validation_warnings, "revision": revision(inv),
         "lines": [{"id": str(ln.id), "line_no": ln.line_no, "sku": ln.sku, "description": ln.description,
                    "quantity": dec(ln.quantity), "unit_price": price(ln.unit_price), "discount": money(ln.discount),
                    "line_total": money(ln.line_total), "source": ln.source} for ln in inv.lines],
@@ -190,6 +190,13 @@ class CorrectionIn(BaseModel):
     lines: list[LineIn] | None = None
     supplier_id: uuid.UUID | None = None
     reason: str | None = Field(None, max_length=1000)
+    # The `revision` the client loaded. When it no longer matches, someone else saved in between (audit TECH-01).
+    revision: str | None = Field(None, max_length=64)
+
+
+def revision(inv: Invoice) -> str:
+    """An opaque version token: changes whenever the invoice row is saved."""
+    return inv.updated_at.isoformat()
 
 
 @router.patch("/{invoice_id}")
@@ -199,6 +206,8 @@ def correct(invoice_id: uuid.UUID, body: CorrectionIn, p: Principal = Depends(re
                      .options(selectinload(Invoice.lines))).first()
     if not inv:
         raise HTTPException(404, "Invoice not found")
+    if body.revision is not None and body.revision != revision(inv):
+        raise HTTPException(409, "This invoice was changed by someone else since you opened it. Reload to see the latest version.")
     if body.supplier_id and not db.scalars(select(Supplier).where(Supplier.id == body.supplier_id,
                                                                   Supplier.organization_id == p.org_id)).first():
         raise HTTPException(422, "Unknown supplier")
