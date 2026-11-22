@@ -12,6 +12,7 @@ import { Button, EmptyState, ErrorState, Field, Input, Panel, PanelHeader, Selec
 import { api, ApiError, useApi } from "@/lib/api";
 import { date } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 
 type Doc = { id: string; title: string; doc_type: string; language: string | null; status: string; chunk_count: number; version: string | null;
   effective_date: string | null; document_id: string; supplier_name: string | null };
@@ -165,7 +166,7 @@ export default function KnowledgePage() {
               <tr key={d.id} className="hover:bg-sunken/70">
                 <Td><Link href={`/knowledge/${d.id}`} className="inline-flex items-center gap-2 font-medium hover:text-accent" dir="auto">
                   <BookOpenText className="h-4 w-4 shrink-0 text-ink-3" />{d.title}</Link></Td>
-                <Td className="text-sm text-ink-2">{(t.knowledge.type as Record<string, string>)[d.doc_type]}</Td>
+                <Td className="text-sm text-ink-2">{label(t.knowledge.type, d.doc_type)}</Td>
                 <Td className="text-sm text-ink-2" dir="auto">{d.supplier_name ?? "—"}</Td>
                 <Td className="text-sm text-ink-2">{date(d.effective_date, locale)}</Td>
                 <Td className="text-sm text-ink-2"><bdi>{d.language?.toUpperCase() ?? "—"}</bdi></Td>

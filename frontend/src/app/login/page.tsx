@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth-shell";
 import { Button, Field, Input, Panel } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 
 const DEMO = [
   { email: "finance@kinneret.example", role: "finance_reviewer" },
@@ -67,7 +68,7 @@ function LoginForm() {
             {DEMO.map((d) => <li key={d.email}>
               <button type="button" onClick={() => { setEmail(d.email); document.getElementById("password")?.focus(); }}
                 className="flex w-full items-center justify-between gap-3 rounded-md px-1 py-2.5 text-start hover:bg-sunken">
-                <span className="min-w-0"><span className="block text-sm font-medium">{(t.roles as Record<string, string>)[d.role]}</span>
+                <span className="min-w-0"><span className="block text-sm font-medium">{label(t.roles, d.role)}</span>
                   <bdi className="break-all text-sm text-ink-2">{d.email}</bdi></span>
                 <ArrowRight className="h-4 w-4 shrink-0 text-ink-3 rtl:rotate-180" aria-hidden />
               </button>

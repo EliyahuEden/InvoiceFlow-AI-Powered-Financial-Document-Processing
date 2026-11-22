@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { AlertTriangle, ArrowUp, Building2, FileText, Loader2, ScrollText, ShieldCheck, ShoppingCart, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowUp, Building2, FileText, Loader2, MessageSquareText, ScrollText, ShieldCheck, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -20,10 +20,10 @@ const ICON: Record<Citation["kind"], React.ElementType> = {
 
 /** The record the reviewer is looking at, so "this invoice" means something. */
 export function pageContext(path: string): Record<string, string> {
-  const inv = path.match(/^\/invoices\/([0-9a-zA-Z-]+)(?:\/|$)/);
-  if (inv && inv[1] !== "upload") return { invoice_id: inv[1] };
-  const exc = path.match(/^\/exceptions\/([0-9a-zA-Z-]+)/);
-  return exc ? { exception_id: exc[1] } : {};
+  const invoiceId = path.match(/^\/invoices\/([0-9a-zA-Z-]+)(?:\/|$)/)?.[1];
+  if (invoiceId && invoiceId !== "upload") return { invoice_id: invoiceId };
+  const exceptionId = path.match(/^\/exceptions\/([0-9a-zA-Z-]+)/)?.[1];
+  return exceptionId ? { exception_id: exceptionId } : {};
 }
 
 /** AP Copilot: ask about the queue, invoices, suppliers and policies. Read-only: it looks things
@@ -67,7 +67,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
           className="fixed inset-y-0 end-0 z-50 flex w-full max-w-[440px] flex-col border-s border-line bg-surface shadow-pop data-[state=open]:animate-[palette-in_180ms_cubic-bezier(.16,1,.3,1)]">
           <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
             <div className="flex items-start gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ai-soft text-ai"><Sparkles className="h-4 w-4" aria-hidden /></span>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sunken text-ink-2"><MessageSquareText className="h-4 w-4" aria-hidden /></span>
               <div>
                 <Dialog.Title className="text-lg font-semibold tracking-tight text-ink">{c.title}</Dialog.Title>
                 <p className="flex items-center gap-1.5 text-xs text-ink-3"><ShieldCheck className="h-3.5 w-3.5" aria-hidden />{c.readOnly}</p>
@@ -99,7 +99,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
               <div key={i} className="space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
                   <span className="inline-flex items-center gap-1 rounded-full bg-ai-soft px-2 py-0.5 font-semibold text-ai">
-                    <Sparkles className="h-3 w-3" aria-hidden />{m.mode === "offline" ? c.offline : c.ai}</span>
+                    {m.mode === "offline" ? c.offline : c.ai}</span>
                   {!m.verified && <span className="rounded-full bg-warn-soft px-2 py-0.5 font-semibold text-warn">{c.unverified}</span>}
                 </div>
                 <p dir="auto" className="whitespace-pre-line text-sm leading-relaxed text-ink">{m.content}</p>

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { BarList, Lines } from "@/components/charts";
+import dynamic from "next/dynamic";
+import { BarList } from "@/components/bar-list";
+
+// Recharts is the heaviest dependency: load the line chart after the page has rendered.
+const Lines = dynamic(() => import("@/components/charts").then((m) => m.Lines), {
+  ssr: false, loading: () => <div className="skeleton h-[220px] w-full rounded-xl" aria-hidden />,
+});
 import { Pill } from "@/components/domain";
 import { Pager, Segmented, type Page } from "@/components/list";
 import { PageHeader } from "@/components/shell";

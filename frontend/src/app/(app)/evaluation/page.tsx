@@ -2,7 +2,7 @@
 
 import { ArrowDown, BookOpenCheck, ChevronDown, FileCheck2, FlaskConical, ListOrdered, Search, Terminal, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { BarList } from "@/components/charts";
+import { BarList } from "@/components/bar-list";
 import { Pill } from "@/components/domain";
 import { RulesFirstReport } from "@/components/rules-first";
 import { Segmented } from "@/components/list";
@@ -11,9 +11,10 @@ import { cx, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th
 import { useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { fixed, type EvaluationResults, type ExtractionResult, type RagResult, type ReconResult } from "@/lib/eval-types";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Results = { available: Record<string, any> };
+const RETRIEVAL_METRICS = ["recall@1", "recall@3", "recall@5", "mrr", "ndcg@5", "all@5"] as const;
+const HELD_OUT_METRICS = ["recall@1", "recall@5", "mrr", "ndcg@5"] as const;
 
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(1)}%`);
 
@@ -27,7 +28,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-function Meta({ r }: { r: any }) {
+function Meta({ r }: { r: { generated_at: string; git_rev?: string | null; command: string } }) {
   const { locale, t } = useI18n();
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-xs text-ink-3">
@@ -52,10 +53,10 @@ function Notes({ notes }: { notes?: string[] }) {
   );
 }
 
-function Extraction({ r }: { r: any }) {
+function Extraction({ r }: { r: ExtractionResult }) {
   const { t } = useI18n();
   const sys = r.systems.rule_based;
-  const groups = Object.entries(sys.groups as Record<string, { field_accuracy: number; n: number }>);
+  const groups = Object.entries(sys.groups);
   const pick = (prefix: string) => groups.filter(([k]) => k.startsWith(prefix)).map(([k, v]) => ({ label: `${k.split(":")[1]} (n=${v.n})`, value: v.field_accuracy }));
   return (
     <Panel id="report-extraction" className="scroll-mt-24">
@@ -74,7 +75,7 @@ function Extraction({ r }: { r: any }) {
       <Table>
         <thead><tr><Th>{t.evaluation.field}</Th><Th className="text-end">{t.evaluation.accuracy}</Th><Th className="text-end">Precision</Th>
           <Th className="text-end">Recall</Th><Th className="text-end">F1</Th><Th className="text-end">Absent → null</Th></tr></thead>
-        <tbody>{Object.entries(sys.per_field as Record<string, any>).map(([f, m]) => {
+        <tbody>{Object.entries(sys.per_field).map(([f, m]) => {
           const miss = sys.missing_field_handling[f];
           return (
             <tr key={f}>
@@ -87,7 +88,7 @@ function Extraction({ r }: { r: any }) {
       </Table>
       <details className="border-t border-line px-4 py-2 text-sm">
         <summary className="cursor-pointer text-xs font-medium text-ink-2">Error examples ({sys.error_examples.length})</summary>
-        <Table className="mt-2"><tbody>{sys.error_examples.map((e: any, i: number) => (
+        <Table className="mt-2"><tbody>{sys.error_examples.map((e, i) => (
           <tr key={i}><Td className="font-mono text-2xs">{e.file.replace("docs/", "")}</Td><Td className="font-mono text-xs">{e.field}</Td>
             <Td className="text-xs" dir="auto">{e.expected ?? "∅"}</Td><Td className="text-xs text-danger" dir="auto">{e.predicted ?? "∅"}</Td></tr>))}</tbody></Table>
       </details>
@@ -96,11 +97,11 @@ function Extraction({ r }: { r: any }) {
   );
 }
 
-function Rag({ r }: { r: any }) {
+function Rag({ r }: { r: RagResult }) {
   const { t } = useI18n();
-  const strategies = Array.from(new Set(r.configs.map((c: any) => c.chunking))) as string[];
-  const [strategy, setStrategy] = useState<string>(strategies.includes("clause") ? "clause" : strategies[0]);
-  const rows = r.configs.filter((c: any) => c.chunking === strategy);
+  const strategies = Array.from(new Set(r.configs.map((c) => c.chunking)));
+  const [strategy, setStrategy] = useState<string>(strategies.includes("clause") ? "clause" : strategies[0] ?? "");
+  const rows = r.configs.filter((c) => c.chunking === strategy);
   const cats = ["he", "en", "mixed", "cross_lingual", "multi_doc", "conflicting"];
   return (
     <Panel id="report-rag" className="scroll-mt-24">
@@ -111,23 +112,23 @@ function Rag({ r }: { r: any }) {
         <thead><tr><Th>{t.evaluation.config}</Th><Th className="text-end">chunks</Th><Th className="text-end">R@1</Th><Th className="text-end">R@3</Th><Th className="text-end">R@5</Th>
           <Th className="text-end">MRR</Th><Th className="text-end">nDCG@5</Th><Th className="text-end">all@5</Th>
           {cats.map((c) => <Th key={c} className="text-end">MRR·{c}</Th>)}<Th className="text-end">p50</Th></tr></thead>
-        <tbody>{rows.map((c: any) => (
+        <tbody>{rows.map((c) => (
           <tr key={c.chunking + c.name}>
-            <Td className="whitespace-nowrap font-mono text-xs">{c.chunking}/{c.name}{r.best_config.name === c.name && r.best_config.chunking === c.chunking && <Pill tone="ok" className="ms-2">best</Pill>}</Td>
+            <Td className="whitespace-nowrap font-mono text-xs">{c.chunking}/{c.name}{r.best_config?.name === c.name && r.best_config?.chunking === c.chunking && <Pill tone="ok" className="ms-2">best</Pill>}</Td>
             <Td className="text-end num">{c.n_chunks}</Td>
-            {["recall@1", "recall@3", "recall@5", "mrr", "ndcg@5", "all@5"].map((k) => <Td key={k} className="text-end num">{c[k].toFixed(3)}</Td>)}
-            {cats.map((k) => <Td key={k} className="text-end num">{c.by_category[k]?.mrr?.toFixed(2) ?? "—"}</Td>)}
+            {RETRIEVAL_METRICS.map((k) => <Td key={k} className="text-end num">{fixed(c[k], 3)}</Td>)}
+            {cats.map((k) => <Td key={k} className="text-end num">{fixed(c.by_category?.[k]?.mrr, 2)}</Td>)}
             <Td className="text-end num">{c.latency_ms_p50} ms</Td>
           </tr>))}</tbody>
       </Table>
       <div className="grid grid-cols-1 gap-4 border-t border-line p-4 md:grid-cols-2">
-        {Object.entries(r.answers as Record<string, any>).map(([k, a]) => (
+        {Object.entries(r.answers).map(([k, a]) => (
           <div key={k} className="rounded-md border border-line p-3">
             <p className="font-mono text-xs text-ink-2">{k} · clause chunks</p>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
               <dt className="text-ink-3">Answer correctness</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
               <dt className="text-ink-3">Citation accuracy</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
-              <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention.precision)} / {pct(a.abstention.recall)}</span></dd>
+              <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention?.precision)} / {pct(a.abstention?.recall)}</span></dd>
               <dt className="text-ink-3">Injection parroting</dt><dd className="text-end font-medium num">{a.injection_parroting}</dd>
               <dt className="text-ink-3">Groundedness</dt><dd className="text-end text-xs">{a.groundedness}</dd>
             </dl>
@@ -144,20 +145,20 @@ function Rag({ r }: { r: any }) {
           <div className="mt-3 overflow-x-auto">
             <Table>
               <thead><tr><Th>{t.evaluation.config}</Th><Th className="text-end">R@1</Th><Th className="text-end">R@5</Th><Th className="text-end">MRR</Th><Th className="text-end">nDCG@5</Th></tr></thead>
-              <tbody>{r.held_out.retrieval.map((c: any) => (
+              <tbody>{r.held_out.retrieval.map((c) => (
                 <tr key={c.name}>
                   <Td className="whitespace-nowrap font-mono text-xs">{c.chunking}/{c.name}</Td>
-                  {["recall@1", "recall@5", "mrr", "ndcg@5"].map((k) => <Td key={k} className="text-end num">{c[k].toFixed(3)}</Td>)}
+                  {HELD_OUT_METRICS.map((k) => <Td key={k} className="text-end num">{fixed(c[k], 3)}</Td>)}
                 </tr>))}</tbody>
             </Table>
           </div>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-            {Object.entries(r.held_out.answers as Record<string, any>).map(([k, a]) => (
+            {Object.entries(r.held_out.answers).map(([k, a]) => (
               <dl key={k} className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-md border border-line p-3 text-sm">
                 <dt className="col-span-2 font-mono text-xs text-ink-2">{k}</dt>
                 <dt className="text-ink-3">Answer correctness</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
                 <dt className="text-ink-3">Citation accuracy</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
-                <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention.precision)} / {pct(a.abstention.recall)}</span></dd>
+                <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention?.precision)} / {pct(a.abstention?.recall)}</span></dd>
               </dl>
             ))}
           </div>
@@ -169,7 +170,7 @@ function Rag({ r }: { r: any }) {
   );
 }
 
-function Recon({ r }: { r: any }) {
+function Recon({ r }: { r: ReconResult }) {
   const { t } = useI18n();
   const c = r.controlled;
   const e = r.end_to_end;
@@ -185,13 +186,13 @@ function Recon({ r }: { r: any }) {
       <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-2">
         <Table>
           <thead><tr><Th>Finding type</Th><Th className="text-end">TP</Th><Th className="text-end">FP</Th><Th className="text-end">FN</Th><Th className="text-end">Precision</Th><Th className="text-end">Recall</Th></tr></thead>
-          <tbody>{c.per_type.map((x: any) => (
+          <tbody>{c.per_type.map((x) => (
             <tr key={x.type}><Td className="font-mono text-xs">{x.type}</Td><Td className="text-end num">{x.tp}</Td><Td className="text-end num">{x.fp}</Td>
               <Td className="text-end num">{x.fn}</Td><Td className="text-end num">{pct(x.precision)}</Td><Td className="text-end num">{pct(x.recall)}</Td></tr>))}</tbody>
         </Table>
         <Table>
           <thead><tr><Th>End-to-end document</Th><Th>Expected</Th><Th>Got</Th></tr></thead>
-          <tbody>{e.rows.map((x: any) => (
+          <tbody>{e.rows.map((x) => (
             <tr key={x.file} className={x.exact ? "" : "bg-danger-soft/40"}>
               <Td className="font-mono text-2xs">{x.file.replace("invoices/", "")}</Td>
               <Td className="font-mono text-2xs">{x.expected.join(", ") || "∅"}</Td>
@@ -204,7 +205,6 @@ function Recon({ r }: { r: any }) {
   );
 }
 
-type RetrievalRow = { name: string; chunking: string; mrr: number; "recall@5": number };
 
 function Metric({ icon: Icon, label, value, hint, href }: {
   icon: LucideIcon; label: React.ReactNode; value: string; hint: React.ReactNode; href: string;
@@ -251,20 +251,20 @@ function InputChart({ groups }: { groups: Record<string, { n: number; field_accu
 
 export default function EvaluationPage() {
   const { t, locale } = useI18n();
-  const { data, error, mutate } = useApi<Results>("/api/evaluation/results");
+  const { data, error, mutate } = useApi<EvaluationResults>("/api/evaluation/results");
   if (error) return <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
   if (!data) return <Skeleton className="h-96 w-full" />;
   const a = data.available;
-  const clauseRows = (a.rag?.configs as RetrievalRow[] | undefined)?.filter((c) => c.chunking === "clause") ?? [];
+  const clauseRows = a.rag?.configs.filter((c) => c.chunking === "clause") ?? [];
   const rerank = clauseRows.find((c) => c.name === "hybrid_rerank");
   const bm25 = clauseRows.find((c) => c.name === "bm25_plain");
   const endToEnd = a.reconciliation?.end_to_end;
   const retrievalSample = a.rag && `${a.rag.dataset.answerable} ${t.evaluation.answerable}`;
-  const reports = [
-    a.extraction && { key: "extraction", name: t.evaluation.extraction, sample: `${a.extraction.dataset.evaluated} ${t.evaluation.documents}`, source: a.extraction.dataset.source },
-    a.rag && { key: "rag", name: t.evaluation.rag, sample: `${a.rag.dataset.questions} ${t.evaluation.questions}`, source: a.rag.dataset.source },
-    a.reconciliation && { key: "reconciliation", name: t.evaluation.reconciliation, sample: `${a.reconciliation.controlled.cases} ${t.evaluation.controlled}`, source: a.reconciliation.engine_version },
-  ].filter(Boolean);
+  type Report = { key: string; name: string; sample: string; source?: string; generatedAt: string };
+  const reports: Report[] = [];
+  if (a.extraction) reports.push({ key: "extraction", name: t.evaluation.extraction, sample: `${a.extraction.dataset.evaluated} ${t.evaluation.documents}`, source: a.extraction.dataset.source, generatedAt: a.extraction.generated_at });
+  if (a.rag) reports.push({ key: "rag", name: t.evaluation.rag, sample: `${a.rag.dataset.questions} ${t.evaluation.questions}`, source: a.rag.dataset.source, generatedAt: a.rag.generated_at });
+  if (a.reconciliation) reports.push({ key: "reconciliation", name: t.evaluation.reconciliation, sample: `${a.reconciliation.controlled.cases} ${t.evaluation.controlled}`, source: a.reconciliation.engine_version, generatedAt: a.reconciliation.generated_at });
   return (
     <div className="space-y-5">
       <PageHeader title={t.evaluation.hero} sub={t.evaluation.subtitle}
@@ -279,7 +279,7 @@ export default function EvaluationPage() {
             hint={<>{a.extraction.dataset.evaluated} {t.evaluation.documents} × {a.extraction.fields.length} {t.invoice.fields.toLocaleLowerCase()}</>} />}
           {rerank && <Metric icon={Search} href="#report-rag" label="Recall@5" value={pct(rerank["recall@5"])}
             hint={<><bdi>{rerank.chunking}/{rerank.name}</bdi> · {retrievalSample}</>} />}
-          {bm25 && <Metric icon={ListOrdered} href="#report-rag" label="MRR · BM25" value={bm25.mrr.toFixed(3)}
+          {bm25 && <Metric icon={ListOrdered} href="#report-rag" label="MRR · BM25" value={fixed(bm25.mrr, 3)}
             hint={<><bdi>{bm25.chunking}/{bm25.name}</bdi> · {retrievalSample}</>} />}
           {endToEnd && <Metric icon={BookOpenCheck} href="#report-reconciliation" label={t.evaluation.precision} value={pct(endToEnd.precision)}
             hint={<>{endToEnd.tp} / {endToEnd.tp + endToEnd.fp} {t.evaluation.findings} · {endToEnd.documents} {t.evaluation.documents}</>} />}
@@ -288,14 +288,14 @@ export default function EvaluationPage() {
           {a.extraction && <InputChart groups={a.extraction.systems.rule_based.groups} />}
           {clauseRows.length > 0 && <Panel>
             <PanelHeader title={t.evaluation.retrievalComparison} sub={<><bdi>Recall@5 · clause</bdi> · {retrievalSample}</>} />
-            <div className="p-5"><BarList max={1} items={clauseRows.map((c) => ({ label: c.name, value: c["recall@5"] }))} format={pct} /></div>
+            <div className="p-5"><BarList max={1} items={clauseRows.flatMap((c) => (typeof c["recall@5"] === "number" ? [{ label: c.name, value: c["recall@5"] }] : []))} format={pct} /></div>
           </Panel>}
         </div>
         <div id="benchmark-reports" className="grid scroll-mt-24 items-start gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <Panel><PanelHeader title={t.evaluation.runs} />
             <Table><thead><tr><Th>{t.evaluation.report}</Th><Th>{t.evaluation.sample}</Th><Th>{t.evaluation.generated}</Th></tr></thead>
               <tbody>{reports.map((r) => <tr key={r.key}><Td><a className="font-medium text-accent hover:underline" href={`#report-${r.key}`}>{r.name}</a></Td>
-                <Td>{r.sample}</Td><Td><time dateTime={a[r.key].generated_at}>{new Date(a[r.key].generated_at).toLocaleString(locale === "he" ? "he-IL" : "en-GB", {dateStyle: "medium", timeStyle: "short"})}</time></Td></tr>)}</tbody>
+                <Td>{r.sample}</Td><Td><time dateTime={r.generatedAt}>{new Date(r.generatedAt).toLocaleString(locale === "he" ? "he-IL" : "en-GB", {dateStyle: "medium", timeStyle: "short"})}</time></Td></tr>)}</tbody>
             </Table>
           </Panel>
           <Panel><PanelHeader title={t.evaluation.methodology} />

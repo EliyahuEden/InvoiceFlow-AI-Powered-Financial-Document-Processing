@@ -10,6 +10,7 @@ import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import type { AiSummary } from "@/lib/types";
 import { useInvoice } from "@/lib/use-invoice";
+import { label } from "@/lib/i18n/label";
 
 export default function InvestigationPage() {
   const { t, locale } = useI18n();
@@ -32,7 +33,7 @@ export default function InvestigationPage() {
           <Panel className="command-aside p-5">
             <h2 className="text-lg font-semibold tracking-tight">{t.exceptions.decide}</h2>
             <p className="mt-2 font-medium" dir="auto">
-              {(t.finding as Record<string, string>)[inv.discrepancies.find((d) => d.severity !== "info")?.type ?? ""] ?? inv.exception.title}
+              {label(t.finding, inv.discrepancies.find((d) => d.severity !== "info")?.type ?? "", inv.exception.title)}
             </p>
             <div className="mt-3 flex items-center justify-between">
               <StatusPill status={inv.exception.status} />

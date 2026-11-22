@@ -14,6 +14,7 @@ import { dateTime, money, num, unitPrice } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
 import { useUnsavedWork } from "@/lib/use-unsaved-work";
+import { label } from "@/lib/i18n/label";
 
 export default function InvoiceOverview() {
   const { t, locale } = useI18n();
@@ -54,7 +55,7 @@ export default function InvoiceOverview() {
         {inv.exception && (
           <Link href={`/exceptions/${inv.exception.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-warn/30 bg-warn-soft px-5 py-4 transition-colors hover:border-warn">
             <span className="min-w-0">
-              <span className="block truncate text-base font-medium text-ink">{(t.finding as Record<string, string>)[inv.discrepancies.find((d) => d.severity !== "info")?.type ?? ""] ?? inv.exception.title}</span>
+              <span className="block truncate text-base font-medium text-ink">{label(t.finding, inv.discrepancies.find((d) => d.severity !== "info")?.type ?? "", inv.exception.title)}</span>
               <span className="text-sm text-ink-2">{t.exceptions.proposed}: <ActionLabel action={inv.exception.proposed_action} /></span>
             </span>
             <StatusPill status={inv.exception.status} />
@@ -110,7 +111,7 @@ export default function InvoiceOverview() {
             <ul className="divide-y divide-line">
               {inv.approvals.map((a) => (
                 <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                  <span>{t.invoice.step} {a.step} · {(t.roles as Record<string, string>)[a.required_role]}</span>
+                  <span>{t.invoice.step} {a.step} · {label(t.roles, a.required_role)}</span>
                   <span className="flex items-center gap-2">
                     {a.decided_at && <span className="text-xs text-ink-3">{dateTime(a.decided_at, locale)}</span>}
                     <StatusPill status={a.status} />

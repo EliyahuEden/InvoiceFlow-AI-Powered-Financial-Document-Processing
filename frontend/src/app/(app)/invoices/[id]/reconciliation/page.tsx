@@ -12,6 +12,7 @@ import { dateTime, money, num, unitPrice } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
 import { findingMessage } from "@/lib/findings";
+import { label } from "@/lib/i18n/label";
 
 export default function ReconciliationPage() {
   const { t, locale } = useI18n();
@@ -81,7 +82,7 @@ export default function ReconciliationPage() {
                     <Td className={cx("border-e border-line text-end", priceBad && "font-semibold text-danger")}><span className="ltr">{unitPrice(ln.unit_price)}</span></Td>
                     <Td className="text-center">
                       {m ? <Pill tone={m.method === "sku" ? "ok" : m.method === "description" ? "accent" : m.method === "ambiguous" ? "warn" : "danger"}>
-                        {(t.recon.lineMatch as Record<string, string>)[m.method]}{m.method === "description" && ` ${Math.round(m.score * 100)}%`}
+                        {label(t.recon.lineMatch, m.method)}{m.method === "description" && ` ${Math.round(m.score * 100)}%`}
                       </Pill> : "—"}
                     </Td>
                     {pl ? (
@@ -108,10 +109,10 @@ export default function ReconciliationPage() {
           </Table>
           {run && (
             <div className="border-t border-line px-4 py-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">{t.recon.tolerances}</p>
+              <p className="mb-2 text-sm font-semibold text-ink-3">{t.recon.tolerances}</p>
               <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-2">
                 {Object.entries(run.tolerances).map(([k, v]) => (
-                  <div key={k} className="flex gap-1"><dt>{(t.settings as Record<string, string>)[k] ?? k}:</dt><dd className="font-medium text-ink num">{String(v)}</dd></div>
+                  <div key={k} className="flex gap-1"><dt>{label(t.settings, k)}:</dt><dd className="font-medium text-ink num">{String(v)}</dd></div>
                 ))}
               </dl>
             </div>

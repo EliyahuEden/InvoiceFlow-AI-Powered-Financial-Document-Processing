@@ -2,23 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Modern Financial Command Center. Business colors are independent of brand atmosphere. */
+/* Modern Financial Command Center. Neutral graphite surfaces; colour is reserved for the navy accent and for
+   meaning (status, money at risk, chart series). No washes, glows or gradients on the chrome. */
 /* One workhorse family for Hebrew and Latin (precise humanist forms, tabular figures); a mono only for codes and
    hashes, never as decoration. Loaded from @fontsource in app/layout.tsx. */
 :root { --font-sans: "Assistant"; --font-mono: "JetBrains Mono"; }
 
 :root {
-  --bg: 228 236 255;
-  --surface: 252 253 255;
-  --sunken: 237 242 253;
-  --ink: 17 24 39;
-  --ink-2: 57 73 100;
-  --ink-3: 85 102 132;
-  --line: 206 217 240;
-  --line-strong: 134 153 184;
-  --rule: 206 217 240;
+  --bg: 247 247 248;
+  --surface: 255 255 255;
+  --sunken: 243 244 246;
+  --ink: 23 23 23;
+  --ink-2: 82 82 91;
+  --ink-3: 107 107 116;
+  --line: 228 228 231;
+  --line-strong: 161 161 170;
+  --rule: 228 228 231;
   --accent: 44 65 126;
-  --accent-soft: 226 234 255;
+  --accent-soft: 234 238 248;
   --accent-ink: 25 43 94;
   --primary: 17 19 25;
   --primary-hover: 38 44 58;
@@ -32,53 +33,53 @@
   --danger-soft: 255 228 225;
   --info: 48 75 133;
   --info-soft: 229 237 255;
-  --ai: 100 61 164;
-  --ai-soft: 242 235 255;
-  --ai-line: 206 188 239;
+  --ai: 44 65 126;
+  --ai-soft: 238 241 248;
+  --ai-line: 214 220 235;
   --highlight: 219 162 16;
-  --rail: 237 243 255;
-  --rail-ink: 21 31 51;
-  --rail-ink-2: 66 84 118;
-  --rail-line: 200 213 240;
+  --rail: 244 244 245;
+  --rail-ink: 23 23 23;
+  --rail-ink-2: 82 82 91;
+  --rail-line: 228 228 231;
   --rail-active: 255 255 255;
-  --atmosphere-a: 179 197 250;
-  --atmosphere-b: 218 230 255;
-  --hero: 241 246 255;
-  --hero-wave: 141 164 241;
+  --atmosphere-a: 247 247 248;
+  --atmosphere-b: 247 247 248;
+  --hero: 255 255 255;
+  --hero-wave: 228 228 231;
   --series-1: #4369bb;
   --series-2: #b27625;
   --series-3: #21856b;
   --series-4: #697e9f;
-  --chart-grid: #d9e3f4;
-  --chart-axis: #556684;
+  --chart-grid: #e4e4e7;
+  --chart-axis: #71717a;
   --radius-control: 14px;
-  --radius-panel: 24px;
-  --radius-hero: 28px;
-  --shadow-panel: 0 10px 32px -22px rgb(42 65 122 / .24);
-  --shadow-pop: 0 22px 64px -20px rgb(31 47 88 / .28);
+  --radius-panel: 16px;
+  --radius-hero: 20px;
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px -18px rgb(0 0 0 / .14);
+  --shadow-pop: 0 18px 48px -18px rgb(0 0 0 / .22);
   --motion-fast: 160ms;
   --motion-ease: cubic-bezier(.16, 1, .3, 1);
   color-scheme: light;
 }
 
 [data-theme="dark"] {
-  --bg: 15 22 39;
-  --surface: 25 34 54;
-  --sunken: 31 43 67;
-  --ink: 237 242 255;
-  --ink-2: 188 202 227;
-  --ink-3: 157 175 205;
-  --line: 57 75 108;
-  --line-strong: 107 128 165;
-  --rule: 57 75 108;
+  --bg: 20 20 21;
+  --surface: 25 25 27;
+  --sunken: 35 35 37;
+  --ink: 237 237 237;
+  --ink-2: 161 161 166;
+  --ink-3: 138 138 144;
+  --line: 46 46 50;
+  --line-strong: 88 88 94;
+  --rule: 46 46 50;
   --accent: 169 193 255;
-  --accent-soft: 39 55 89;
+  --accent-soft: 33 41 61;
   --accent-ink: 202 217 255;
   /* in dark the primary pill inverts to a light pill so the single main action stays obvious */
-  --primary: 233 239 252;
-  --primary-hover: 203 214 240;
-  --primary-ink: 13 19 33;
-  --primary-line: 233 239 252;
+  --primary: 237 237 237;
+  --primary-hover: 212 212 216;
+  --primary-ink: 20 20 21;
+  --primary-line: 237 237 237;
   --ok: 116 220 175;
   --ok-soft: 23 57 48;
   --warn: 246 193 120;
@@ -86,27 +87,27 @@
   --danger: 255 159 148;
   --danger-soft: 73 38 42;
   --info: 167 195 255;
-  --info-soft: 38 55 89;
-  --ai: 205 177 255;
-  --ai-soft: 49 37 76;
-  --ai-line: 112 86 155;
+  --info-soft: 33 41 61;
+  --ai: 169 193 255;
+  --ai-soft: 33 41 61;
+  --ai-line: 60 72 100;
   --highlight: 245 193 68;
-  --rail: 20 30 51;
-  --rail-ink: 232 239 255;
-  --rail-ink-2: 168 187 219;
-  --rail-line: 57 75 108;
-  --rail-active: 45 63 97;
-  --atmosphere-a: 36 56 101;
-  --atmosphere-b: 23 38 70;
-  --hero: 34 48 77;
-  --hero-wave: 83 110 176;
+  --rail: 15 15 16;
+  --rail-ink: 237 237 237;
+  --rail-ink-2: 161 161 166;
+  --rail-line: 46 46 50;
+  --rail-active: 35 35 37;
+  --atmosphere-a: 20 20 21;
+  --atmosphere-b: 20 20 21;
+  --hero: 25 25 27;
+  --hero-wave: 46 46 50;
   --series-1: #9bbaff;
   --series-2: #e2b06c;
   --series-3: #79ceb0;
   --series-4: #b0bfd9;
-  --chart-grid: #354969;
-  --chart-axis: #9dafcd;
-  --shadow-panel: 0 12px 36px -24px rgb(0 0 0 / .55);
+  --chart-grid: #2e2e32;
+  --chart-axis: #8a8a90;
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / .03);
   --shadow-pop: 0 24px 68px -20px rgb(0 0 0 / .6);
   color-scheme: dark;
 }
@@ -117,8 +118,6 @@
   }
   body {
     @apply bg-bg text-ink font-sans text-base antialiased;
-    background-image: radial-gradient(ellipse at 2% 0%, rgb(var(--atmosphere-a) / .72), transparent 48%), radial-gradient(ellipse at 100% 8%, rgb(var(--atmosphere-b) / .9), transparent 60%);
-    background-attachment: fixed;
     font-feature-settings: "kern", "liga", "calt";
   }
   ::selection {
@@ -166,41 +165,17 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border: 1px solid rgb(var(--surface) / .75);
+    border: 1px solid rgb(var(--line));
     border-radius: var(--radius-hero);
-    background: linear-gradient(115deg, rgb(var(--hero) / .78), rgb(var(--surface) / .42));
+    background: rgb(var(--surface));
     padding: 28px 32px;
     box-shadow: var(--shadow-panel);
   }
-  .command-hero::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    inset: 0;
-    /* a feathered glow at the inline end that fades out fully inside the hero: never a hard shape behind figures */
-    background: radial-gradient(ellipse 45% 85% at 92% 110%, rgb(var(--hero-wave) / .24), transparent 100%);
-    pointer-events: none;
-  }
-  .command-hero::after {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    width: 68%;
-    height: 170%;
-    inset-inline-end: -20%;
-    inset-block-start: -115%;
-    border: 1px solid rgb(var(--surface) / .65);
-    border-radius: 50%;
-    transform: rotate(-9deg);
-    pointer-events: none;
-  }
-  [dir="rtl"] .command-hero::after { transform: rotate(9deg); }
-  [dir="rtl"] .command-hero::before { background: radial-gradient(ellipse 45% 85% at 8% 110%, rgb(var(--hero-wave) / .24), transparent 100%); }
   .command-metric {
     min-width: 0;
-    border: 1px solid rgb(var(--surface) / .78);
-    border-radius: 20px;
-    background: rgb(var(--surface) / .67);
+    border: 1px solid rgb(var(--line));
+    border-radius: 14px;
+    background: rgb(var(--surface));
     padding: 20px;
   }
   .command-panel {
@@ -269,19 +244,10 @@
   }
 }
 
-/* Login brand panel: a slow, soft aurora drift in the brand atmosphere (frozen under reduced motion). */
-.aurora {
-  background:
-    radial-gradient(60% 55% at 20% 20%, rgb(var(--atmosphere-a) / .85), transparent 70%),
-    radial-gradient(55% 60% at 85% 75%, rgb(var(--hero-wave) / .35), transparent 70%),
-    radial-gradient(70% 60% at 60% 10%, rgb(var(--ai-soft) / .9), transparent 70%),
-    rgb(var(--hero));
-  background-size: 160% 160%, 160% 160%, 160% 160%, auto;
-  animation: aurora-drift 22s ease-in-out infinite alternate;
-}
-@keyframes aurora-drift {
-  from { background-position: 0% 0%, 100% 100%, 50% 0%, 0 0; }
-  to { background-position: 40% 30%, 60% 70%, 20% 40%, 0 0; }
+/* Sign-in brand panel: a quiet raised surface with a hairline; the evidence card inside is its one moment. */
+.brand-panel {
+  background: rgb(var(--sunken));
+  border-inline-end: 1px solid rgb(var(--line));
 }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes palette-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }

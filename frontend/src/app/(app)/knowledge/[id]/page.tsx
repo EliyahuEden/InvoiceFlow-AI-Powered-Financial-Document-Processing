@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shell";
 import { cx, ErrorState, Panel, PanelHeader, Skeleton } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 
 type KD = { status: string; language: string | null; id: string; title: string; doc_type: string; document_id: string; version: string | null; effective_date: string | null;
   chunks: { id: string; index: number; page: number; section: string | null; text: string; strategy: string }[] };
@@ -25,7 +26,7 @@ export default function KnowledgeDoc() {
     <div className="space-y-4">
       <PageHeader back={{ href: "/knowledge", label: t.knowledge.title }} title={<span dir="auto">{d.title}</span>}
         actions={<StatusPill status={d.status} />}
-        sub={`${(t.knowledge.type as Record<string, string>)[d.doc_type]} · ${t.knowledge.version} ${d.version ?? "—"} · ${t.knowledge.effective} ${d.effective_date ?? "—"}`} />
+        sub={`${label(t.knowledge.type, d.doc_type)} · ${t.knowledge.version} ${d.version ?? "—"} · ${t.knowledge.effective} ${d.effective_date ?? "—"}`} />
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <DocumentViewer className="h-[52svh] min-h-72 xl:h-[calc(100vh-14rem)] xl:min-h-96" documentId={d.document_id} pageCount={pages?.page_count ?? 1}
           filename={d.title} quote={chunk?.text.split("\n").slice(1).join(" ") || chunk?.text} quotePage={chunk?.page}

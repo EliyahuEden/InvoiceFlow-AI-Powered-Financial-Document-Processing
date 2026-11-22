@@ -6,7 +6,7 @@ const SYMBOL: Record<string, string> = { ILS: "₪", USD: "$", EUR: "€", GBP: 
 export function money(value: string | null | undefined, currency?: string | null, locale: Locale = "he"): string {
   if (value === null || value === undefined || value === "") return "—";
   const neg = value.startsWith("-");
-  const [int, frac = ""] = value.replace("-", "").split(".");
+  const [int = "0", frac = ""] = value.replace("-", "").split(".");
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const body = `${grouped}.${(frac + "00").slice(0, 2)}`;
   const sym = currency ? SYMBOL[currency] ?? `${currency} ` : "";
@@ -23,7 +23,7 @@ export function unitPrice(value: string | null | undefined, currency?: string | 
 export function num(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—";
   const s = String(value);
-  const [int, frac] = s.split(".");
+  const [int = "0", frac] = s.split(".");
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return frac && !/^0+$/.test(frac) ? `${grouped}.${frac.replace(/0+$/, "")}` : grouped;
 }

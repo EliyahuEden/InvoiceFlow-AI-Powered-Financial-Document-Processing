@@ -6,7 +6,25 @@ import { money, num } from "@/lib/format";
 import type { InvoiceDetail, Source } from "@/lib/types";
 import { cx } from "./ui";
 
-export const FIELD_DEFS: { key: string; src: string; label: (t: ReturnType<typeof useI18n>["t"]) => string; kind?: "money" | "date" | "ltr" }[] = [
+/** The invoice header fields a reviewer reads and corrects. Each must be a text field of InvoiceDetail: a typo here is a
+ * compile error instead of a field that silently shows empty and is never saved. */
+export type HeaderField = "supplier_name_raw" | "supplier_tax_id_raw" | "invoice_number" | "invoice_date" | "po_reference"
+  | "payment_terms" | "allocation_number" | "currency" | "subtotal" | "tax_rate" | "tax_total" | "total";
+type IsTextField<K extends keyof InvoiceDetail> = InvoiceDetail[K] extends string | null | undefined ? true : false;
+const headerFieldsAreText: { [K in HeaderField]: IsTextField<K> extends true ? true : never } = {
+  supplier_name_raw: true, supplier_tax_id_raw: true, invoice_number: true, invoice_date: true, po_reference: true,
+  payment_terms: true, allocation_number: true, currency: true, subtotal: true, tax_rate: true, tax_total: true, total: true,
+};
+void headerFieldsAreText;
+
+export type FieldDef = { key: HeaderField; src: string; label: (t: ReturnType<typeof useI18n>["t"]) => string; kind?: "money" | "date" | "ltr" };
+
+/** The value of a header field on an invoice, as text ("" when absent). */
+export function headerValue(inv: InvoiceDetail, key: HeaderField): string {
+  return inv[key] ?? "";
+}
+
+export const FIELD_DEFS: readonly FieldDef[] = [
   { key: "supplier_name_raw", src: "supplier_name", label: (t) => t.invoice.supplierName },
   { key: "supplier_tax_id_raw", src: "supplier_tax_id", label: (t) => t.invoice.supplierTaxId, kind: "ltr" },
   { key: "invoice_number", src: "invoice_number", label: (t) => t.invoice.invoiceNumber, kind: "ltr" },
@@ -50,7 +68,7 @@ export function FieldList({ inv, onHover }: { inv: InvoiceDetail; onHover: (id: 
   return (
     <dl className="divide-y divide-line px-4 sm:px-5">
       {FIELD_DEFS.map((f) => {
-        const value = (inv as unknown as Record<string, string | null>)[f.key];
+        const value = inv[f.key];
         const { source, corrected, id } = fieldEvidence(inv, f);
         const missing = value === null || value === undefined || value === "";
         const display = missing ? null : f.kind === "money" ? money(value, inv.currency) : f.kind === "date"

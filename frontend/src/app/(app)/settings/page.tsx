@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/shell";
 import { Button, ErrorState, Field, Input, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 
 type Org = { id: string; name: string; settings: { tolerances: Record<string, string | number>; approval: Record<string, string>; auto_investigate?: boolean;
   priority?: { critical_amount?: string }; security?: { session_idle_hours?: number; session_max_days?: number } };
@@ -56,7 +57,7 @@ export default function SettingsPage() {
           <PanelHeader title={t.settings.tolerances} sub={t.ai.deterministic} />
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
             {Object.keys(tol).map((k) => (
-              <Field key={k} label={(t.settings as Record<string, string>)[k] ?? k} htmlFor={k}>
+              <Field key={k} label={label(t.settings, k)} htmlFor={k}>
                 <Input id={k} dir="ltr" inputMode="decimal" value={tol[k]} disabled={!admin} onChange={(e) => setTol({ ...tol, [k]: e.target.value })} />
               </Field>
             ))}
@@ -95,7 +96,7 @@ export default function SettingsPage() {
       <Panel>
         <PanelHeader title={t.settings.permissions} />
         <Table>
-          <thead><tr><Th>Permission</Th>{Object.keys(org.roles).map((r) => <Th key={r} className="text-center">{(t.roles as Record<string, string>)[r]}</Th>)}</tr></thead>
+          <thead><tr><Th>Permission</Th>{Object.keys(org.roles).map((r) => <Th key={r} className="text-center">{label(t.roles, r)}</Th>)}</tr></thead>
           <tbody>{allPerms.map((p) => (
             <tr key={p}>
               <Td className="font-mono text-xs">{p}</Td>

@@ -4,7 +4,7 @@ import { FileSearch, Link2, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DocumentViewer } from "@/components/document-viewer";
-import { fieldEvidence, fieldHighlights, FIELD_DEFS, SourceTags } from "@/components/invoice-fields";
+import { fieldEvidence, fieldHighlights, FIELD_DEFS, headerValue, SourceTags } from "@/components/invoice-fields";
 import { SecurityNotice, WarningList } from "@/components/domain";
 import { useSession } from "@/components/session";
 import { Button, cx, EmptyState, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, Th } from "@/components/ui";
@@ -33,7 +33,7 @@ export default function ReviewPage() {
 
   const loadDraft = useCallback((source: InvoiceDetail) => {
     const h: Record<string, string> = {};
-    for (const f of FIELD_DEFS) h[f.key] = ((source as unknown as Record<string, string | null>)[f.key] ?? "") as string;
+    for (const f of FIELD_DEFS) h[f.key] = headerValue(source, f.key);
     setBaseline(source);
     setHeader(h);
     setLines(source.lines.map((l) => ({ id: l.id, line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "",
@@ -46,8 +46,8 @@ export default function ReviewPage() {
     if (!inv) return {};
     const out: Record<string, string> = {};
     for (const f of FIELD_DEFS) {
-      const orig = ((inv as unknown as Record<string, string | null>)[f.key] ?? "") as string;
-      if ((header[f.key] ?? "") !== orig) out[f.key] = header[f.key];
+      const draft = header[f.key] ?? "";
+      if (draft !== headerValue(inv, f.key)) out[f.key] = draft;
     }
     return out;
   }, [header, inv]);
@@ -104,7 +104,7 @@ export default function ReviewPage() {
               const { source, corrected, id } = fieldEvidence(inv, f);
               const missing = inv.missing_fields.includes(f.key) || inv.missing_fields.includes(f.src);
               const modified = changed[f.key] !== undefined;
-              const original = (inv as unknown as Record<string, string | null>)[f.key];
+              const original = inv[f.key];
               return (
                 <div key={f.key} className={cx("space-y-1.5 py-3", focus === id && "bg-hl/10")}
                   onMouseEnter={() => source?.bbox && setFocus(id)} onMouseLeave={() => setFocus(null)}

@@ -6,6 +6,7 @@ import InvoiceOverview from "@/app/(app)/invoices/[id]/page";
 import { I18nProvider } from "@/lib/i18n";
 import { api } from "@/lib/api";
 import type { InvoiceDetail } from "@/lib/types";
+import { at } from "../support/at";
 
 const state = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -63,7 +64,7 @@ it("starts at most three uploads at once and advances the queue as slots open", 
   const files = Array.from({ length: 4 }, (_, i) => new File(["pdf"], `doc-${i}.pdf`));
   fireEvent.change(screen.getByTestId("file-input"), { target: { files } });
   expect(upload).toHaveBeenCalledTimes(3);
-  await act(async () => { releases[0]({ invoice_id: "first-invoice", job_id: "first-job" }); });
+  await act(async () => { at(releases, 0)({ invoice_id: "first-invoice", job_id: "first-job" }); });
   expect(upload).toHaveBeenCalledTimes(4);
 });
 
@@ -90,7 +91,7 @@ it("requires final-approval permission and a different reviewer for a second pay
   state.permissions.push("approval:final");
   view.rerender(<I18nProvider initial="en"><InvoiceOverview /></I18nProvider>);
   expect(screen.getByRole("button", { name: "Approve for payment" })).toBeEnabled();
-  state.invoice.approvals.unshift({ ...state.invoice.approvals[0], id: "first", step: 1, status: "approved", decided_by: "reviewer" });
+  state.invoice.approvals.unshift({ ...at(state.invoice.approvals, 0), id: "first", step: 1, status: "approved", decided_by: "reviewer" });
   view.rerender(<I18nProvider initial="en"><InvoiceOverview /></I18nProvider>);
   expect(screen.queryByRole("button", { name: "Approve for payment" })).not.toBeInTheDocument();
 });

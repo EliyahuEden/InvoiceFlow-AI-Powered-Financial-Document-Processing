@@ -1,11 +1,11 @@
 "use client";
 
-import { BarList } from "@/components/charts";
+import { BarList } from "@/components/bar-list";
 import { Panel, PanelHeader } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
+import type { ExtractionResult } from "@/lib/eval-types";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(1)}%`);
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -20,7 +20,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 /** Rules-first extraction from the extraction benchmark: how many invoices the free rules
  *  handed to a model, whether those were the ones the rules got wrong, and (only when a model
  *  run exists) the measured accuracy and token use. Nothing is shown that the report lacks. */
-export function RulesFirstReport({ r }: { r: any }) {
+export function RulesFirstReport({ r }: { r: ExtractionResult | undefined }) {
   const { t, locale } = useI18n();
   const rt = t.evaluation.rulesFirst;
   const router = r?.systems?.rule_based?.rules_first_router;

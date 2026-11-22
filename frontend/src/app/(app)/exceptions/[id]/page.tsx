@@ -19,6 +19,7 @@ import { markReviewed } from "@/lib/review";
 import type { AiSummary, InvoiceDetail, ReviewNext, ReviewQueueItem } from "@/lib/types";
 import { isTyping } from "@/lib/nav";
 import { useUnsavedWork } from "@/lib/use-unsaved-work";
+import { label } from "@/lib/i18n/label";
 
 type Exc = {
   id: string; title: string; status: string; priority: string; discrepancy_types: string[]; proposed_action: string | null;
@@ -176,7 +177,7 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0 flex-[1_1_18rem]">
           <h1 className="break-words text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-            <bdi>{supplierName || e.invoice_number || e.title}</bdi>{titleFinding && <> · {(t.finding as Record<string, string>)[titleFinding] ?? titleFinding}</>}
+            <bdi>{supplierName || e.invoice_number || e.title}</bdi>{titleFinding && <> · {label(t.finding, titleFinding)}</>}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {current && <PriorityBadge level={current.priority.level} />}

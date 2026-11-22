@@ -1,11 +1,12 @@
 "use client";
 
-import { AlertTriangle, BadgeCheck, CircleDot, FileText, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertTriangle, BadgeCheck, CircleDot, FileSearch, FileText, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { pickLang, useI18n } from "@/lib/i18n";
 import { priorityReasonText } from "@/lib/review";
 import type { PriorityReason } from "@/lib/types";
 import { cx } from "./ui";
+import { label as labelOf } from "@/lib/i18n/label";
 
 type Tone = "neutral" | "ok" | "warn" | "danger" | "info" | "accent" | "ai";
 const TONE: Record<Tone, string> = {
@@ -51,7 +52,7 @@ export function Pill({ tone = "neutral", children, className, icon }: {
 
 export function StatusPill({ status }: { status: string }) {
   const { t } = useI18n();
-  const label = (t.status as Record<string, string>)[status] ?? status;
+  const label = labelOf(t.status, status);
   return (
     <Pill tone={STATUS_TONE[status] ?? "neutral"} icon={<CircleDot className="h-3 w-3" aria-hidden />}>
       {label}
@@ -60,13 +61,16 @@ export function StatusPill({ status }: { status: string }) {
 }
 
 export function SeverityDot({ severity }: { severity: string }) {
+  const { t } = useI18n();
   const c = severity === "critical" ? "bg-danger" : severity === "warning" ? "bg-warn" : "bg-info";
-  return <span className={cx("inline-block h-2 w-2 shrink-0 rounded-full", c)} aria-label={severity} />;
+  // the colour alone is not enough: the dot is a named image, in the reader's language
+  const label = labelOf(t.severity, severity);
+  return <span role="img" aria-label={label} title={label} className={cx("inline-block h-2 w-2 shrink-0 rounded-full", c)} />;
 }
 
 export function FindingTag({ type, severity }: { type: string; severity?: string }) {
   const { t } = useI18n();
-  const label = (t.finding as Record<string, string>)[type] ?? type;
+  const label = labelOf(t.finding, type);
   const tone: Tone = severity === "critical" ? "danger" : severity === "warning" ? "warn" : severity === "info" ? "info" : "neutral";
   return <Pill tone={tone}>{label}</Pill>;
 }
@@ -74,7 +78,7 @@ export function FindingTag({ type, severity }: { type: string; severity?: string
 export function ActionLabel({ action }: { action: string | null | undefined }) {
   const { t } = useI18n();
   if (!action) return <>—</>;
-  return <>{(t.action as Record<string, string>)[action] ?? action}</>;
+  return <>{labelOf(t.action, action)}</>;
 }
 
 /** Container for anything a model (or offline template) wrote. Never used for verified data. */
@@ -87,7 +91,7 @@ export function AiBlock({ mode, children, className, title }: {
     <div className={cx("rounded-lg border border-ai-line bg-ai-soft/60", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ai-line/70 px-4 py-2">
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-ai">
-          <Sparkles className="h-4 w-4" aria-hidden />
+          <FileSearch className="h-4 w-4" aria-hidden />
           {title ?? t.ai.generated}
         </span>
         <span className="text-xs text-ai/80">{offline ? t.ai.template : `${t.ai.liveMode}: ${mode?.replace("llm:", "")}`}</span>

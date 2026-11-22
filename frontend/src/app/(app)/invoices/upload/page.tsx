@@ -108,8 +108,10 @@ export default function UploadPage() {
     const fresh: Item[] = list.map((f) => ({ key: crypto.randomUUID(), name: f.name, size: f.size, state: "queued" }));
     setItems((prev) => [...fresh, ...prev]);
     fresh.forEach((it, idx) => {
+      const file = list[idx];
+      if (!file) return;
       const fd = new FormData();
-      fd.append("file", list[idx]);
+      fd.append("file", file);
       enqueue(it.key, () => api.post("/api/invoices/upload", fd));
     });
   };

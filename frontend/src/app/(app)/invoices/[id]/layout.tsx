@@ -11,6 +11,7 @@ import { api, ApiError } from "@/lib/api";
 import { date, money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
+import { label } from "@/lib/i18n/label";
 
 export default function InvoiceLayout({ children }: { children: React.ReactNode }) {
   const { t, locale } = useI18n();
@@ -30,7 +31,7 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
   const rerun = async () => {
     try {
       const r = await api.post<{ outcome: string }>(`/api/invoices/${id}/reconcile`);
-      toast.success(`${t.recon.title}: ${(t.status as Record<string, string>)[r.outcome] ?? r.outcome}`);
+      toast.success(`${t.recon.title}: ${label(t.status, r.outcome)}`);
       mutate();
     } catch (e) { toast.error(String((e as Error).message)); }
   };
@@ -60,7 +61,7 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
                   <StatusPill status={inv.status} />
                 </h1>
                 <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
-                  <span dir="auto" className={inv.supplier ? "" : "italic text-ink-3"}>{supplierLabel ?? t.common.unknown}</span>
+                  <span dir="auto" className={inv.supplier ? "" : "text-ink-3"}>{supplierLabel ?? t.common.unknown}</span>
                   <span className="text-line-strong" aria-hidden>|</span>
                   <span>{date(inv.invoice_date, locale)}</span>
                   <span className="text-line-strong" aria-hidden>|</span>

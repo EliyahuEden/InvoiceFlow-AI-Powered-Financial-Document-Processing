@@ -1,8 +1,10 @@
 "use client";
 
+import { Kbd } from "./kbd";
+
 import * as Dialog from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
-import { ArrowRight, Bot, Building2, FileText, Languages, Loader2, Moon, Search, ShoppingCart, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Building2, FileText, Languages, ListChecks, Loader2, Moon, Search, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -63,7 +65,7 @@ export function CommandPalette({ open, onOpenChange, onAskCopilot }: {
   };
   type Action = { id: string; label: string; icon: React.ElementType; run: () => void };
   const allActions: (Action | false)[] = [
-    can("exception:decide") && { id: "next", label: t.review.reviewNext, icon: Sparkles, run: async () => {
+    can("exception:decide") && { id: "next", label: t.review.reviewNext, icon: ListChecks, run: async () => {
       try {
         const r = await api.get<NextResp>("/api/review/next");
         if (r.item) go(`/exceptions/${r.item.exception_id}`); else toast.success(t.review.clearTitle);
@@ -136,6 +138,3 @@ function Row({ value, icon: Icon, title, sub, hint, onSelect }: {
   );
 }
 
-export function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="inline-flex min-w-[1.5rem] items-center justify-center rounded-md border border-line bg-surface px-1.5 py-0.5 font-sans text-[0.7rem] font-semibold text-ink-2 shadow-[0_1px_0_rgb(var(--line))]">{children}</kbd>;
-}

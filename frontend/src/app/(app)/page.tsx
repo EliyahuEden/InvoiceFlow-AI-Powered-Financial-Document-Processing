@@ -21,13 +21,13 @@ export default function OverviewPage() {
     { label: t.review.critical, href: "/exceptions?level=critical", value: data?.by_level.critical, icon: AlertTriangle, tone: "bg-danger-soft text-danger" },
     { label: t.review.high, href: "/exceptions?level=high", value: data?.by_level.high, icon: CircleAlert, tone: "bg-warn-soft text-warn" },
     { label: t.review.overdue, href: "/exceptions?due=overdue", value: data?.overdue, icon: CalendarClock, tone: "bg-warn-soft text-warn" },
-    { label: t.review.dueSoon, href: "/exceptions?due=soon", value: data?.due_soon, icon: CalendarDays, tone: "bg-info-soft text-info" },
+    { label: t.review.dueSoon, href: "/exceptions?due=soon", value: data?.due_soon, icon: CalendarDays, tone: "bg-sunken text-ink-3" },
   ];
   const workflow = [
-    { label: t.review.readyForApproval, href: "/invoices?status=reconciled", value: data?.ready_for_approval, icon: CheckCheck, tone: "text-ok" },
+    { label: t.review.readyForApproval, href: "/invoices?status=reconciled", value: data?.ready_for_approval, icon: CheckCheck, tone: "text-ink-3" },
     { label: t.review.awaitingInfo, href: "/exceptions?status=pending_info", value: data?.awaiting_info, icon: Clock3, tone: "text-warn" },
     { label: t.review.escalated, href: "/exceptions?status=escalated", value: data?.escalated, icon: CircleAlert, tone: "text-warn" },
-    { label: t.review.processing, href: "/invoices?status=processing", value: data?.processing, icon: Layers, tone: "text-info" },
+    { label: t.review.processing, href: "/invoices?status=processing", value: data?.processing, icon: Layers, tone: "text-ink-3" },
   ];
   const currencyRows = data ? [
     { currency: data.currency, value_under_review: data.value_under_review, amount_at_risk: data.amount_at_risk },
@@ -56,7 +56,7 @@ export default function OverviewPage() {
         </div>
       </section>
       <Panel className="command-panel overflow-hidden">
-        <PanelHeader title={<span className="inline-flex items-center gap-2"><Wallet className="h-5 w-5 text-info" aria-hidden />{t.review.exposure}</span>}
+        <PanelHeader title={<span className="inline-flex items-center gap-2"><Wallet className="h-5 w-5 text-ink-3" aria-hidden />{t.review.exposure}</span>}
           sub={currencyRows.length > 1 ? t.review.amountNote : undefined} />
         {data ? <Table><thead><tr><Th>{t.invoice.currency}</Th><Th className="text-end">{t.review.valueUnderReview}</Th><Th className="text-end">{t.review.atRisk}</Th></tr></thead>
           <tbody>{currencyRows.map((entry) => <tr key={entry.currency ?? "unknown"}>

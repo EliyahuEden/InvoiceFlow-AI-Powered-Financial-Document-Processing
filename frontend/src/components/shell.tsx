@@ -1,9 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { confirmDraftNavigation } from "@/lib/use-unsaved-work";
 
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { ArrowLeft, FileStack, Languages, LayoutGrid, LogOut, Moon, Search, Sparkles, Sun, X } from "lucide-react";
+import { ArrowLeft, FileStack, Languages, LayoutGrid, LogOut, MessageSquareText, Moon, Search, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,12 +13,16 @@ import { useI18n } from "@/lib/i18n";
 import { useLiveEvents } from "@/lib/events";
 import { isActive, isTyping, useNav } from "@/lib/nav";
 import { setTheme as applyTheme, type Theme } from "@/lib/theme";
-import { CommandPalette, Kbd } from "./command-palette";
+import { Kbd } from "./kbd";
 import { CopilotPanel } from "./copilot";
-import { ShortcutsDialog } from "./shortcuts";
 import { ReviewNextButton } from "./review-next";
 import { SessionProvider, useSession } from "./session";
 import { Button, cx } from "./ui";
+import { label } from "@/lib/i18n/label";
+
+// The command palette (cmdk) and the shortcuts dialog load only when opened; the shell owns the hotkeys.
+const CommandPalette = dynamic(() => import("./command-palette").then((m) => m.CommandPalette), { ssr: false });
+const ShortcutsDialog = dynamic(() => import("./shortcuts").then((m) => m.ShortcutsDialog), { ssr: false });
 
 /** Narrow icon rail for wide screens. Every icon has an accessible name and a tooltip;
  *  "All destinations" opens the labelled drawer, so no page is hidden behind an icon. */
@@ -176,7 +181,8 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
         {current && <><span className="hidden text-ink-3 sm:inline" aria-hidden>/</span>
           <span className="truncate text-base text-ink-2">{current}</span></>}
       </div>
-      <button type="button" onClick={onSearch} aria-label={t.palette.trigger}
+      {/* named by its visible text (including the shortcut), so speech control can activate what it shows */}
+      <button type="button" onClick={onSearch}
         className="hidden h-10 min-w-[15rem] items-center gap-2.5 rounded-full border border-line bg-surface/80 pe-2 ps-4 text-sm text-ink-3 shadow-raise transition-colors hover:text-ink-2 md:flex">
         <Search className="h-4 w-4" aria-hidden />
         <span className="flex-1 text-start">{t.palette.trigger}</span>
@@ -184,14 +190,15 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
       </button>
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onSearch} aria-label={t.palette.trigger}><Search className="h-4 w-4" /></Button>
       <Button variant="ai" size="sm" onClick={onCopilot} aria-label={t.copilot.open} className="gap-1.5">
-        <Sparkles className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">{t.copilot.open}</span>
+        <MessageSquareText className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">{t.copilot.open}</span>
       </Button>
       <AiModeBadge />
       {/* the dashboard and the workspace carry their own primary review action */}
       {me && can("exception:decide") && path !== "/" && !path.startsWith("/exceptions") &&
         <ReviewNextButton size="sm" className="hidden md:inline-flex" />}
-      <Button variant="ghost" size="sm" onClick={() => setLocale(locale === "he" ? "en" : "he")} aria-label={t.common.language}>
-        <Languages className="h-4 w-4" aria-hidden /> {locale === "he" ? "EN" : "עב"}
+      <Button variant="ghost" size="sm" onClick={() => setLocale(locale === "he" ? "en" : "he")}>
+        <Languages className="h-4 w-4" aria-hidden /><span className="sr-only">{t.common.language}: </span>
+        <span lang={locale === "he" ? "en" : "he"}>{locale === "he" ? "EN" : "עב"}</span>
       </Button>
       <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t.common.theme}>
         {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
@@ -203,7 +210,7 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
           </span>
           <span className="leading-tight">
             <span className="block text-sm font-semibold text-ink">{me.user.full_name}</span>
-            <span className="block text-2xs text-ink-3">{(t.roles as Record<string, string>)[me.role]}</span>
+            <span className="block text-2xs text-ink-3">{label(t.roles, me.role)}</span>
           </span>
         </div>
       )}
@@ -261,15 +268,25 @@ function KeyedShell({ children, open, setOpen }: { children: React.ReactNode; op
   const [help, setHelp] = useState(false);
   const [copilot, setCopilot] = useState(false);
   useGlobalKeys(nav, () => setPalette(true), () => setHelp(true), () => setCopilot(true));
+  // fetch the on-demand dialogs once the page is idle, so the first Ctrl+K opens without a delay
+  useEffect(() => {
+    const warm = () => { void import("./command-palette"); void import("./shortcuts"); };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = setTimeout(warm, 2000);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-[84px] shrink-0 lg:block">
         <Rail onOpenAll={() => setOpen(true)} />
       </aside>
       {open && <NavDrawer onClose={() => setOpen(false)} />}
-      <CommandPalette open={palette} onOpenChange={setPalette} onAskCopilot={() => setCopilot(true)} />
+      {palette && <CommandPalette open onOpenChange={setPalette} onAskCopilot={() => setCopilot(true)} />}
       <CopilotPanel open={copilot} onOpenChange={setCopilot} />
-      <ShortcutsDialog open={help} onOpenChange={setHelp} />
+      {help && <ShortcutsDialog open onOpenChange={setHelp} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar onMenu={() => setOpen(true)} onSearch={() => setPalette(true)} onCopilot={() => setCopilot(true)} />
         {children}

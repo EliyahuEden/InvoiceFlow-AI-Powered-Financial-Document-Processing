@@ -12,7 +12,7 @@ const en = {
     admin: "Administration",
   },
   common: {
-    "close": "Close", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "downloadOriginal": "Download original",
+    "close": "Close", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "downloadOriginal": "Download original", "documentPages": "Document pages",
 
     search: "Search", loading: "Loading…", retry: "Retry", save: "Save changes", cancel: "Cancel", back: "Back", organization: "Business",
     view: "View", open: "Open", all: "All", none: "None", yes: "Yes", no: "No", page: "Page", of: "of",
@@ -39,6 +39,7 @@ const en = {
     inactive: "Inactive", partially_received: "Partially received", received: "Received", closed: "Closed",
     cancelled: "Cancelled", matched: "Matched", discrepancies: "Discrepancies", superseded: "Superseded", info: "Info", escalated: "Escalated",
   },
+  severity: { critical: "Critical", warning: "Warning", info: "Info" },
   finding: {
     UNRECOGNIZED_SUPPLIER: "Unknown supplier", AMBIGUOUS_SUPPLIER: "Ambiguous supplier", SUPPLIER_BLOCKED: "Supplier blocked",
     DUPLICATE_INVOICE: "Duplicate invoice", POSSIBLE_DUPLICATE: "Possible duplicate", MISSING_PURCHASE_ORDER: "No purchase order",
@@ -91,7 +92,7 @@ const en = {
     correct_extraction: "Correct extraction",
   },
   login: {
-    heroTitle: "Supplier invoices, reconciled and explained.", pointRead: "Reads Hebrew and English invoices, scans and photos",
+    heroTitle: "Supplier invoices, reconciled and explained", evidence: { title: "Tax invoice HC-8870", supplier: "Hermon Coffee Roasters", item1: "Espresso beans 1 kg", item2: "Paper cups 8oz", subtotal: "Subtotal", vat: "VAT 18%", total: "Total due", tag: "Read from page 1 · matches PO-2026-1011" }, pointRead: "Reads Hebrew and English invoices, scans and photos",
     pointMatch: "Matches every line against purchase orders and goods receipts", pointExplain: "Explains each exception with cited evidence, and people decide",
     synthetic: "Demo environment with synthetic data.",
     title: "Sign in to InvoiceFlow", email: "Work email", password: "Password", submit: "Sign in", failed: "Email or password is incorrect.",
@@ -218,7 +219,7 @@ const en = {
     sent: "If this address has an account, a reset link is on its way. It works once and expires in an hour. Check your spam folder too.",
     noEmail: "Password reset by email is not set up on this installation. Ask your administrator to set a new password for you.",
     backToLogin: "Back to sign in", resetTitle: "Choose a new password", resetSub: "Setting a new password signs you out on every device.",
-    inviteTitle: "Welcome! Choose your password", inviteSub: "Pick a password to finish joining your team.",
+    inviteTitle: "Choose your password", inviteSub: "Pick a password to finish joining your team.",
     newPassword: "New password", confirm: "Repeat the password", mismatch: "The passwords do not match.", save: "Save password",
     done: "Your password is set. You can sign in now.", invalid: "This link is invalid or has expired. Ask for a new one.",
     missingToken: "This link is incomplete. Open it again from the email.", signIn: "Sign in" },
@@ -265,7 +266,7 @@ const he: Dict = {
     quality: "איכות", admin: "ניהול",
   },
   common: {
-    "close": "סגירה", "zoomIn": "הגדלה", "zoomOut": "הקטנה", "downloadOriginal": "הורדת המקור",
+    "close": "סגירה", "zoomIn": "הגדלה", "zoomOut": "הקטנה", "downloadOriginal": "הורדת המקור", "documentPages": "עמודי המסמך",
 
     search: "חיפוש", loading: "טוען…", retry: "נסה שוב", save: "שמירת שינויים", cancel: "ביטול", back: "חזרה", organization: "עסק", view: "צפייה",
     open: "פתיחה", all: "הכול", none: "אין", yes: "כן", no: "לא", page: "עמוד", of: "מתוך", previous: "הקודם", next: "הבא",
@@ -288,6 +289,7 @@ const he: Dict = {
     pending: "ממתין", indexed: "אונדקס", active: "פעיל", blocked: "חסום", inactive: "לא פעיל", partially_received: "התקבל חלקית",
     received: "התקבל", closed: "סגור", cancelled: "בוטל", matched: "תואם", discrepancies: "פערים", superseded: "הוחלף", info: "מידע", escalated: "הועבר למנהל",
   },
+  severity: { critical: "קריטי", warning: "אזהרה", info: "מידע" },
   finding: {
     UNRECOGNIZED_SUPPLIER: "ספק לא מוכר", AMBIGUOUS_SUPPLIER: "ספק לא חד-משמעי", SUPPLIER_BLOCKED: "ספק חסום",
     DUPLICATE_INVOICE: "חשבונית כפולה", POSSIBLE_DUPLICATE: "חשד לכפילות", MISSING_PURCHASE_ORDER: "אין הזמנת רכש",
@@ -340,7 +342,7 @@ const he: Dict = {
     correct_extraction: "תיקון החילוץ",
   },
   login: {
-    heroTitle: "חשבוניות ספקים, מותאמות ומוסברות.", pointRead: "קוראת חשבוניות בעברית ובאנגלית, סריקות וצילומים",
+    heroTitle: "חשבוניות ספקים, מותאמות ומוסברות", evidence: { title: "חשבונית מס HC-8870", supplier: "חרמון קלייה בע\"מ", item1: "פולי קפה אספרסו 1 ק\"ג", item2: "כוסות נייר 8oz", subtotal: "סה\"כ לפני מע\"מ", vat: "מע\"מ 18%", total: "סה\"כ לתשלום", tag: "נקרא מעמוד 1 · תואם להזמנה PO-2026-1011" }, pointRead: "קוראת חשבוניות בעברית ובאנגלית, סריקות וצילומים",
     pointMatch: "מתאימה כל שורה מול הזמנות רכש ותעודות קבלת טובין", pointExplain: "מסבירה כל חריגה עם ראיות מצוטטות, והאדם מחליט",
     synthetic: "סביבת הדגמה עם נתונים סינתטיים.",
     title: "כניסה ל-InvoiceFlow", email: "דוא\"ל עבודה", password: "סיסמה", submit: "כניסה", failed: "הדוא\"ל או הסיסמה שגויים.",
@@ -467,7 +469,7 @@ const he: Dict = {
     sent: "אם לכתובת הזו יש חשבון, קישור לאיפוס בדרך אליה. הקישור לשימוש אחד ותקף לשעה. כדאי לבדוק גם בתיקיית הספאם.",
     noEmail: "איפוס סיסמה בדוא\"ל אינו מוגדר בהתקנה הזו. אפשר לבקש ממנהל/ת המערכת להגדיר לך סיסמה חדשה.",
     backToLogin: "חזרה לכניסה", resetTitle: "בחירת סיסמה חדשה", resetSub: "בחירת סיסמה חדשה מנתקת אותך מכל המכשירים.",
-    inviteTitle: "ברוכים הבאים! בחירת סיסמה", inviteSub: "בחרו סיסמה כדי להשלים את ההצטרפות לצוות.",
+    inviteTitle: "בחירת סיסמה", inviteSub: "בחרו סיסמה כדי להשלים את ההצטרפות לצוות.",
     newPassword: "סיסמה חדשה", confirm: "הקלדת הסיסמה שוב", mismatch: "הסיסמאות אינן זהות.", save: "שמירת הסיסמה",
     done: "הסיסמה נשמרה. אפשר להיכנס עכשיו.", invalid: "הקישור אינו תקף או שפג תוקפו. אפשר לבקש קישור חדש.",
     missingToken: "הקישור חסר. יש לפתוח אותו שוב מתוך ההודעה.", signIn: "כניסה" },

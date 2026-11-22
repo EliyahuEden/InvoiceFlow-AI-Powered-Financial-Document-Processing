@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CopilotPanel } from "@/components/copilot";
 import { I18nProvider } from "@/lib/i18n";
+import { at } from "../support/at";
 
 const post = vi.fn();
 let path = "/invoices/inv-9";
@@ -51,7 +52,7 @@ describe("AP Copilot panel", () => {
     askVia("What should I review first?");
     fireEvent.click(await screen.findByRole("button", { name: "Show the goods receipt" }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
-    expect(post.mock.calls[1][1].history).toEqual([
+    expect(at(post.mock.calls, 1)[1].history).toEqual([
       { role: "user", content: "What should I review first?" },
       { role: "assistant", content: reply().answer }]);
   });

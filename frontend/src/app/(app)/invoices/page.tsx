@@ -12,6 +12,7 @@ import { Button, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Table, Td
 import { qs, useApi } from "@/lib/api";
 import { date, money, relative } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 
 export type InvoiceRow = {
   id: string; status: string; invoice_number: string | null; supplier_name: string | null; supplier_name_en: string | null;
@@ -52,10 +53,10 @@ function InvoiceInbox() {
   const counts = data?.status_counts ?? {};
   const totalAll = Object.values(counts).reduce((a, b) => a + b, 0);
   const metrics = [
-    { label: t.overview.invoices, value: totalAll, icon: Files, tone: "bg-accent-soft text-accent-ink" },
+    { label: t.overview.invoices, value: totalAll, icon: Files, tone: "bg-sunken text-ink-3" },
     { label: t.status.exception, value: counts.exception ?? 0, icon: TriangleAlert, tone: "bg-danger-soft text-danger" },
-    { label: t.status.reconciled, value: counts.reconciled ?? 0, icon: CheckCircle2, tone: "bg-ok-soft text-ok" },
-    { label: t.status.processing, value: counts.processing ?? 0, icon: Loader, tone: "bg-info-soft text-info" },
+    { label: t.status.reconciled, value: counts.reconciled ?? 0, icon: CheckCircle2, tone: "bg-sunken text-ink-3" },
+    { label: t.status.processing, value: counts.processing ?? 0, icon: Loader, tone: "bg-sunken text-ink-3" },
   ];
   const sortHeading = (key: string, label: string, end = false) => {
     const active = sort.replace(/^-/, "") === key;
@@ -76,11 +77,11 @@ function InvoiceInbox() {
       />
       <dl className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {metrics.map(({ label, value, icon: Icon, tone }) => (
-          <div key={label} className="command-metric flex min-w-0 items-center gap-3 px-3 py-4 sm:px-5">
-            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone}`}><Icon className="h-5 w-5" aria-hidden /></span>
-            <div className="min-w-0"><dt className="text-xs font-medium text-ink-2 sm:text-sm">{label}</dt>
-              <dd className="mt-1 text-2xl font-semibold leading-none tracking-tight text-ink num sm:text-3xl">{data ? value : "—"}</dd>
-            </div>
+          // dl > div > dt + dd: the icon sits in the same grid, so each label stays paired with its number
+          <div key={label} className="command-metric grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 px-3 py-4 sm:px-5">
+            <span className={`row-span-2 grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone}`} aria-hidden><Icon className="h-5 w-5" /></span>
+            <dt className="min-w-0 text-xs font-medium text-ink-2 sm:text-sm">{label}</dt>
+            <dd className="mt-1 min-w-0 text-2xl font-semibold leading-none tracking-tight text-ink num sm:text-3xl">{data ? value : "—"}</dd>
           </div>
         ))}
       </dl>
@@ -96,7 +97,7 @@ function InvoiceInbox() {
             onChange={changeStatus}
             options={FILTERS.map((f) => ({
               value: f,
-              label: f === "" ? t.inbox.filterAll : f === "processing,failed" ? `${t.status.processing} / ${t.status.failed}` : (t.status as Record<string, string>)[f],
+              label: f === "" ? t.inbox.filterAll : f === "processing,failed" ? `${t.status.processing} / ${t.status.failed}` : label(t.status, f),
               count: !data ? undefined : f === "" ? totalAll : f.split(",").reduce((a, s) => a + (counts[s] ?? 0), 0),
             }))}
           />
@@ -130,7 +131,7 @@ function InvoiceInbox() {
                     </Link>
                   </Td>
                   <Td className="max-w-[16rem]">
-                    <span dir="auto" className={`block truncate ${r.supplier_matched ? "text-ink" : "text-ink-3 italic"}`}>
+                    <span dir="auto" className={`block truncate ${r.supplier_matched ? "text-ink" : "text-ink-3"}`}>
                       {locale === "en" && r.supplier_name_en ? r.supplier_name_en : r.supplier_name ?? "—"}
                     </span>
                     {r.po_reference && <bdi className="block font-mono text-xs text-ink-3">{r.po_reference}</bdi>}

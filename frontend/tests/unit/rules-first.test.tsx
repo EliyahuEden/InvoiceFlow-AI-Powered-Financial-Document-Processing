@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RulesFirstReport } from "@/components/rules-first";
 import { I18nProvider } from "@/lib/i18n";
+import type { ExtractionResult } from "@/lib/eval-types";
 
 const router = { documents: 73, sent_to_llm: 12, with_errors: 29, errors_sent: 12, clean_sent: 0,
   share_sent_to_llm: 0.164, error_recall: 0.414, gap_counts: { total: 8, subtotal: 7, invoice_date: 4 } };
@@ -14,8 +15,9 @@ const measured = {
   },
 };
 
+// fixtures carry only the fields this report reads, so they are partial benchmark files
 const show = (r: unknown, locale: "en" | "he" = "en") =>
-  render(<I18nProvider initial={locale}><RulesFirstReport r={r} /></I18nProvider>);
+  render(<I18nProvider initial={locale}><RulesFirstReport r={r as ExtractionResult | undefined} /></I18nProvider>);
 
 describe("rules-first report", () => {
   afterEach(cleanup);

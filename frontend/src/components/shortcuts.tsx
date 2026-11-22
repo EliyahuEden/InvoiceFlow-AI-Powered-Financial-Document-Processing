@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { Kbd } from "./command-palette";
+import { Kbd } from "./kbd";
 import { Button } from "./ui";
 
 /** "?" overlay listing every shortcut. Financial decisions never have a single-key shortcut. */

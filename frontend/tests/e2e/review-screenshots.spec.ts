@@ -13,12 +13,13 @@ test("capture the review workflow in both themes and directions", async ({ page,
   const items = (await queue.json()).items as { exception_id: string; finding_types: string[] }[];
   const example = items.find((item) => item.finding_types.some((type) => type.startsWith("QTY_") || type === "PRICE_MISMATCH")) ?? items[0];
   expect(example).toBeDefined();
+  if (!example) return;
   for (const locale of ["he", "en"]) {
     await page.context().addCookies([{ name: "if_locale", value: locale, url: baseURL! }]);
     for (const theme of ["light", "dark"]) {
       await page.goto("/");
       await page.evaluate((value) => localStorage.setItem("if_theme", value), theme);
-      for (const [name, path] of [["dashboard", "/"], ["queue", "/exceptions"], ["workspace", `/exceptions/${example.exception_id}`]]) {
+      for (const [name, path] of [["dashboard", "/"], ["queue", "/exceptions"], ["workspace", `/exceptions/${example.exception_id}`]] as const) {
         await page.setViewportSize({ width: 1440, height: 1000 });
         await page.goto(path);
         await expect(page.locator("main .skeleton").first()).toHaveCount(0);

@@ -85,3 +85,17 @@ plus one business with 100,000 of each, queried as the restricted application ro
 - Connection pool: 10 + 10 overflow per process with `pool_pre_ping`. Behind a managed pooler (PgBouncer in
   transaction mode), keep it smaller per process.
 - Remaining cost: the list's total count reads every row of the business (about 22 ms at 100,000 invoices).
+
+## Accessibility (WCAG 2.2 A/AA)
+
+`frontend/tests/e2e/a11y.spec.ts` runs axe-core on the rendered sign-in pages and 13 core screens in Hebrew and
+English, light and dark (58 variants), and fails on any serious or critical violation.
+
+- First scan: 5 rule failures, all serious. Definition lists with extra wrappers on the invoice and review-queue
+  metrics; the language and search buttons named differently from their visible text (speech control could not
+  activate them); the document viewer's scroll area unreachable by keyboard; a severity dot conveyed by colour only,
+  with an English-only label.
+- After the fixes: 0 violations of any impact. The viewer's zoom and download buttons are now translated too.
+- Checked by hand: the skip link is the first Tab stop, the viewer area takes focus with a visible outline, and the
+  page sets `lang` and `dir`. axe covers only part of WCAG; a screen-reader pass (NVDA, VoiceOver) and 200% zoom
+  remain to be done by a person.

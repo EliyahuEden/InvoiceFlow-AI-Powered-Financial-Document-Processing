@@ -1,4 +1,5 @@
 import type { Dictionary } from "./i18n/dictionaries";
+import { label } from "@/lib/i18n/label";
 
 type ParamValue = string | number | null | undefined;
 
@@ -14,7 +15,7 @@ export type FindingLike = {
 
 function displayValue(t: Dictionary, name: string, v: ParamValue): string {
   if (v === null || v === undefined || v === "") return name === "name" ? t.common.unknown : t.common.notPrinted;
-  if (name === "status") return (t.status as Record<string, string>)[String(v)] ?? String(v);
+  if (name === "status") return label(t.status, String(v));
   return String(v);
 }
 

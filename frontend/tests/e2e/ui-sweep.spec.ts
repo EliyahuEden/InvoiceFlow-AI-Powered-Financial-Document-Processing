@@ -86,7 +86,8 @@ test("every screen renders in both themes at desktop, tablet and mobile widths",
   const applicationErrors = errors.filter((message) => {
     const cancelled = message.match(/^Failed to fetch RSC payload for (.+?)\. Falling back to browser navigation\./);
     // Hard navigations can cancel Next's speculative requests; require browser cancellation evidence.
-    return !cancelled || !cancelledPrefetchPaths.has(routePath(cancelled[1]));
+    const href = cancelled?.[1];
+    return !href || !cancelledPrefetchPaths.has(routePath(href));
   });
   expect(applicationErrors, "uncaught exceptions or console errors during the screen sweep").toEqual([]);
 });

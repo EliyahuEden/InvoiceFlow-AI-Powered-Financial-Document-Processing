@@ -7,6 +7,7 @@ import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "./session";
 import { Button, Field, Input, Panel, PanelHeader, Select, Table, Td, Th } from "./ui";
+import { label } from "@/lib/i18n/label";
 
 type Member = { id: string; email: string; full_name: string; role: string; is_active: boolean };
 const ROLES = ["admin", "finance_reviewer", "procurement_manager", "read_only"];
@@ -85,7 +86,7 @@ export function TeamPanel() {
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></Field>
           <Field label={t.common.role} htmlFor="tm-role"><Select id="tm-role" className="w-full" value={form.role}
             onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-            {ROLES.map((r) => <option key={r} value={r}>{(t.roles as Record<string, string>)[r]}</option>)}</Select></Field>
+            {ROLES.map((r) => <option key={r} value={r}>{label(t.roles, r)}</option>)}</Select></Field>
           <Field label={tm.password} htmlFor="tm-password" hint={emailOn ? tm.inviteHint : tm.passwordHint}>
             <div className="flex gap-2"><Input id="tm-password" dir="ltr" value={form.password} maxLength={200}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
@@ -105,8 +106,8 @@ export function TeamPanel() {
             <Td><span className="ltr font-mono text-sm">{m.email}</span></Td>
             <Td>{admin && m.id !== me?.user.id ? (
               <Select aria-label={`${t.common.role} · ${m.full_name}`} value={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
-                {ROLES.map((r) => <option key={r} value={r}>{(t.roles as Record<string, string>)[r]}</option>)}
-              </Select>) : (t.roles as Record<string, string>)[m.role]}</Td>
+                {ROLES.map((r) => <option key={r} value={r}>{label(t.roles, r)}</option>)}
+              </Select>) : label(t.roles, m.role)}</Td>
             {admin && <Td className="text-end">{m.id !== me?.user.id && (confirming === m.id
               ? <span className="inline-flex gap-1.5"><Button size="sm" variant="danger" onClick={() => remove(m.id)}>{tm.confirmRemove}</Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirming(null)}>{t.common.cancel}</Button></span>

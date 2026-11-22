@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/shell";
 import { I18nProvider } from "@/lib/i18n";
+import { at } from "../support/at";
 
 const push = vi.fn();
 const get = vi.fn(async (path: string) => {
@@ -26,25 +27,25 @@ afterEach(() => { cleanup(); push.mockClear(); get.mockClear(); });
 const shell = () => render(<I18nProvider initial="en"><AppShell><h1>Page</h1></AppShell></I18nProvider>);
 
 describe("command palette", () => {
-  it("opens with Ctrl+K and lists destinations", () => {
+  it("opens with Ctrl+K and lists destinations", async () => {
     shell();
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
-    const dialog = screen.getByRole("dialog", { name: "Command palette" });
+    const dialog = await screen.findByRole("dialog", { name: "Command palette" });
     expect(within(dialog).getByText("Suppliers")).toBeVisible();
     expect(within(dialog).getByText("Review next priority")).toBeVisible();
   });
 
-  it("opens from the top-bar search button", () => {
+  it("opens from the top-bar search button", async () => {
     shell();
-    fireEvent.click(screen.getAllByRole("button", { name: /Search or jump to/ })[0]);
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+    fireEvent.click(at(screen.getAllByRole("button", { name: /Search or jump to/ }), 0));
+    expect(await screen.findByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
   });
 
   it("searches invoices and suppliers through the real list APIs and navigates", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     shell();
     fireEvent.keyDown(window, { key: "k", metaKey: true });
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "BlueWave" } });
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "BlueWave" } });
     await act(async () => { vi.advanceTimersByTime(400); });
     await waitFor(() => expect(screen.getByText("BW-2026-0412")).toBeVisible());
     expect(get).toHaveBeenCalledWith(expect.stringContaining("/api/invoices?q=BlueWave"));
@@ -55,13 +56,13 @@ describe("command palette", () => {
 });
 
 describe("keyboard shortcuts", () => {
-  it("? opens the shortcuts overlay, but not while typing", () => {
+  it("? opens the shortcuts overlay, but not while typing", async () => {
     shell();
     fireEvent.keyDown(window, { key: "?" });
-    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
   });
 
-  it("g then q goes to the priority queue", () => {
+  it("g then q goes to the priority queue", async () => {
     shell();
     fireEvent.keyDown(window, { key: "g" });
     fireEvent.keyDown(window, { key: "q" });

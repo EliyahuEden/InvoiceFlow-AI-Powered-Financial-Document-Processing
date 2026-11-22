@@ -24,7 +24,8 @@ const buttonStyles = cva(
         secondary: "bg-surface text-ink ring-1 ring-inset ring-line-strong/70 hover:bg-sunken",
         ghost: "text-ink-2 hover:bg-surface/70 hover:text-ink",
         danger: "bg-surface text-danger ring-1 ring-inset ring-danger/40 hover:bg-danger-soft",
-        ai: "bg-ai-soft text-ai ring-1 ring-inset ring-ai-line hover:bg-ai/10",
+        // AI actions look like any other action: no special colour or sparkle; their results are labelled AI
+        ai: "bg-surface text-ink ring-1 ring-inset ring-line-strong/70 hover:bg-sunken",
       },
       size: { sm: "h-8 px-3.5 text-sm", md: "h-10 px-4 text-base", lg: "h-12 px-6 text-md", icon: "h-9 w-9" },
     },

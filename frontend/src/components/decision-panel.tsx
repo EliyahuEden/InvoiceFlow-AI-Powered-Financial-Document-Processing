@@ -4,6 +4,7 @@ import { Check, GitBranch, HelpCircle, ShieldAlert, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { ActionLabel } from "./domain";
 import { Button, Field, Panel, PanelHeader, Select, Textarea } from "./ui";
+import { label } from "@/lib/i18n/label";
 
 export type Decision = "approve" | "reject" | "request_info" | "escalate";
 
@@ -34,7 +35,7 @@ export function DecisionPanel({ proposedAction, detail, allowedActions, note, ov
         {canDecide && <Field label={t.exceptions.changeAction} htmlFor="override">
           <Select id="override" className="w-full" value={override} onChange={(ev) => onOverride(ev.target.value)} disabled={!!busy}>
             <option value="">—</option>
-            {allowedActions.map((action) => <option key={action} value={action}>{(t.action as Record<string, string>)[action] ?? action}</option>)}
+            {allowedActions.map((action) => <option key={action} value={action}>{label(t.action, action)}</option>)}
           </Select>
         </Field>}
         {canRequestInfo && <Field label={t.review.target} htmlFor="request-target">

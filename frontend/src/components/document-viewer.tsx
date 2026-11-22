@@ -23,8 +23,9 @@ export function locateQuote(words: Word[], quote: string): number[][] {
   for (const [line, ws] of byLine) {
     const lineWords = words.filter((w) => w.l === line).length;
     if (ws.length >= Math.min(3, tokens.size) || ws.length / lineWords > 0.5) {
-      boxes.push([Math.min(...ws.map((w) => w.b[0])), Math.min(...ws.map((w) => w.b[1])),
-        Math.max(...ws.map((w) => w.b[2])), Math.max(...ws.map((w) => w.b[3]))]);
+      const bs = ws.map((w) => toBox(w.b)).filter((b): b is Box => b !== null);
+      if (bs.length) boxes.push([Math.min(...bs.map((b) => b[0])), Math.min(...bs.map((b) => b[1])),
+        Math.max(...bs.map((b) => b[2])), Math.max(...bs.map((b) => b[3]))]);
     }
   }
   return boxes;
@@ -70,9 +71,9 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
           </span>
         )}
         <div className="flex items-center gap-0.5">
-          <Button size="icon" variant="ghost" onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} aria-label="Zoom out"><Minus className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} aria-label={t.common.zoomOut}><Minus className="h-4 w-4" /></Button>
           <span className="w-10 text-center text-xs text-ink-3 num">{Math.round(zoom * 100)}%</span>
-          <Button size="icon" variant="ghost" onClick={() => setZoom((z) => Math.min(2.2, z + 0.2))} aria-label="Zoom in"><Plus className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={() => setZoom((z) => Math.min(2.2, z + 0.2))} aria-label={t.common.zoomIn}><Plus className="h-4 w-4" /></Button>
         </div>
         {pageCount > 1 && (
           <div className="flex items-center gap-0.5 border-s border-line ps-2">
@@ -85,11 +86,12 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
             </Button>
           </div>
         )}
-        <Button asChild size="icon" variant="ghost" aria-label="Download original">
+        <Button asChild size="icon" variant="ghost" aria-label={t.common.downloadOriginal}>
           <a href={`/api/documents/${documentId}/file`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
         </Button>
       </div>
-      <div className="flex-1 overflow-auto p-4">
+      {/* focusable, so keyboard users can scroll the pages with the arrow and Page keys */}
+      <div className="flex-1 overflow-auto p-4" tabIndex={0} role="region" aria-label={t.common.documentPages}>
         <div className="relative mx-auto bg-surface shadow-raise" style={{ width: `${zoom * 100}%`, maxWidth: zoom > 1 ? "none" : "100%" }}>
           {status === "loading" && <div className="skeleton aspect-[1/1.414] w-full" />}
           {status === "failed" && <ErrorState message={t.invoice.evidenceUnavailable} retryLabel={t.common.retry}
@@ -105,7 +107,7 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
           />}
           {loaded && shown.map((h) => (
             <div key={h.id} title={h.label}
-              className={cx("pointer-events-none absolute rounded-[2px] transition-all duration-150",
+              className={cx("pointer-events-none absolute rounded-[2px] transition-[background-color,box-shadow] duration-150",
                 h.id === activeId ? "bg-hl/35 ring-2 ring-hl" :
                 h.tone === "finding" ? "bg-danger/10 ring-1 ring-danger/50" : "bg-accent/[0.06] ring-1 ring-accent/25")}
               style={pad(h.bbox)} />
@@ -119,7 +121,18 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
   );
 }
 
-function pad(b: number[]): React.CSSProperties {
+/** A page box [x0, y0, x1, y1] in 0..1 page fractions; anything else (missing or non-numeric values) is not drawn. */
+export type Box = readonly [number, number, number, number];
+export function toBox(b: readonly unknown[] | null | undefined): Box | null {
+  if (!b || b.length < 4) return null;
+  const [x0, y0, x1, y1] = b;
+  return typeof x0 === "number" && typeof y0 === "number" && typeof x1 === "number" && typeof y1 === "number"
+    && [x0, y0, x1, y1].every(Number.isFinite) ? [x0, y0, x1, y1] : null;
+}
+
+function pad(raw: readonly number[]): React.CSSProperties {
+  const b = toBox(raw);
+  if (!b) return { display: "none" };
   const p = 0.004;
   return { left: `${(b[0] - p) * 100}%`, top: `${(b[1] - p) * 100}%`, width: `${(b[2] - b[0] + 2 * p) * 100}%`, height: `${(b[3] - b[1] + 2 * p) * 100}%` };
 }

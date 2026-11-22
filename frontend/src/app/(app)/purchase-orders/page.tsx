@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, Panel, Table, Td, Th } from "@/components/ui";
 import { qs, useApi } from "@/lib/api";
 import { date, money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 
 type PO = { id: string; po_number: string; supplier_name: string; supplier_name_en: string | null; order_date: string; currency: string;
   status: string; line_count: number; total: string };
@@ -30,7 +31,7 @@ export default function POsPage() {
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
           <Segmented value={status} onChange={(v) => { setStatus(v); setPage(1); }}
-            options={["", "open", "partially_received", "received"].map((s) => ({ value: s, label: s ? (t.status as Record<string, string>)[s] : t.common.all }))} />
+            options={["", "open", "partially_received", "received"].map((s) => ({ value: s, label: s ? label(t.status, s) : t.common.all }))} />
           <SearchBox value={q} onChange={onQ} placeholder={`${t.common.search}: ${t.pos.number}, ${t.common.supplier}`} />
         </div>
         <Table>
