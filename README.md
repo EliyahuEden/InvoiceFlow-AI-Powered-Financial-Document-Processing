@@ -4,6 +4,15 @@
 
 InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, English or mixed). It extracts and **verifies** every field against the document, then runs **two-way and three-way matching** against purchase orders and goods receipts in a deterministic `Decimal` engine. When something is wrong, a **LangGraph agent** investigates. It retrieves the relevant clauses from supplier agreements and purchasing policies (Hebrew-first hybrid RAG with reranking) and drafts an **evidence-backed, cited** summary. Then it stops and waits for a person: a reviewer decides, and every step lands in a **hash-chained audit trail**. No model can approve or pay anything.
 
+## Demo
+
+1. Sign in to the quick-start stack as `finance@kinneret.example`. On **Upload**, choose `upload_tavor_correct_he` and open **Reconciliation** to see the clean three-way match.
+2. Upload `upload_hermon_price_mismatch_he`. Open **Reconciliation** to compare the invoiced unit price of ₪124 with the PO price of ₪118.
+3. In **AI investigation**, open a citation to see the relevant clause in the source PDF. Open the exception, write a reviewer note and approve the proposed resolution.
+4. In **Audit trail**, find the decision and select **Verify chain**. Use **Ask Copilot** to ask which cases need attention or how much is at risk by currency.
+
+[Recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) · [Interview demo script](docs/DEMO_SCRIPT.md) · [AP Copilot capabilities](docs/COPILOT.md)
+
 ![Invoice with extracted-field provenance](docs/screenshots/03-invoice-document.png)
 
 | | |
@@ -25,10 +34,11 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
   - prefix-aware Hebrew normalization, clause chunking, BM25, multilingual dense retrieval, RRF and a cross-encoder reranker;
   - verified citations that open the source PDF at the highlighted passage;
   - abstention when evidence is missing; injected passages are screened out;
-  - **benchmarked rather than assumed** (dense retrieval loses to BM25 on Hebrew here, see below).
+  - evaluation on calibration and held-out questions in Hebrew, English and mixed language.
 - **Agent with guard-rails:** LangGraph with typed, RBAC-checked tools; tenant and supplier scope enforced by code; PostgreSQL checkpoints with crash recovery; a human-approval interrupt; no payment tools.
 - **Multi-tenant SaaS foundations:**
   - RBAC (4 roles), tenant isolation in the app **and** in PostgreSQL row-level security;
+  - self-service organization sign-up, team management and workspace switching;
   - revocable server-side sessions: 15-minute access tokens, rotating refresh tokens with reuse detection, single-use SSE tickets;
   - segregated two-step approvals;
   - append-only, hash-chained audit log;
@@ -37,8 +47,31 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 - **Evaluation and observability:** separate benchmarks for extraction, RAG and reconciliation, with an in-app dashboard; telemetry for every model call (latency, tokens, cost when priced, errors, tool calls).
 - **Product-grade UI:** Next.js 15, Tailwind, Radix/shadcn-style components, Recharts; **Hebrew RTL by default** with English; light and dark themes; 13+ pages.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Reviewer[Reviewer] --> Web[Next.js review workspace]
+    Web --> API[FastAPI and role checks]
+    API --> DB[(PostgreSQL and pgvector)]
+    API --> Files[(S3 document storage)]
+    DB --> Worker[Background worker]
+    Files --> Worker
+    Worker --> Extract[Text extraction and OCR]
+    Extract --> Match[Decimal reconciliation]
+    Match --> Agent[LangGraph investigation]
+    Agent --> Knowledge[Hybrid policy retrieval]
+    API --> Copilot[Read-only AP Copilot]
+    Copilot --> Knowledge
+    Worker --> Live[Redis progress events]
+    Live --> API
+    API --> Audit[Hash-chained audit trail]
+```
+
+Uploaded documents and their jobs are committed together. Workers claim jobs with leases and a bounded retry budget. Reconciliation produces the findings and approval route. The agent and Copilot retrieve evidence through role-checked tools, and the API records human decisions. [Architecture details](docs/ARCHITECTURE.md)
+
 ## Quick start
-Requirements: Docker Desktop (about 6 GB of free disk for images and models). Ports used: 3000 (web), 8010 (API), 5433, 6380, 8333.
+Run Docker Desktop with enough disk space for the images and model cache. The web app uses port 3000 and the API uses 8010. The data services use 5433, 6380 and 8333.
 
 ```bash
 git clone <this repo> invoiceflow && cd invoiceflow
@@ -47,7 +80,7 @@ docker compose exec api python -m app.cli seed --reset   # fictional demo org + 
 ```
 Then open http://localhost:3000.
 
-On the first run the worker downloads the local embedding model (220 MB). The first knowledge-base question with the reranker enabled downloads another 1.1 GB; set `RERANKER_BACKEND=none` to skip it.
+On the first run the worker downloads multilingual-e5-large, a roughly 2.1 GB embedding model. The reranker downloads separately on first use. Set `RERANKER_BACKEND=none` to skip the reranker.
 
 **Demo accounts** (fictional organization "כנרת אירוח"). These are demo-only credentials, shared by all accounts: password `InvoiceFlow!2026`.
 | Email | Role |
@@ -57,13 +90,6 @@ On the first run the worker downloads the local embedding model (220 MB). The fi
 | `admin@kinneret.example` | Administrator (settings, second approval) |
 | `viewer@kinneret.example` | Read-only |
 | `admin@yarden.example` | Admin of a *second* tenant (to show isolation) |
-
-**Try it:**
-1. Go to Upload, then "Try a sample", then `upload_hermon_price_mismatch_he` (a Hebrew PDF).
-2. Watch the live pipeline.
-3. Open the invoice and check the Reconciliation tab (price +5.1%).
-4. Open the AI-investigation tab (cited clauses) and the exception.
-5. Approve the proposal with a note, then look at the History and Audit pages.
 
 The 13 seeded invoices cover each scenario: correct, quantity mismatch, price mismatch, duplicate, missing PO, ambiguous description, OCR scan, prompt injection, ambiguous supplier, missing GR, currency mismatch, multi-page, photo.
 
@@ -76,13 +102,15 @@ These come from the scripts in `/eval`; the JSON is in `eval/results/` and is re
 
 | Component | Headline (honest scope) |
 |---|---|
-| Extraction, rule-based baseline, 73 synthetic docs | Field accuracy **0.917**: native 0.976, scanned 0.758, photo 0.705. **Held-out layouts (v2, scored once before and once after the layout-tolerant parser): 0.278 → 0.830.** Line-item F1 0.944. Absent fields returned as null in 57/57 cases. |
-| Retrieval, 50 hand-written questions (he/en/mixed/multi-doc/conflicting/unanswerable) | Clause + hybrid + rerank: **R@5 0.940, nDCG@5 0.870, MRR 0.859**. Dense MiniLM alone: MRR 0.642. BM25: MRR 0.860. Reranking costs about 1 s/query on CPU. On 35 **held-out** questions: R@5 0.980, MRR 0.960. |
-| Grounded answers (offline extractive) | Correctness 0.643, citation accuracy 0.686, abstention P / R 0.80 / 1.00 (threshold calibrated on this set), injection parroting 0/1. **Held out:** correctness 0.760, abstention P / R 0.78 / 0.70. |
+| Extraction on 73 synthetic documents | **92.0%** field accuracy with rules. Rules-first with Groq GPT-OSS 120B reached **92.5%** and called the model on 12 of 73 documents. On 16 held-out layouts, accuracy was 84.7% with rules and 86.4% with rules-first. [Results](eval/results/extraction_latest.json) |
+| Policy retrieval on the held-out set | Multilingual-e5-large, clause chunks, hybrid search and reranking achieved **1.00 recall@5** and **0.950 MRR** on the 25 answerable questions in the 35-question held-out set. [Results](eval/results/rag_e5_latest.json) |
+| Offline extractive answers on the held-out set | **72%** answer correctness on the 25 answerable questions and **73.3%** citation accuracy. The system refused 6 of 10 unanswerable questions and 2 of 25 answerable ones. [Results](eval/results/rag_e5_latest.json) |
+| Live policy answers on 35 held-out questions | **33/35 passed** with Groq GPT-OSS 120B. The model answered 23 of 25 answerable questions correctly and refused all 10 unanswerable questions. A pass requires the labelled facts and sources for an answer, or a correct refusal. [Results](eval/results/rag_llm_latest.json) |
+| Live AP Copilot on 32 catalogue prompts | The initial Groq GPT-OSS 120B run passed **23/32 (71.9%)** against expected tools, filters and facts. [Results](eval/results/copilot_llm_latest.json) |
 | Reconciliation, 348 controlled cases | P = R = 1.00 on all 12 types; **0 false alarms** on 123 clean or near-miss invoices |
 | End to end (PDF → OCR/extraction → engine), 13 demo docs | 13/13 scenarios exact, P = R = 1.00 (was 12/13 because of a PO-label extraction bug, now fixed). |
 
-LLM extraction and answering are **not** benchmarked here, because that needs a paid API. `run_extraction_eval.py --llm` measures it once you configure a provider. Full methodology and limitations: [docs/EVALUATION_PLAN.md](docs/EVALUATION_PLAN.md).
+The benchmark datasets are synthetic. See the dataset definitions, scoring rules and limitations in the evaluation plan. [Evaluation methodology](docs/EVALUATION_PLAN.md)
 
 ## Tests
 ```bash
@@ -118,6 +146,6 @@ All companies, people, tax IDs, e-mail domains (`.example`, reserved by RFC 2606
 - **Backend:** Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic
 - **Data:** PostgreSQL 16 + pgvector (RLS), Redis, S3 (SeaweedFS locally)
 - **Documents:** pdfplumber/pypdfium2, Tesseract, python-bidi
-- **AI:** LangGraph (+ Postgres checkpointer), Anthropic / OpenAI-compatible SDKs, fastembed (ONNX MiniLM + jina reranker)
+- **AI:** LangGraph with a PostgreSQL checkpointer, Anthropic and OpenAI-compatible SDKs, FastEmbed with multilingual-e5-large and a Jina reranker
 - **Frontend:** Next.js 15, React 19, TypeScript, Tailwind, Radix, Recharts, SWR
 - **Testing and delivery:** Pytest, Vitest, Playwright, Docker Compose, GitHub Actions

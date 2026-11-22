@@ -133,6 +133,8 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
         raise HTTPException(403, "Your role cannot decide exceptions.")
     if decision == "request_info" and not has_perm(role, Perm.EXCEPTION_COMMENT):
         raise HTTPException(403, "Your role cannot request information.")
+    inv = session.scalars(select(Invoice).where(Invoice.id == exc.invoice_id, Invoice.organization_id == exc.organization_id)
+                          .with_for_update().execution_options(populate_existing=True)).one()
     # Refresh under a row lock so a reviewer with a stale page cannot overwrite another decision.
     exc = session.scalars(select(ExceptionCase).where(ExceptionCase.id == exc.id,
                                                      ExceptionCase.organization_id == exc.organization_id)
@@ -149,16 +151,15 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
         # an escalation goes to another authorized reviewer: an administrator who did not escalate it
         if role != "admin" or escalated_by(session, exc) == user.id:
             raise HTTPException(403, "An escalated case is decided by another administrator.")
-    inv = session.get(Invoice, exc.invoice_id)
     before = {"status": exc.status, "invoice_status": inv.status}
     override: dict = {}
-    if action_override:
+    if decision == "approve" and action_override:
         if action_override not in APPROVE_EFFECT:
             raise HTTPException(422, "Unknown action.")
         if action_override != exc.proposed_action:
             # Anyone who may decide cases may override the proposed action, even over blocking findings
             # (audit FIN-06, owner's decision), but only with a written justification, recorded as an override.
-            if decision == "approve" and not (note and note.strip()):
+            if not (note and note.strip()):
                 raise HTTPException(422, "A written justification is required to override the proposed action.")
             override = {"override": True, "overridden_action": exc.proposed_action,
                         "overridden_findings": list(exc.discrepancy_types or [])}
@@ -193,7 +194,7 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
                                   "decision": {"decision": decision, "by": user.email, "note": note,
                                                "action": exc.proposed_action}},
                          idempotency_key=f"agent.resume:{run.id}")
-    events.publish(exc.organization_id, "exception.updated", {"exception_id": str(exc.id), "status": exc.status})
+    events.after_commit(session, exc.organization_id, "exception.updated", {"exception_id": str(exc.id), "status": exc.status})
     return exc
 
 
@@ -236,5 +237,5 @@ def decide_approval(session: Session, inv: Invoice, user: User, role: str, decis
     audit.record(session, org_id=inv.organization_id, action=f"approval.{decision}", entity_type="invoice",
                  entity_id=inv.id, actor_id=user.id, actor_label=user.email, before={"status": before},
                  after={"status": inv.status, "step": pending.step}, meta={"comment": comment})
-    events.publish(inv.organization_id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
+    events.after_commit(session, inv.organization_id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
     return pending

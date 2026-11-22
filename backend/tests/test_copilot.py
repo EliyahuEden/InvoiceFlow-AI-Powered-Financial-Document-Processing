@@ -72,6 +72,33 @@ def test_long_questions_are_rejected(client, as_user):
     assert ask(client, as_user("finance@kinneret.example"), "x" * 1001).status_code == 422
 
 
+def test_empty_after_trimming_question_is_rejected(client, as_user):
+    assert ask(client, as_user("finance@kinneret.example"), "  \u00a0 ").status_code == 422
+
+
+def test_model_without_tool_results_uses_the_grounded_queue_answer(client, as_user, scripted):
+    llm = scripted(ScriptedLLM(turns=[[]], answers=[{"answer": "All cases are approved."}]))
+    response = ask(client, as_user("finance@kinneret.example"), "Which cases are waiting for information?").json()
+    assert response["mode"] == "offline" and response["verified"]
+    assert response["steps"][0]["input"]["status"] == "pending_info"
+    assert "All cases are approved" not in response["answer"]
+    assert not llm.structured_calls
+
+
+def test_grounded_approval_answer_can_repeat_the_hypothetical_amount(client, as_user, scripted):
+    wording = "For an invoice of 30,000 ILS, a finance reviewer and an administrator must approve."
+    scripted(ScriptedLLM(turns=[[("approval_rules", {})], []], answers=[{"answer": wording}]))
+    response = ask(client, as_user("finance@kinneret.example"), "Who needs to approve an invoice of 30,000?").json()
+    assert response["verified"] and response["answer"] == wording
+
+
+def test_iso_date_is_not_read_as_an_unsupported_partial_number():
+    from app.services.copilot import answer_problems
+
+    assert not answer_problems("The invoice arrived on 2026-11-22.", [{"invoice_date": "2026-11-22"}], "en")
+    assert answer_problems("The invoice total is 202 ILS.", [{"invoice_date": "2026-11-22"}], "en")
+
+
 def test_copilot_tools_are_read_only():
     from app.services.copilot import COPILOT_TOOLS
     from app.services.agent.tools import TOOLS
@@ -200,6 +227,22 @@ def test_offline_question_about_one_supplier(client, as_user, seeded):
     r = ask(client, as_user("finance@kinneret.example"), "מה המצב עם חרמון קלייה?").json()
     assert r["steps"][0]["tool"] == "supplier_overview"
     assert r["citations"][0]["kind"] == "supplier"
+
+
+def test_offline_english_answers_use_available_english_supplier_names(client, as_user):
+    reviewer = as_user("finance@kinneret.example")
+    for question, expected in (("List all suppliers", "Tavor Office Supplies"),
+                               ("Tell me about Hermon Coffee", "Hermon Coffee Roasters"),
+                               ("What is the status of PO-2026-1001?", "Tavor Office Supplies")):
+        response = ask(client, reviewer, question)
+        assert response.is_success
+        assert expected in response.json()["answer"]
+
+
+def test_offline_empty_queue_answer_names_the_requested_filter(client, as_user):
+    response = ask(client, as_user("finance@kinneret.example"), "Which invoices are overdue?")
+    assert response.is_success
+    assert "no overdue" in response.json()["answer"].lower()
 
 
 def test_offline_refusal_is_in_the_readers_language(client, as_user):

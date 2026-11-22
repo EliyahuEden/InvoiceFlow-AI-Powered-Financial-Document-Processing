@@ -17,8 +17,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Job
-from app.services import events
+from app.core.db import session_scope, set_session_org
+from app.models import Document, Invoice, Job, KnowledgeDocument
+from app.services import audit, events
+
+
+class LeaseLost(RuntimeError):
+    """The attempt no longer owns the job and must roll back its work."""
 
 
 def enqueue(
@@ -72,19 +77,41 @@ def claim_next(session: Session, worker_id: str) -> Job | None:
     ).scalar_one_or_none()
     if job is None:
         return None
+    if job.attempts >= job.max_attempts:
+        set_session_org(session, job.organization_id)
+        return mark_failed(session, job.id, "Worker lease expired on the final attempt")
     job.status = "running"
     job.locked_at = now
     job.locked_by = worker_id
     job.attempts += 1
+    job.progress = 0
+    job.progress_message = None
+    job.run_after = None
     session.flush()
     return job
 
 
-def report_progress(session: Session, job: Job, progress: int, message: str) -> None:
-    job.progress = progress
-    job.progress_message = message
-    job.locked_at = datetime.now(UTC)  # heartbeat
-    session.flush()
+def _owned_attempt(job_id: uuid.UUID, worker_id: str, attempt: int):
+    return (Job.id == job_id, Job.status == "running", Job.locked_by == worker_id, Job.attempts == attempt)
+
+
+def lock_attempt(session: Session, job_id: uuid.UUID, worker_id: str, attempt: int) -> None:
+    job = session.scalar(select(Job.id).where(*_owned_attempt(job_id, worker_id, attempt)).with_for_update())
+    if job is None:
+        raise LeaseLost(str(job_id))
+
+
+def renew_lease(job_id: uuid.UUID, worker_id: str, attempt: int, **progress) -> None:
+    with session_scope() as session:
+        updated = session.execute(update(Job).where(*_owned_attempt(job_id, worker_id, attempt)).values(
+            locked_at=datetime.now(UTC), **progress))
+        if not updated.rowcount:
+            raise LeaseLost(str(job_id))
+
+
+def report_progress(_session: Session, job: Job, progress: int, message: str) -> None:
+    # Progress is independently durable. The handler's work remains atomic until it finishes.
+    renew_lease(job.id, job.locked_by, job.attempts, progress=progress, progress_message=message)
     events.publish(
         job.organization_id,
         "job.progress",
@@ -94,22 +121,28 @@ def report_progress(session: Session, job: Job, progress: int, message: str) -> 
 
 
 def mark_succeeded(session: Session, job: Job, result: dict | None = None) -> None:
+    lock_attempt(session, job.id, job.locked_by, job.attempts)
     job.status = "succeeded"
     job.progress = 100
     job.result = result or {}
+    job.last_error = None
     job.locked_at = None
+    job.locked_by = None
     session.flush()
-    events.publish(job.organization_id, "job.completed",
+    events.after_commit(session, job.organization_id, "job.completed",
                    {"job_id": str(job.id), "type": job.type, "entity_id": str(job.entity_id) if job.entity_id else None,
                     "status": "succeeded"})
 
 
-def mark_failed(session: Session, job_id: uuid.UUID, error: str) -> Job:
+def mark_failed(session: Session, job_id: uuid.UUID, error: str, *, permanent: bool = False) -> Job:
     """Record a failure; retry with exponential backoff until max_attempts."""
     job = session.get(Job, job_id)
     assert job is not None
     job.last_error = error[:4000]
     job.locked_at = None
+    job.locked_by = None
+    if permanent:
+        job.attempts = job.max_attempts
     if job.attempts < job.max_attempts:
         job.status = "queued"
         job.run_after = datetime.now(UTC) + timedelta(seconds=min(300, 2 ** job.attempts * 5))
@@ -117,16 +150,34 @@ def mark_failed(session: Session, job_id: uuid.UUID, error: str) -> Job:
     else:
         job.status = "failed"
         job.progress_message = "Failed"
+        job.run_after = None
+        _fail_document(session, job)
     session.flush()
-    events.publish(job.organization_id, "job.failed" if job.status == "failed" else "job.retrying",
+    events.after_commit(session, job.organization_id, "job.failed" if job.status == "failed" else "job.retrying",
                    {"job_id": str(job.id), "type": job.type, "entity_id": str(job.entity_id) if job.entity_id else None,
                     "status": job.status, "error": job.last_error[:300]})
     return job
 
 
-def requeue_stale(session: Session) -> int:
-    stale = datetime.now(UTC) - timedelta(seconds=get_settings().job_lock_timeout_seconds)
-    res = session.execute(
-        update(Job).where(Job.status == "running", Job.locked_at < stale).values(status="queued", locked_at=None)
-    )
-    return res.rowcount or 0
+def _fail_document(session: Session, job: Job) -> None:
+    if job.type == "invoice.process":
+        entity_type, model, payload_key = "invoice", Invoice, "invoice_id"
+    elif job.type == "knowledge.ingest":
+        entity_type, model, payload_key = "knowledge_document", KnowledgeDocument, "knowledge_document_id"
+    else:
+        return
+    entity_id = job.entity_id or job.payload.get(payload_key)
+    if entity_id is None:
+        return
+    entity = session.get(model, uuid.UUID(str(entity_id)))
+    if entity is None or entity.status != "processing":
+        return
+    entity.status = "failed"
+    document = session.get(Document, entity.document_id)
+    if document is not None:
+        document.status, document.error = "failed", job.last_error
+    audit.record(session, org_id=job.organization_id, action=f"{entity_type}.processing_failed", entity_type=entity_type,
+                 entity_id=entity.id, actor_type="system", actor_label="worker", meta={"error": job.last_error})
+    if model is Invoice:
+        events.after_commit(session, job.organization_id, "invoice.updated",
+                            {"invoice_id": str(entity.id), "status": "failed"})

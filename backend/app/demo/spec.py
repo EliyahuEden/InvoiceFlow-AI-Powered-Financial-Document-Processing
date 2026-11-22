@@ -112,22 +112,22 @@ USERS = [
 OTHER_USERS = [("admin@yarden.example", "Omer Katz", "admin", "en")]
 
 SUPPLIERS = [
-    SupplierSpec("tavor", "תבור ציוד משרדי בע\"מ", "Tavor Office Supplies Ltd", "514000127", "he",
+    SupplierSpec("tavor", "תבור ציוד משרדי בע\"מ", "Tavor Office Supplies Ltd", "514000124", "he",
                  email="billing@tavor-office.example", phone="04-6000127", address="אזור התעשייה ציפורית, נצרת עילית",
                  aliases=["תבור ציוד משרדי", "Tavor Office"]),
-    SupplierSpec("hermon", "חרמון קלייה בע\"מ", "Hermon Coffee Roasters Ltd", "515000238", "he",
+    SupplierSpec("hermon", "חרמון קלייה בע\"מ", "Hermon Coffee Roasters Ltd", "515000230", "he",
                  email="office@hermon-roast.example", phone="04-6900238", address="רחוב הגליל 4, קריית שמונה",
                  aliases=["חרמון קלייה", "Hermon Coffee"]),
-    SupplierSpec("bluewave", "BlueWave IT Solutions Ltd", "BlueWave IT Solutions Ltd", "516000349", "en",
+    SupplierSpec("bluewave", "BlueWave IT Solutions Ltd", "BlueWave IT Solutions Ltd", "516000346", "en",
                  payment_terms="Net 45", email="ar@bluewave-it.example", phone="+972-3-6000349",
                  address="22 Ha'Arba'a St, Tel Aviv", aliases=["BlueWave IT", "Blue Wave IT Solutions"]),
-    SupplierSpec("carmel_cleaning", "כרמל שירותי ניקיון בע\"מ", "Carmel Cleaning Services Ltd", "513000451", "he",
+    SupplierSpec("carmel_cleaning", "כרמל שירותי ניקיון בע\"מ", "Carmel Cleaning Services Ltd", "513000455", "he",
                  email="cs@carmel-clean.example", phone="04-8000451", address="שדרות ההסתדרות 80, חיפה",
                  aliases=["כרמל ניקיון", "כרמל קלין סרוויס", "Carmel Cleaning", "Carmel Clean Service"]),
-    SupplierSpec("carmel_cleantech", "כרמל קלין-טק בע\"מ", "Carmel Clean-Tech Ltd", "517000562", "he",
+    SupplierSpec("carmel_cleantech", "כרמל קלין-טק בע\"מ", "Carmel Clean-Tech Ltd", "517000568", "he",
                  email="info@carmel-cleantech.example", phone="04-8100562", address="רחוב העצמאות 15, חיפה",
                  aliases=["כרמל קלין טק", "Carmel CleanTech"]),
-    SupplierSpec("arava", "ערבה אריזות בע\"מ", "Arava Packaging Ltd", "518000673", "mixed",
+    SupplierSpec("arava", "ערבה אריזות בע\"מ", "Arava Packaging Ltd", "518000674", "mixed",
                  payment_terms="שוטף + 60", email="sales@arava-pack.example", phone="08-6300673",
                  address="Industrial Zone, Eilat", aliases=["Arava Packaging", "ערבה אריזות"]),
 ]
@@ -274,7 +274,7 @@ INVOICES = [
 
 # Second tenant: used to demonstrate and test tenant isolation.
 OTHER_ORG_SUPPLIERS = [
-    SupplierSpec("tavor_y", "תבור ציוד משרדי בע\"מ", "Tavor Office Supplies Ltd", "514000127", "he"),
+    SupplierSpec("tavor_y", "תבור ציוד משרדי בע\"מ", "Tavor Office Supplies Ltd", "514000124", "he"),
 ]
 OTHER_ORG_POS = [
     POSpec("PO-Y-0001", "tavor_y", D26(9, 2), [L("TV-PAP-A4", "נייר צילום A4 80 גרם (קרטון 5 חבילות)", 100, "88.00")],

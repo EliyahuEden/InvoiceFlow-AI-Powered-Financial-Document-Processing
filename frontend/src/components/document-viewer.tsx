@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Download, FileScan, Minus, Plus } from "luci
 import { useEffect, useMemo, useState } from "react";
 import { useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { Button, cx } from "./ui";
+import { Button, cx, ErrorState } from "./ui";
 
 export type Highlight = { id: string; page: number; bbox: number[]; tone?: "field" | "active" | "finding" | "citation"; label?: string };
 
@@ -37,10 +37,16 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
 }) {
   const { t } = useI18n();
   const [localPage, setLocalPage] = useState(quotePage ?? 1);
-  const page = controlledPage ?? localPage;
-  const setPage = (p: number) => { setLocalPage(p); onPage?.(p); };
+  const lastPage = Math.max(1, pageCount);
+  const boundPage = (p: number) => Number.isFinite(p) ? Math.min(lastPage, Math.max(1, Math.trunc(p))) : 1;
+  const page = boundPage(controlledPage ?? localPage);
+  const setPage = (p: number) => { const next = boundPage(p); setLocalPage(next); onPage?.(next); };
   const [zoom, setZoom] = useState(1);
-  const [loaded, setLoaded] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [imageResult, setImageResult] = useState<{ key: string; status: "loaded" | "failed" }>();
+  const imageKey = `${documentId}/${page}/${retry}`;
+  const status = imageResult?.key === imageKey ? imageResult.status : "loading";
+  const loaded = status === "loaded";
   const { data: pages } = useApi<PagesResp>(quote || pageCount > 0 ? `/api/documents/${documentId}/pages` : null);
   const pageInfo = pages?.pages.find((p) => p.page_no === page);
 
@@ -48,7 +54,6 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
   // jump to the page of the hovered/focused field (only when the active highlight changes)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (active && active.page !== page) setPage(active.page); }, [activeId]);
-  useEffect(() => setLoaded(false), [page, documentId]);
 
   const quoteBoxes = useMemo(() => (quote && pageInfo ? locateQuote(pageInfo.words, quote) : []), [quote, pageInfo]);
   const shown = highlights.filter((h) => h.page === page && h.bbox?.length === 4);
@@ -60,7 +65,8 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
         {pageInfo && (
           <span className="inline-flex items-center gap-1 text-xs text-ink-3">
             <FileScan className="h-3.5 w-3.5" aria-hidden />
-            {pageInfo.method === "ocr" ? `${t.invoice.ocr} · ${t.invoice.ocrConfidence} ${Math.round(pageInfo.ocr_confidence ?? 0)}%` : t.invoice.nativeText}
+            {pageInfo.method === "ocr" ? `${t.invoice.ocr} · ${t.invoice.ocrConfidence} ${pageInfo.ocr_confidence == null
+              ? t.common.unknown : `${Math.round(pageInfo.ocr_confidence)}%`}` : t.invoice.nativeText}
           </span>
         )}
         <div className="flex items-center gap-0.5">
@@ -85,15 +91,18 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
       </div>
       <div className="flex-1 overflow-auto p-4">
         <div className="relative mx-auto bg-surface shadow-raise" style={{ width: `${zoom * 100}%`, maxWidth: zoom > 1 ? "none" : "100%" }}>
-          {!loaded && <div className="skeleton aspect-[1/1.414] w-full" />}
+          {status === "loading" && <div className="skeleton aspect-[1/1.414] w-full" />}
+          {status === "failed" && <ErrorState message={t.invoice.evidenceUnavailable} retryLabel={t.common.retry}
+            onRetry={() => setRetry((n) => n + 1)} />}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/api/documents/${documentId}/pages/${page}/image?width=1200`}
+          {status !== "failed" && <img key={imageKey}
+            src={`/api/documents/${documentId}/pages/${page}/image?width=1200${retry ? `&retry=${retry}` : ""}`}
             alt={`${filename ?? "document"} — ${t.invoice.page} ${page}`}
             className={cx("block w-full select-none", !loaded && "absolute inset-0 opacity-0")}
-            onLoad={() => setLoaded(true)}
+            onLoad={() => setImageResult({ key: imageKey, status: "loaded" })}
+            onError={() => setImageResult({ key: imageKey, status: "failed" })}
             draggable={false}
-          />
+          />}
           {loaded && shown.map((h) => (
             <div key={h.id} title={h.label}
               className={cx("pointer-events-none absolute rounded-[2px] transition-all duration-150",

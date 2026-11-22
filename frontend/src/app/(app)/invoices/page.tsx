@@ -2,8 +2,8 @@
 
 import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, FileScan, Files, FileText, Inbox, Loader, Plus, ShieldAlert, TriangleAlert } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useState } from "react";
 import { StatusPill } from "@/components/domain";
 import { Pager, RowsSkeleton, SearchBox, Segmented, type Page } from "@/components/list";
 import { useSession } from "@/components/session";
@@ -23,13 +23,27 @@ export type InvoiceRow = {
 const FILTERS = ["", "exception", "needs_review", "reconciled", "on_hold", "approved", "processing,failed"];
 
 export default function InboxPage() {
+  return <Suspense fallback={<Skeleton className="h-80 w-full" />}><InvoiceInbox /></Suspense>;
+}
+
+function InvoiceInbox() {
   const { t, locale } = useI18n();
   const { can } = useSession();
   const router = useRouter();
-  const [status, setStatus] = useState("");
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const rawStatus = params.get("status") ?? "";
+  const status = FILTERS.includes(rawStatus) || ["processing", "failed"].includes(rawStatus) ? rawStatus : "";
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState("-created_at");
+  const changeStatus = (next: string) => {
+    const updated = new URLSearchParams(params.toString());
+    if (next) updated.set("status", next); else updated.delete("status");
+    const query = updated.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    setPage(1);
+  };
   const { data, error, mutate, isLoading } = useApi<Page<InvoiceRow> & { status_counts: Record<string, number> }>(
     `/api/invoices${qs({ status, q, page, page_size: 20, sort })}`,
     { refreshInterval: (d) => (d?.items.some((i) => i.status === "processing") ? 3000 : 0) },
@@ -78,8 +92,8 @@ export default function InboxPage() {
             <SearchBox value={q} onChange={onQ} placeholder={`${t.common.search}: ${t.inbox.number}, ${t.common.supplier}, PO`} />
           </div>
           <Segmented
-            value={status}
-            onChange={(v) => { setStatus(v); setPage(1); }}
+            value={["processing", "failed"].includes(status) ? "processing,failed" : status}
+            onChange={changeStatus}
             options={FILTERS.map((f) => ({
               value: f,
               label: f === "" ? t.inbox.filterAll : f === "processing,failed" ? `${t.status.processing} / ${t.status.failed}` : (t.status as Record<string, string>)[f],

@@ -13,6 +13,7 @@ import { api, ApiError } from "@/lib/api";
 import { dateTime, money, num, unitPrice } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
+import { useUnsavedWork } from "@/lib/use-unsaved-work";
 
 export default function InvoiceOverview() {
   const { t, locale } = useI18n();
@@ -21,6 +22,7 @@ export default function InvoiceOverview() {
   const [hover, setHover] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
+  useUnsavedWork(!!comment.trim(), t.review.unsavedChanges);
   if (!inv) return <div className="grid grid-cols-1 gap-5 xl:grid-cols-2"><Skeleton className="h-[640px] w-full" /><Skeleton className="h-[640px] w-full" /></div>;
 
   const security = inv.validation_warnings.filter((w) => w.code === "SUSPICIOUS_INSTRUCTIONS");

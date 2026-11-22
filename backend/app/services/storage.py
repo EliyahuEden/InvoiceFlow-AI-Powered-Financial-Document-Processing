@@ -10,13 +10,41 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
 
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+
 from app.core.config import Settings, get_settings
+from app.core.logging import get_logger
+
+log = get_logger(__name__)
 
 
 class Storage(Protocol):
     def put(self, key: str, data: bytes, content_type: str) -> None: ...
     def get(self, key: str) -> bytes: ...
     def delete(self, key: str) -> None: ...
+
+
+def put_for_upload(session: Session, key: str, data: bytes, content_type: str) -> None:
+    storage = get_storage()
+    session.info.setdefault("pending_upload_objects", []).append((storage, key))
+    storage.put(key, data, content_type)
+
+
+@event.listens_for(Session, "after_commit")
+def _keep_committed_uploads(session: Session) -> None:
+    if not session.in_nested_transaction():
+        session.info.pop("pending_upload_objects", None)
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _cleanup_uncommitted_uploads(session: Session, transaction) -> None:
+    if transaction.parent is None:
+        for storage, key in session.info.pop("pending_upload_objects", ()):
+            try:
+                storage.delete(key)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("upload_cleanup_failed", storage_key=key, error=str(exc))
 
 
 class LocalStorage:

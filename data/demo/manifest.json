@@ -12,7 +12,7 @@
       "truth": {
         "supplier_key": "tavor",
         "supplier_name": "תבור ציוד משרדי בע\"מ",
-        "supplier_tax_id": "514000127",
+        "supplier_tax_id": "514000124",
         "invoice_number": "TV-24518",
         "invoice_date": "2026-09-09",
         "currency": "ILS",
@@ -60,7 +60,7 @@
       "truth": {
         "supplier_key": "hermon",
         "supplier_name": "חרמון קלייה בע\"מ",
-        "supplier_tax_id": "515000238",
+        "supplier_tax_id": "515000230",
         "invoice_number": "HC-8841",
         "invoice_date": "2026-09-11",
         "currency": "ILS",
@@ -108,7 +108,7 @@
       "truth": {
         "supplier_key": "bluewave",
         "supplier_name": "BlueWave IT Solutions Ltd",
-        "supplier_tax_id": "516000349",
+        "supplier_tax_id": "516000346",
         "invoice_number": "BW-2026-0412",
         "invoice_date": "2026-09-16",
         "currency": "ILS",
@@ -156,7 +156,7 @@
       "truth": {
         "supplier_key": "tavor",
         "supplier_name": "תבור ציוד משרדי בע\"מ",
-        "supplier_tax_id": "514000127",
+        "supplier_tax_id": "514000124",
         "invoice_number": "TV-24518",
         "invoice_date": "2026-09-09",
         "currency": null,
@@ -204,7 +204,7 @@
       "truth": {
         "supplier_key": "arava",
         "supplier_name": "ערבה אריזות בע\"מ",
-        "supplier_tax_id": "518000673",
+        "supplier_tax_id": "518000674",
         "invoice_number": "AR-77135",
         "invoice_date": "2026-10-02",
         "currency": "ILS",
@@ -238,7 +238,7 @@
       "truth": {
         "supplier_key": "carmel_cleaning",
         "supplier_name": "כרמל שירותי ניקיון בע\"מ",
-        "supplier_tax_id": "513000451",
+        "supplier_tax_id": "513000455",
         "invoice_number": "CC-3307",
         "invoice_date": "2026-10-31",
         "currency": "ILS",
@@ -270,7 +270,7 @@
       "truth": {
         "supplier_key": "hermon",
         "supplier_name": "חרמון קלייה בע\"מ",
-        "supplier_tax_id": "515000238",
+        "supplier_tax_id": "515000230",
         "invoice_number": "HC-8853",
         "invoice_date": "2026-10-10",
         "currency": "ILS",
@@ -311,7 +311,7 @@
       "truth": {
         "supplier_key": "bluewave",
         "supplier_name": "BlueWave IT Solutions Ltd",
-        "supplier_tax_id": "516000349",
+        "supplier_tax_id": "516000346",
         "invoice_number": "BW-2026-0425",
         "invoice_date": "2026-10-31",
         "currency": "ILS",
@@ -379,7 +379,7 @@
       "truth": {
         "supplier_key": "bluewave",
         "supplier_name": "BlueWave IT Solutions Ltd",
-        "supplier_tax_id": "516000349",
+        "supplier_tax_id": "516000346",
         "invoice_number": "BW-2026-0419",
         "invoice_date": "2026-09-20",
         "currency": "ILS",
@@ -413,7 +413,7 @@
       "truth": {
         "supplier_key": "arava",
         "supplier_name": "Arava Packaging Ltd",
-        "supplier_tax_id": "518000673",
+        "supplier_tax_id": "518000674",
         "invoice_number": "AR-77120",
         "invoice_date": "2026-09-28",
         "currency": "USD",
@@ -452,7 +452,7 @@
       "truth": {
         "supplier_key": "tavor",
         "supplier_name": "תבור ציוד משרדי בע\"מ",
-        "supplier_tax_id": "514000127",
+        "supplier_tax_id": "514000124",
         "invoice_number": "TV-24602",
         "invoice_date": "2026-10-13",
         "currency": "ILS",
@@ -645,7 +645,7 @@
       "truth": {
         "supplier_key": "bluewave",
         "supplier_name": "BlueWave IT Solutions Ltd",
-        "supplier_tax_id": "516000349",
+        "supplier_tax_id": "516000346",
         "invoice_number": "BW-2026-0431",
         "invoice_date": "2026-10-15",
         "currency": "ILS",
@@ -688,7 +688,7 @@
       "truth": {
         "supplier_key": "hermon",
         "supplier_name": "חרמון קלייה בע\"מ",
-        "supplier_tax_id": "515000238",
+        "supplier_tax_id": "515000230",
         "invoice_number": "HC-8870",
         "invoice_date": "2026-10-25",
         "currency": "ILS",
@@ -727,7 +727,7 @@
       "truth": {
         "supplier_key": "tavor",
         "supplier_name": "תבור ציוד משרדי בע\"מ",
-        "supplier_tax_id": "514000127",
+        "supplier_tax_id": "514000124",
         "invoice_number": "TV-24655",
         "invoice_date": "2026-10-28",
         "currency": "ILS",

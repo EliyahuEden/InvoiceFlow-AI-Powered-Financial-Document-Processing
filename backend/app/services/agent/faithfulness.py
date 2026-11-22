@@ -21,7 +21,7 @@ from decimal import Decimal, InvalidOperation
 from itertools import permutations
 
 # an amount in prose: not glued to an identifier (PO-2026-1004, AR-77120) or a date (2026-01-01)
-NUM = re.compile(r"(?<![\w\-./])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(%?)(?!-\d)")
+NUM = re.compile(r"(?<![\w\-./])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(%?)(?![\w%]|[.,/\-]\d)")
 ANY_NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
 CURRENCY_WORDS = {
     "ILS": r"₪|ש\"ח|ש״ח|שקלים|שקל|ILS|NIS",
@@ -131,23 +131,30 @@ def check_report(report: dict, findings: list[dict], evidence: list[dict], invoi
     return list(dict.fromkeys(out))
 
 
-def unsupported_numbers(text: str, sources: object, max_derived: int = 60) -> list[str]:
+def unsupported_numbers(text: str, sources: object, max_derived: int = 60, *,
+                        ignore_small: bool = True, premise: str | None = None) -> list[str]:
     """Numbers in free text (e.g. a Copilot answer) that do not appear in ``sources`` (the tool
     results) and are not a difference or percentage of two source numbers. Small counts, dates and
     document identifiers are ignored, as in check_report."""
+    claims = [(n, pct) for whole, frac, pct in NUM.findall(EVIDENCE_REF.sub(" ", text))
+              if (n := _dec(whole + frac)) is not None and (not ignore_small or frac and not pct or n > SMALL_COUNT)]
+    if not claims:
+        return []
     amounts = set(_values(sources))
-    nums = [d for d in dict.fromkeys(amounts) if d > SMALL_COUNT][:max_derived]
-    pcts = set(amounts)
+    premise_amount = _dec(premise) if premise else None
+    missing = [(n, pct) for n, pct in claims if not _near(n, amounts, PCT_TOL if pct else TOL)
+               and (pct or n != premise_amount)]
+    if not missing:
+        return []
+    nums = [d for d in amounts if d > SMALL_COUNT][:max_derived]
+    pcts: set[Decimal] = set()
     for a, b in permutations(nums, 2):
         amounts.add(abs(a - b))
         if b:
             for v in (a / b * 100, abs(a - b) / b * 100):
                 pcts.update({round(v, 2), round(v, 1), round(v)})
     out = []
-    for whole, frac, pct in NUM.findall(EVIDENCE_REF.sub(" ", text)):
-        n = _dec(whole + frac)
-        if n is None or (not frac and n <= SMALL_COUNT) or (pct and n <= SMALL_COUNT):
-            continue
+    for n, pct in missing:
         if (pct and _near(n, pcts, PCT_TOL)) or (not pct and _near(n, amounts, TOL)):
             continue
         out.append(f"{'percentage' if pct else 'number'} {_fmt(n)} is not in the data the tools returned")

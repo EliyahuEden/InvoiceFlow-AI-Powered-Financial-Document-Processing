@@ -1,7 +1,7 @@
 "use client";
 
 import { FileSearch, Link2, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DocumentViewer } from "@/components/document-viewer";
 import { fieldEvidence, fieldHighlights, FIELD_DEFS, SourceTags } from "@/components/invoice-fields";
@@ -10,6 +10,7 @@ import { useSession } from "@/components/session";
 import { Button, cx, EmptyState, Field, Input, Panel, PanelHeader, Select, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import type { InvoiceDetail } from "@/lib/types";
 import { useInvoice } from "@/lib/use-invoice";
 import { useUnsavedWork } from "@/lib/use-unsaved-work";
 
@@ -18,7 +19,9 @@ type LineDraft = { id?: string; line_no: number; sku: string; description: strin
 export default function ReviewPage() {
   const { t, locale } = useI18n();
   const { can } = useSession();
-  const { data: inv, mutate } = useInvoice();
+  const { data: incoming, mutate } = useInvoice();
+  const [baseline, setBaseline] = useState<InvoiceDetail>();
+  const inv = baseline?.id === incoming?.id ? baseline : incoming;
   const { data: suppliers } = useApi<{ items: { id: string; name: string; name_en: string | null; tax_id: string | null }[] }>("/api/suppliers?page_size=100");
   const [header, setHeader] = useState<Record<string, string>>({});
   const [lines, setLines] = useState<LineDraft[]>([]);
@@ -26,17 +29,18 @@ export default function ReviewPage() {
   const [reason, setReason] = useState("");
   const [focus, setFocus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const editable = can("invoice:edit") && inv && !["approved", "rejected", "processing"].includes(inv.status);
+  const editable = can("invoice:edit") && incoming && !["approved", "rejected", "processing"].includes(incoming.status);
 
-  useEffect(() => {
-    if (!inv) return;
+  const loadDraft = useCallback((source: InvoiceDetail) => {
     const h: Record<string, string> = {};
-    for (const f of FIELD_DEFS) h[f.key] = ((inv as unknown as Record<string, string | null>)[f.key] ?? "") as string;
+    for (const f of FIELD_DEFS) h[f.key] = ((source as unknown as Record<string, string | null>)[f.key] ?? "") as string;
+    setBaseline(source);
     setHeader(h);
-    setLines(inv.lines.map((l) => ({ id: l.id, line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "",
+    setLines(source.lines.map((l) => ({ id: l.id, line_no: l.line_no, sku: l.sku ?? "", description: l.description, quantity: l.quantity ?? "",
       unit_price: l.unit_price ?? "", discount: l.discount ?? "", line_total: l.line_total ?? "" })));
-    setSupplierId(inv.supplier_id ?? "");
-  }, [inv]);
+    setSupplierId(source.supplier_id ?? "");
+    setReason("");
+  }, []);
 
   const changed = useMemo(() => {
     if (!inv) return {};
@@ -52,7 +56,10 @@ export default function ReviewPage() {
     discount: l.discount ?? "", line_total: l.line_total ?? "" }))), [lines, inv]);
   const supplierChanged = !!inv && supplierId !== (inv.supplier_id ?? "");
   const dirty = Object.keys(changed).length > 0 || linesChanged || supplierChanged || !!reason.trim();
-  useUnsavedWork(!!editable && dirty, t.review.unsavedChanges);
+  useEffect(() => {
+    if (incoming && incoming !== baseline && (incoming.id !== baseline?.id || (!dirty && !saving))) loadDraft(incoming);
+  }, [incoming, baseline, dirty, saving, loadDraft]);
+  useUnsavedWork(baseline?.id === incoming?.id && !!baseline && dirty, t.review.unsavedChanges);
 
   if (!inv) return <Skeleton className="h-[600px] w-full" />;
 
@@ -69,7 +76,8 @@ export default function ReviewPage() {
       });
       toast.success(t.invoice.saveCorrections);
       setReason("");
-      await mutate();
+      const updated = await mutate();
+      if (updated) loadDraft(updated);
     } catch (e) {
       toast.error(e instanceof ApiError && e.status === 409 ? t.review.staleRevision
         : e instanceof ApiError ? String(e.message) : t.common.error);

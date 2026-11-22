@@ -4,7 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { DocumentViewer } from "@/components/document-viewer";
 import { PageHeader } from "@/components/shell";
-import { Skeleton } from "@/components/ui";
+import { ErrorState, Skeleton } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -17,14 +17,15 @@ function Viewer() {
   const page = Number(params.get("page") ?? 1);
   const quote = params.get("q");
   const title = params.get("title");
-  const { data } = useApi<{ page_count: number; filename: string }>(`/api/documents/${id}/pages`);
+  const { data, error, mutate } = useApi<{ page_count: number; filename: string }>(`/api/documents/${id}/pages`);
   return (
     <div>
       <PageHeader title={<span dir="auto" className="break-all">{title ?? data?.filename ?? "…"}</span>}
         sub={quote ? <span dir="auto" className="text-ai">“{quote}”</span> : undefined}
         actions={<button className="text-sm text-ink-3 hover:text-accent" onClick={() => router.back()}>{t.common.back}</button>} />
-      {!data ? <Skeleton className="h-[70vh] w-full" /> : (
-        <DocumentViewer className="h-[calc(100vh-13rem)] min-h-[520px]" documentId={id} pageCount={data.page_count}
+      {error && !data ? <ErrorState message={t.invoice.evidenceUnavailable} retryLabel={t.common.retry} onRetry={() => mutate()} />
+        : !data ? <Skeleton className="h-[70vh] w-full" /> : (
+        <DocumentViewer key={`${id}/${page}`} className="h-[calc(100vh-13rem)] min-h-[520px]" documentId={id} pageCount={data.page_count}
           filename={data.filename} quote={quote} quotePage={page} />
       )}
     </div>

@@ -113,7 +113,7 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
     setBusy(decision);
     try {
       await api.post(`/api/exceptions/${e.id}/decision`, {
-        decision, note: draft.note.trim() || null, action_override: draft.override || null,
+        decision, note: draft.note.trim() || null, action_override: decision === "approve" ? draft.override || null : null,
         target: decision === "request_info" ? draft.target : null,
       });
       setRecorded(true);
@@ -207,7 +207,7 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
           setActiveLine(lineId);
           if (window.matchMedia("(max-width: 1279px)").matches) jumpTo("review-document");
         }} />}
-        {e.ai_summary ? <AiSummaryView s={e.ai_summary} currency={invoice?.currency ?? current?.currency} /> : <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={t.exceptions.noAi}
+        {e.ai_summary && !e.ai_summary.stale ? <AiSummaryView s={e.ai_summary} currency={invoice?.currency ?? current?.currency} /> : <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={e.ai_summary?.stale ? t.exceptions.staleAi : t.exceptions.noAi}
           action={can("agent:run") && <Button variant="ai" onClick={runAgent} loading={busy === "agent"}>{t.exceptions.runAgent}</Button>} /></Panel>}
         {e.agent_run && <Button asChild className="h-auto w-full whitespace-normal py-2" variant="ai"><Link href={`/investigations/${e.agent_run.id}`}>
           <Bot className="h-4 w-4 shrink-0" aria-hidden />{t.agent.trace}<StatusPill status={e.agent_run.status} />

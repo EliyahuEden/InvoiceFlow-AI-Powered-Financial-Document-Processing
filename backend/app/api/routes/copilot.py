@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, get_db, require
@@ -28,7 +28,7 @@ class PageContext(BaseModel):
 
 
 class AskIn(BaseModel):
-    question: str = Field(..., min_length=2, max_length=1000)
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=1000)]
     history: list[Turn] = Field(default_factory=list, max_length=10)
     context: PageContext = Field(default_factory=PageContext)
 

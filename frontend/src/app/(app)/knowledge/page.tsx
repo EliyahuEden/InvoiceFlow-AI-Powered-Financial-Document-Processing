@@ -30,6 +30,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
   const [docType, setDocType] = useState("supplier_agreement");
   const [supplierId, setSupplierId] = useState("");
   const [eff, setEff] = useState("");
+  const [policyKey, setPolicyKey] = useState("");
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +39,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
     fd.append("file", file); fd.append("title", title); fd.append("doc_type", docType);
     if (supplierId) fd.append("supplier_id", supplierId);
     if (eff) fd.append("effective_date", eff);
+    if (policyKey) fd.append("policy_key", policyKey);
     setBusy(true);
     try { await api.post("/api/knowledge/documents", fd); toast.success(t.knowledge.upload); onDone(); }
     catch (err) { toast.error(err instanceof ApiError ? String(err.message) : t.common.error); } finally { setBusy(false); }
@@ -51,7 +53,11 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       <Field label={t.common.supplier} htmlFor="kb-supplier"><Select id="kb-supplier" className="w-full" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
         <option value="">—</option>{sup?.items.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
       <Field label={t.knowledge.effective} htmlFor="kb-effective"><Input id="kb-effective" type="date" value={eff} onChange={(e) => setEff(e.target.value)} /></Field>
-      <div className="flex items-end md:col-span-5"><Button type="submit" variant="primary" loading={busy}><Upload className="h-4 w-4" />{t.knowledge.upload}</Button></div>
+      <div className="md:col-span-3"><Field label={t.knowledge.policyKey} htmlFor="kb-policy-key" hint={t.knowledge.policyKeyHint}>
+        <Input id="kb-policy-key" dir="ltr" pattern="[a-z0-9][a-z0-9_\-]{0,79}" maxLength={80}
+          value={policyKey} onChange={(e) => setPolicyKey(e.target.value)} />
+      </Field></div>
+      <div className="flex items-end md:col-span-2"><Button type="submit" variant="primary" loading={busy}><Upload className="h-4 w-4" />{t.knowledge.upload}</Button></div>
     </form>
   );
 }

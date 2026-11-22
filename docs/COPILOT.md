@@ -18,10 +18,11 @@ question, up to 10 earlier turns and the page the reviewer is on (invoice or cas
    `retrieve_policy`). At most 4 rounds and 8 calls. Every call goes through
    `call_tool` (Pydantic input validation, role permission check, trace). Any other tool name is refused.
 2. **Structured answer.** A second call writes `{answer, citations, follow_ups}` from the tool results only.
-3. **Checks.** Citations the tools never returned are dropped. The answer is rejected if it contains a number
-   that is not in the tool results (or a difference or percentage of two of them), a raw record id, or, for a
-   Hebrew question, no Hebrew. One retry with the problems quoted back; a second failure returns an honest
-   "could not verify" message with links to the records found, marked **Not verified**.
+3. **Checks.** Citations must refer to records returned by a tool. The checker rejects unsupported figures,
+   raw record IDs and English-only answers to Hebrew questions. An approval-rules answer may repeat an amount
+   that the reviewer supplied as a hypothetical. If the model produces an unverifiable answer twice, the UI
+   shows **Not verified** with links to the records found. If the model supplies no usable tool results or the
+   answer request fails, the deterministic path still answers the question from the permitted tools.
 4. **Offline mode** (no model configured, `backend/app/services/copilot_offline.py`): an ordered intent table in
    Hebrew and English with entity extraction (invoice and PO numbers, supplier names, finding types, statuses)
    and a date parser ("today", "this week", "last month", "October", "היום", "החודש", "בחודש שעבר",
@@ -79,8 +80,17 @@ Live with the model, the new tools were chosen correctly: "who do we owe money t
 "status of PO-2026-1001, what is left to receive" -> `po_status`, "are there duplicate invoices" ->
 `findings_by_type`, all with verified figures.
 
+## Measured catalogue
+
+The initial Groq GPT-OSS 120B run passed 23 of 32 English catalogue prompts. A pass requires the expected
+tool and filters, the expected facts and a verified response. The result includes every question and tool trace.
+[Initial live result](../eval/results/copilot_llm_latest.json)
+
+The quality rerun passed 24 of 32 prompts end to end. Groq's token limit interrupted the model path. Five
+responses used a model-written answer and 27 used the deterministic path. This run measures the combined
+behavior under a provider limit. [Quality rerun](../eval/results/copilot_quality_latest.json)
+
 ## Not yet done
 
-- Scoring the catalogue with a model (expected tool and facts per question) as a benchmark with a pass rate.
 - Streaming answers.
 - Drafting supplier emails for "request clarification" decisions (the Copilot can already explain the case).

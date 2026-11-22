@@ -119,6 +119,8 @@ def main() -> None:
     ap.add_argument("--no-rerank", action="store_true")
     ap.add_argument("--embedding-model", help="override the dense model (e.g. to compare a larger multilingual one)")
     ap.add_argument("--out", default="rag", help="result name: eval/results/<out>_latest.json")
+    ap.add_argument("--llm-answers", action="store_true", help="score only live answers on the held-out set")
+    ap.add_argument("--pace", type=float, default=0, help="seconds between live model requests")
     args = ap.parse_args()
     questions = load_questions("questions.jsonl")
     held_out = load_questions("questions_heldout.jsonl")
@@ -142,6 +144,24 @@ def main() -> None:
             reranker = FastEmbedReranker(s.reranker_model, str(s.model_cache_dir))
         except Exception as exc:  # noqa: BLE001
             rerank_note = f"reranker unavailable: {exc}"
+    if args.llm_answers:
+        from app.services.llm.provider import get_llm
+
+        llm = get_llm()
+        if llm is None:
+            ap.error("--llm-answers requires a configured model provider")
+        chunks = build_chunks(docs, pages, "clause")
+        index = ChunkIndex(chunks, embedder)
+        mode = "hybrid_rerank" if reranker else "hybrid"
+        results = evaluate_answers(held_out, index, mode, reranker, chunks, llm=llm, pace=args.pace)
+        path = write_result("rag_llm" if args.out == "rag" else args.out, {
+            "dataset": "eval/datasets/rag/questions_heldout.jsonl", "questions": len(held_out),
+            "model": llm.model, "provider": llm.name, "prompt_version": A.PROMPT_VERSION,
+            "embedding": embedding_model, "retrieval": mode, "reranker": s.reranker_model if reranker else None,
+            "retrieval_note": rerank_note, **results,
+        })
+        print(f"{results['passed']}/{len(held_out)} passed; results: {path}")
+        return
     answerable = [q for q in questions if q["answerable"]]
     configs, answer_results, held = [], {}, {"retrieval": [], "answers": {}}
     for strategy in ("fixed_700", "fixed_300", "clause"):
@@ -201,20 +221,33 @@ def main() -> None:
     })
 
 
-def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chunks) -> dict:  # noqa: ANN001
+def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chunks, *, llm=None, pace=0) -> dict:  # noqa: ANN001
     correct = cited = cited_ok = 0
     abst_tp = abst_fp = abst_fn = 0
     forbidden_hits = forbidden_n = 0
     answerable_n = 0
     examples = []
+    per_question = []
     for q in questions:
         hits = idx.search(q["question"], mode=mode, k=5, reranker=reranker if mode == "hybrid_rerank" else None)
-        ans = A.answer_extractive(q["question"], hits)
+        if llm is not None and hits:
+            try:
+                ans, _ = A.answer_with_llm(llm, q["question"], hits)
+            except Exception as exc:  # keep provider errors visible and count them as failures
+                per_question.append({"id": q["id"], "passed": False, "error": type(exc).__name__})
+                answerable_n += q["answerable"]
+                abst_fn += not q["answerable"]
+                continue
+            finally:
+                if pace:
+                    time.sleep(pace)
+        else:
+            ans = A.answer_extractive(q["question"], hits)
         should_abstain = not q["answerable"]
+        ok = ans["abstained"] and should_abstain
         if ans["abstained"] and should_abstain:
             abst_tp += 1
         elif ans["abstained"] and not should_abstain:
-            abst_fn_local = True  # noqa: F841
             abst_fp += 1
         elif not ans["abstained"] and should_abstain:
             abst_fn += 1
@@ -229,16 +262,24 @@ def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chun
             if not ok and len(examples) < 6:
                 examples.append({"id": q["id"], "question": q["question"], "answer": ans["answer"][:240],
                                  "abstained": ans["abstained"]})
+        forbidden = any(normalize(f) in normalize(ans["answer"]) for f in q.get("forbidden", []))
         if q.get("forbidden"):
             forbidden_n += 1
-            forbidden_hits += any(normalize(f) in normalize(ans["answer"]) for f in q["forbidden"])
+            forbidden_hits += forbidden
+        if llm is not None:
+            cited_ids = {c["chunk_id"] for c in ans["citations"]}
+            supported = should_abstain or all(cited_ids & labels for labels in relevant_ids(chunks, q["relevant"]))
+            per_question.append({"id": q["id"], "passed": bool(ok and supported and not forbidden),
+                                 "facts_correct": bool(ok), "required_sources_cited": supported,
+                                 "abstained": ans["abstained"], "answer": ans["answer"], "citations": ans["citations"]})
     abst = prf(abst_tp, abst_fp, abst_fn)
     return {
         "answer_correctness": round(correct / answerable_n, 3),
         "citation_accuracy": round(cited_ok / cited, 3) if cited else None,
         "abstention": {**abst, "note": "positive class = question should be refused"},
         "injection_parroting": f"{forbidden_hits}/{forbidden_n}",
-        "groundedness": "1.0 by construction (verbatim extractive)",
+        **({"passed": sum(row["passed"] for row in per_question), "per_question": per_question}
+           if llm is not None else {"groundedness": "1.0 by construction (verbatim extractive)"}),
         "failure_examples": examples,
     }
 

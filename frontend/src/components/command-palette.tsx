@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useNav } from "@/lib/nav";
 import { currentTheme, setTheme } from "@/lib/theme";
+import { confirmDraftNavigation } from "@/lib/use-unsaved-work";
 import type { NextResp } from "@/lib/types";
 import { useSession } from "./session";
 import { cx } from "./ui";
@@ -57,14 +58,15 @@ export function CommandPalette({ open, onOpenChange, onAskCopilot }: {
 
   const q = query.trim().toLowerCase();
   const destinations = useMemo(() => nav.flatMap((g) => g.items).filter((i) => !q || i.label.toLowerCase().includes(q)), [nav, q]);
-  const go = (href: string) => { onOpenChange(false); router.push(href); };
+  const go = (href: string) => {
+    if (confirmDraftNavigation()) { onOpenChange(false); router.push(href); }
+  };
   type Action = { id: string; label: string; icon: React.ElementType; run: () => void };
   const allActions: (Action | false)[] = [
     can("exception:decide") && { id: "next", label: t.review.reviewNext, icon: Sparkles, run: async () => {
-      onOpenChange(false);
       try {
         const r = await api.get<NextResp>("/api/review/next");
-        if (r.item) router.push(`/exceptions/${r.item.exception_id}`); else toast.success(t.review.clearTitle);
+        if (r.item) go(`/exceptions/${r.item.exception_id}`); else toast.success(t.review.clearTitle);
       } catch { toast.error(t.common.error); }
     } },
     !!onAskCopilot && { id: "copilot", label: t.copilot.open, icon: Bot, run: () => { onOpenChange(false); onAskCopilot(); } },

@@ -233,6 +233,18 @@ def test_a_justified_override_is_allowed_and_audited(client, as_user):
 
 
 @pytest.mark.integration
+def test_requesting_information_cannot_change_the_proposed_action(client, as_user):
+    exc_id, proposed, finance = _blocking_case(client, as_user)
+    procurement = as_user("procurement@kinneret.example")
+    path = f"/api/exceptions/{exc_id}"
+    response = client.post(f"{path}/decision", headers=procurement,
+                           json={"decision": "request_info", "target": "supplier", "note": "Confirm legal name",
+                                 "action_override": "accept_variance"})
+    assert response.status_code == 200, response.text
+    assert client.get(path, headers=finance).json()["proposed_action"] == proposed
+
+
+@pytest.mark.integration
 def test_approving_the_proposed_action_needs_no_extra_note(client, as_user):
     exc_id, proposed, fin = _blocking_case(client, as_user)
     r = client.post(f"/api/exceptions/{exc_id}/decision", headers=fin, json={"decision": "approve"})

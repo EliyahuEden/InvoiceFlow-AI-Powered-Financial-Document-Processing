@@ -171,8 +171,23 @@ Held-out (35 questions, never used for tuning), clause chunks:
 
 With the reranker, the two embedders are equal within one held-out question. Without it, e5 retrieves far
 better and refuses unanswerable questions instead of answering them, at the price of refusing more
-answerable ones. e5 costs a 2.1 GB model and slower embedding. Model-written answers (LLM mode) were
-not benchmarked here.
+answerable ones. e5 costs a 2.1 GB model and slower embedding.
+
+### Live answers on the held-out set
+
+Groq GPT-OSS 120B passed **33 of 35** questions with the same multilingual-e5-large, clause, hybrid and
+reranker configuration. It returned the labelled facts for 23 of 25 answerable questions, cited a labelled
+passage in 93.3% of citations, and refused all ten unanswerable questions. A pass on an answerable question
+requires the expected facts, citations for all labelled evidence groups, and no forbidden phrase. A model
+error counts as a failure. Both automated misses cited the expected sources and used supported paraphrases
+of the labelled facts. The published score retains the original string-based rubric.
+[Per-question results](../eval/results/rag_llm_latest.json)
+
+Run `python eval/run_rag_eval.py --llm-answers --pace 10` from the repository root with the configured Groq
+environment loaded. It writes a separate result file and uses the existing held-out question set.
+
+The subsequent 120B quality run passed 16 of 35 end to end. Groq refused 16 model requests at its token limit,
+and 16 of the 19 served requests passed the rubric. [Quota-limited rerun](../eval/results/rag_llm_quality_latest.json)
 
 ## C. Reconciliation
 **Method**

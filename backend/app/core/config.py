@@ -111,7 +111,7 @@ class Settings(BaseSettings):
 
     # --- worker ---
     worker_poll_seconds: float = 1.0
-    job_lock_timeout_seconds: int = 300
+    job_lock_timeout_seconds: int = Field(300, ge=1)
 
     # --- misc ---
     eval_results_dir: Path = REPO_ROOT / "eval" / "results"

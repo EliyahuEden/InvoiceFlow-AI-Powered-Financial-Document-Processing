@@ -146,6 +146,12 @@ def ans_queue(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
     out = call_tool(ctx, "review_queue", {"limit": 5, **args}, source="copilot")
     items = out.get("items", [])
     if not items:
+        if args.get("overdue"):
+            return a.t("אין חשבוניות באיחור בתור הבדיקה.", "No overdue invoices are in the review queue.")
+        if args.get("status") == "pending_info":
+            return a.t("אין מקרים שממתינים למידע.", "No cases are waiting for information.")
+        if args.get("status") == "escalated":
+            return a.t("אין מקרים מוסלמים בתור הבדיקה.", "No cases have been escalated in the review queue.")
         return a.t("אין כרגע מקרים שמתאימים לשאלה.", "No cases match that right now.")
     level = {"critical": "קריטי", "high": "גבוה", "normal": "רגיל"} if a.he else {}
     lines = []
@@ -253,14 +259,15 @@ def ans_po(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
     if "error" in out:
         return a.t("לא מצאתי את הזמנת הרכש הזו.", "I could not find that purchase order.")
     a.cite("purchase_order", out["purchase_order_id"], out["po_number"])
-    a.cite("supplier", out["supplier_id"], out["supplier"] or "")
+    supplier = a.t(out["supplier"], out.get("supplier_en") or out["supplier"])
+    a.cite("supplier", out["supplier_id"], supplier or "")
     lines = [a.t(f"• שורה {ln['line_no']} {ln['description']}: הוזמנו {ln['quantity']}, התקבלו {ln['received']}, "
                  f"חויבו {ln['invoiced']}, נותרו לקבל {ln['to_receive']}, נותרו לחייב {ln['to_invoice']}",
                  f"• line {ln['line_no']} {ln['description']}: ordered {ln['quantity']}, received {ln['received']}, "
                  f"invoiced {ln['invoiced']}, to receive {ln['to_receive']}, to invoice {ln['to_invoice']}")
              for ln in out["lines"]]
-    return a.t(f"הזמנת רכש {out['po_number']} ({out['supplier']}, {st(a, out['status'])}):",
-               f"Purchase order {out['po_number']} ({out['supplier']}, {out['status']}):") + "\n" + "\n".join(lines)
+    return a.t(f"הזמנת רכש {out['po_number']} ({supplier}, {st(a, out['status'])}):",
+               f"Purchase order {out['po_number']} ({supplier}, {out['status']}):") + "\n" + "\n".join(lines)
 
 
 def ans_payables(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
@@ -303,7 +310,8 @@ def ans_period(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
     rows = out.get("by_currency", [])
     span = f"{args.get('date_from') or '…'} – {args.get('date_to') or '…'}"
     if not rows:
-        return a.t(f"אין חשבוניות בתקופה {span}.", f"No invoices in {span}.")
+        return a.t(f"אין חשבוניות בתקופה {span}, ולכן אין מע״מ לדיווח.",
+                   f"No invoices in {span}, so there is no VAT to report.")
     lines = [a.t(f"• {r['currency']}: {r['invoices']} חשבוניות, לפני מע\"מ {money(r['net'], None)}, "
                  f"מע\"מ {money(r['vat'], None)}, סה\"כ {money(r['total'], None)}",
                  f"• {r['currency']}: {r['invoices']} invoices, net {money(r['net'], None)}, VAT {money(r['vat'], None)}, "
@@ -318,11 +326,12 @@ def ans_suppliers(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
         return a.t("אין ספקים שמתאימים לשאלה.", "No suppliers match that.")
     lines = []
     for sp in rows:
-        lines.append(a.t(f"• {sp['name']} · ח.פ. {sp['tax_id']} · {st(a, sp['status'])} · תנאי תשלום {sp['payment_terms'] or '—'}"
+        name = a.t(sp["name"], sp.get("name_en") or sp["name"])
+        lines.append(a.t(f"• {name} · ח.פ. {sp['tax_id']} · {st(a, sp['status'])} · תנאי תשלום {sp['payment_terms'] or '—'}"
                          f" · {sp['invoices']} חשבוניות · {sp['open_cases']} מקרים פתוחים",
-                         f"• {sp['name']} · tax ID {sp['tax_id']} · {sp['status']} · terms {sp['payment_terms'] or '—'}"
+                         f"• {name} · tax ID {sp['tax_id']} · {sp['status']} · terms {sp['payment_terms'] or '—'}"
                          f" · {sp['invoices']} invoices · {sp['open_cases']} open cases"))
-        a.cite("supplier", sp["supplier_id"], sp["name"])
+        a.cite("supplier", sp["supplier_id"], name)
     return a.t(f"{len(rows)} ספקים:", f"{len(rows)} suppliers:") + "\n" + "\n".join(lines)
 
 
@@ -330,15 +339,16 @@ def ans_supplier(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
     out = call_tool(ctx, "supplier_overview", args, source="copilot")
     if "error" in out:
         return a.t("לא מצאתי את הספק הזה.", "I could not find that supplier.")
-    a.cite("supplier", out["supplier_id"], out["name"])
+    name = a.t(out["name"], out.get("name_en") or out["name"])
+    a.cite("supplier", out["supplier_id"], name)
     for i in out["recent_invoices"][:3]:
         a.cite("invoice", i["invoice_id"], i["invoice_number"] or "")
     recent = ", ".join(f"{i['invoice_number']} ({st(a, i['status'])}, {money(i['total'], i['currency'])})"
                        for i in out["recent_invoices"][:3]) or "—"
     pos = ", ".join(p["po_number"] for p in out["purchase_orders"]) or "—"
-    return a.t(f"{out['name']} · ח.פ. {out['tax_id']} · {st(a, out['status'])} · תנאי תשלום {out['payment_terms'] or '—'}\n"
+    return a.t(f"{name} · ח.פ. {out['tax_id']} · {st(a, out['status'])} · תנאי תשלום {out['payment_terms'] or '—'}\n"
                f"מקרים פתוחים: {out['open_exceptions']}\nהזמנות רכש: {pos}\nחשבוניות אחרונות: {recent}",
-               f"{out['name']} · tax ID {out['tax_id']} · {out['status']} · terms {out['payment_terms'] or '—'}\n"
+               f"{name} · tax ID {out['tax_id']} · {out['status']} · terms {out['payment_terms'] or '—'}\n"
                f"Open cases: {out['open_exceptions']}\nPurchase orders: {pos}\nRecent invoices: {recent}")
 
 

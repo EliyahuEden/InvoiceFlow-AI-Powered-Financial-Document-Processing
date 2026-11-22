@@ -253,9 +253,13 @@ def retrieve_policy(ctx: ToolContext, inp: SearchIn) -> dict:
 
 def create_exception_draft(ctx: ToolContext, inp: DraftIn) -> dict:
     inv_id = _uuid(inp.invoice_id)
+    invoice = ctx.session.scalar(select(Invoice.id).where(Invoice.id == inv_id, Invoice.organization_id == ctx.org_id)
+                                 .with_for_update())
+    if invoice is None:
+        return {"error": "invoice not found"}
     exc = ctx.session.scalars(select(ExceptionCase).where(
         ExceptionCase.invoice_id == inv_id, ExceptionCase.organization_id == ctx.org_id,
-        ExceptionCase.status.in_(["draft", "open", "pending_info"]))).first()
+        ExceptionCase.status.in_(["draft", "open", "pending_info", "escalated"]))).first()
     created = False
     if exc is None:
         exc = ExceptionCase(organization_id=ctx.org_id, invoice_id=inv_id, status="draft",
@@ -565,7 +569,8 @@ def po_status(ctx: ToolContext, inp: PORefIn) -> dict:
                       "to_receive": str(max(ordered - received, Decimal(0)).normalize()),
                       "to_invoice": str(max(ordered - invoiced, Decimal(0)).normalize())})
     return {"purchase_order_id": str(po.id), "po_number": po.po_number, "status": po.status, "currency": po.currency,
-            "supplier": d.get("supplier_name"), "supplier_id": str(po.supplier_id), "lines": lines}
+            "supplier": d.get("supplier_name"), "supplier_en": d.get("supplier_name_en"),
+            "supplier_id": str(po.supplier_id), "lines": lines}
 
 
 def period_totals(ctx: ToolContext, inp: PeriodIn) -> dict:

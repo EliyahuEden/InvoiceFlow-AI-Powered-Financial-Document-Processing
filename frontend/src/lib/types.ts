@@ -66,6 +66,7 @@ export type InvoiceDetail = {
 };
 
 export type AiSummary = {
+  stale?: boolean;
   headline: Record<string, string>; summary: Record<string, string>; recommendation: Record<string, string>;
   confidence: string; mode: string; deterministic_action: string; ai_recommended_action?: string;
   findings: { type: string; severity: string; message: string; amount_at_risk?: string | null;

@@ -84,7 +84,7 @@ def world(db_clean):
             create_knowledge_upload(s, org_id=org_id, user=s.get(User, users["procurement@kinneret.example"]),
                                     data=(DATA / "knowledge" / f"{k.key}.pdf").read_bytes(), filename=f"{k.key}.pdf",
                                     title=k.title, doc_type=k.doc_type, supplier_id=sup_ids.get(k.supplier) if k.supplier else None,
-                                    effective_date=k.effective_date, version=k.version)
+                                    effective_date=k.effective_date, version=k.version, policy_key=k.policy_key)
     drain()
     return {"org_id": org_id, "other_org_id": other_id, "users": users, "suppliers": sup_ids, "other_suppliers": other_sup}
 

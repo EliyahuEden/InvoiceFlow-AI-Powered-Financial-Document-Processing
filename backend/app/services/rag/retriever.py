@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from datetime import date
 
 import numpy as np
 
@@ -34,6 +35,13 @@ class IndexedChunk:
     text: str
     effective_date: str | None = None
     source_document_id: str | None = None  # the stored file (for opening the PDF)
+    version: str | None = None
+    policy_key: str | None = None
+
+    def policy_family(self) -> tuple[str, str]:
+        if self.policy_key:
+            return "key", self.policy_key
+        return "title", " ".join(self.document_title.casefold().split())
 
 
 @dataclass
@@ -57,14 +65,31 @@ class ChunkIndex:
             embeddings = embedder.embed([f"{c.document_title}. {c.text}" for c in chunks])
         self.emb = embeddings
 
-    def _filter_ids(self, supplier_id: str | None, doc_types: list[str] | None) -> np.ndarray:
+    def _filter_ids(self, supplier_id: str | None, doc_types: list[str] | None, as_of: date | None) -> np.ndarray:
         mask = np.ones(len(self.chunks), dtype=bool)
+        cutoff = as_of.isoformat() if as_of else None
+        authority: dict[tuple[str, str | None, tuple[str, str]], tuple[bool, str]] = {}
+        revisions = {}
         for i, c in enumerate(self.chunks):
             if doc_types and c.doc_type not in doc_types:
                 mask[i] = False
             # supplier scoping: keep the supplier's own agreements + non-supplier documents
             if supplier_id and c.supplier_id and c.supplier_id != supplier_id:
                 mask[i] = False
+            if cutoff is None or not mask[i]:
+                continue
+            effective = c.effective_date or ""
+            if effective > cutoff:
+                mask[i] = False
+                continue
+            # Keep same-date revisions available as evidence of a conflict.
+            scope = None if supplier_id else c.supplier_id
+            family = (c.doc_type, scope, c.policy_family())
+            rank = (c.supplier_id is not None, effective)
+            revisions[i] = (family, rank)
+            authority[family] = max(rank, authority.get(family, rank))
+        for i, (family, rank) in revisions.items():
+            mask[i] = rank == authority[family]
         return mask
 
     def bm25_scores(self, query: str) -> np.ndarray:
@@ -78,10 +103,12 @@ class ChunkIndex:
 
     def search(self, query: str, mode: str = "hybrid", k: int = 5, supplier_id: str | None = None,
                doc_types: list[str] | None = None, reranker: Reranker | None = None,
-               candidates: int = 20) -> list[Hit]:
+               candidates: int = 20, as_of: date | None = None) -> list[Hit]:
         if not self.chunks:
             return []
-        mask = self._filter_ids(supplier_id, doc_types)
+        mask = self._filter_ids(supplier_id, doc_types, as_of)
+        if not mask.any():
+            return []
         bm = self.bm25_scores(query) if mode in ("bm25", "hybrid", "hybrid_rerank") else None
         de = self.dense_scores(query) if mode in ("dense", "hybrid", "hybrid_rerank") else None
 
@@ -135,7 +162,7 @@ def load_index(session, org_id: uuid.UUID, embedder: Embedder | None) -> ChunkIn
             id=str(ch.id), document_id=str(kd.id), document_title=kd.title, doc_type=kd.doc_type,
             supplier_id=str(kd.supplier_id) if kd.supplier_id else None, page=ch.page, section=ch.section,
             text=ch.text, effective_date=kd.effective_date.isoformat() if kd.effective_date else None,
-            source_document_id=str(kd.document_id)))
+            source_document_id=str(kd.document_id), version=kd.version, policy_key=kd.policy_key))
         vecs.append(np.array(ch.embedding, dtype=np.float32) if ch.embedding is not None else None)
     emb = None
     if chunks and all(v is not None for v in vecs):

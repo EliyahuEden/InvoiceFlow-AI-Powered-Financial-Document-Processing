@@ -5,13 +5,13 @@ import time
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models import Document, DocumentPage, Invoice, InvoiceLine, Job, Organization, User
-from app.services import audit, events, jobs
+from app.services import audit, jobs
 from app.services.documents.classify import classify_document
 from app.services.documents.hebrew import detect_language
 from app.services.documents.pages import drop_duplicate_pages
@@ -30,7 +30,7 @@ from app.services.extraction.postprocess import normalize
 from app.services.extraction.schema import InvoiceExtraction
 from app.services.llm.provider import LLMOutputInvalid, get_llm
 from app.services.llm.telemetry import record_call
-from app.services.storage import get_storage, new_key
+from app.services.storage import get_storage, new_key, put_for_upload
 
 log = get_logger(__name__)
 
@@ -47,23 +47,19 @@ class DuplicateUpload(Exception):
 def store_upload(session: Session, *, org_id: uuid.UUID, user: User | None, data: bytes, filename: str,
                  purpose: str = "invoice") -> tuple[Document, ValidatedFile]:
     vf = validate_upload(data, filename)
-    existing = session.scalars(select(Document).where(
-        Document.organization_id == org_id, Document.sha256 == vf.sha256, Document.purpose == purpose)).first()
-    if existing:
+    key = new_key(org_id, purpose, vf.ext)
+    document_id = session.scalar(insert(Document).values(
+        organization_id=org_id, purpose=purpose, filename=vf.safe_filename, mime_type=vf.mime_type,
+        size_bytes=len(vf.data), sha256=vf.sha256, storage_key=key, page_count=vf.page_count,
+        status="uploaded", uploaded_by=user.id if user else None,
+    ).on_conflict_do_nothing(index_elements=["organization_id", "sha256", "purpose"]).returning(Document.id))
+    if document_id is None:
+        existing = session.scalars(select(Document).where(
+            Document.organization_id == org_id, Document.sha256 == vf.sha256, Document.purpose == purpose)).one()
         inv_id = session.scalar(select(Invoice.id).where(Invoice.document_id == existing.id))
         raise DuplicateUpload(existing, inv_id)
-    key = new_key(org_id, purpose, vf.ext)
-    get_storage().put(key, vf.data, vf.mime_type)
-    doc = Document(organization_id=org_id, purpose=purpose, filename=vf.safe_filename, mime_type=vf.mime_type,
-                   size_bytes=len(vf.data), sha256=vf.sha256, storage_key=key, page_count=vf.page_count,
-                   status="uploaded", uploaded_by=user.id if user else None)
-    session.add(doc)
-    try:
-        session.flush()
-    except IntegrityError as exc:  # concurrent identical upload
-        session.rollback()
-        raise DuplicateUpload(doc, None) from exc
-    return doc, vf
+    put_for_upload(session, key, vf.data, vf.mime_type)
+    return session.get(Document, document_id), vf
 
 
 def create_invoice_upload(session: Session, *, org_id: uuid.UUID, user: User | None, data: bytes,
@@ -239,10 +235,6 @@ def handle_invoice_process(session: Session, job: Job) -> dict:
     try:
         pages = clean_pages(extract_pages(data, doc.mime_type, progress))
     except OCRUnavailable as exc:
-        doc.status, doc.error, inv.status = "failed", str(exc), "failed"
-        audit.record(session, org_id=org.id, action="invoice.processing_failed", entity_type="invoice",
-                     entity_id=inv.id, actor_type="system", actor_label="worker", meta={"error": str(exc)})
-        session.commit()
         raise PermanentJobError(str(exc)) from exc
     ocr_pages = [p for p in pages if p.method == "ocr"]
     if ocr_pages:
@@ -267,5 +259,4 @@ def handle_invoice_process(session: Session, job: Job) -> dict:
         jobs.enqueue(session, org_id=org.id, job_type="agent.investigate",
                      payload={"invoice_id": str(inv.id)}, idempotency_key=f"agent.investigate:{inv.id}:{run.id}",
                      entity_id=inv.id)
-    events.publish(org.id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
     return {"invoice_id": str(inv.id), "status": inv.status, "outcome": run.outcome}

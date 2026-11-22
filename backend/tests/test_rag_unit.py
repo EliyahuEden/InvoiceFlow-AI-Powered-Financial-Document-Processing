@@ -47,6 +47,23 @@ def test_citation_verification_drops_fabricated_quotes():
     assert len(valid) == 1 and dropped == 2 and valid[0]["page"] == 1
 
 
+def test_live_answer_cannot_attach_a_real_quote_to_a_different_payment_term():
+    from app.services.llm.provider import LLMResult
+    from app.services.rag.answer import answer_with_llm
+
+    class Model:
+        model = "fake"
+
+        def structured(self, **kwargs):
+            return LLMResult("fake", self.model, 0, data={"answer": "Payment is due within 30 days.",
+                              "citations": [{"passage": 1, "quote": "Payment is due within 45 days."}]})
+
+    result, _ = answer_with_llm(Model(), "When is payment due?", [
+        _hit("Payment is due within 45 days."), _hit("Warranty claims must be filed within 30 days.", "c2"),
+    ])
+    assert result["abstained"] and "30 days" not in result["answer"]
+
+
 def test_extractive_answer_abstains_without_evidence_and_screens_injection():
     assert answer_extractive("anything?", [])["abstained"]
     weak = answer_extractive("What is the cancellation fee for licenses?", [_hit("Hardware carries a 36-month warranty.")])

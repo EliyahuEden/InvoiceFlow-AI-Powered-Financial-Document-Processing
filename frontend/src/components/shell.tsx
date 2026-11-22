@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmDraftNavigation } from "@/lib/use-unsaved-work";
+
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { ArrowLeft, FileStack, Languages, LayoutGrid, LogOut, Moon, Search, Sparkles, Sun, X } from "lucide-react";
 import Link from "next/link";
@@ -243,7 +245,7 @@ function useGlobalKeys(nav: ReturnType<typeof useNav>, openPalette: () => void, 
       if (pendingG) {
         pendingG = false;
         const item = nav.flatMap((g) => g.items).find((i) => i.key === e.key.toLowerCase());
-        if (item) { e.preventDefault(); router.push(item.href); }
+        if (item) { e.preventDefault(); if (confirmDraftNavigation()) router.push(item.href); }
         return;
       }
       if (e.key.toLowerCase() === "g") { pendingG = true; clearTimeout(timer); timer = setTimeout(() => { pendingG = false; }, 1200); }

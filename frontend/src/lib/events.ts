@@ -6,7 +6,7 @@ import { api } from "./api";
 
 export type LiveEvent = { event: string; data: Record<string, unknown> };
 
-const REFRESH_PREFIXES = ["/api/invoices", "/api/exceptions", "/api/dashboard", "/api/agent", "/api/knowledge"];
+const REFRESH_PREFIXES = ["/api/invoices", "/api/exceptions", "/api/dashboard", "/api/agent", "/api/knowledge", "/api/review/"];
 
 /**
  * Subscribe to server-sent events for the organization. Every event is re-broadcast

@@ -129,12 +129,18 @@ def to_engine_invoice(inv: Invoice, sha: str | None, confirmed_supplier: bool) -
 
 def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "system", actor_id: uuid.UUID | None = None,
                       mode: str = "three_way") -> ReconciliationRun:
+    # Corrections, reruns and decisions share the invoice lock before changing any case or findings.
+    session.flush()
+    session.refresh(inv, with_for_update=True)
+    session.expire(inv, ["lines"])
     org = session.get(Organization, inv.organization_id)
     sha = session.scalar(select(Document.sha256).where(Document.id == inv.document_id)) if inv.document_id else None
     confirmed = bool(inv.field_sources.get("_supplier_confirmed")) if inv.field_sources else False
     ctx = build_context(session, org, inv)
     result = E.reconcile(to_engine_invoice(inv, sha, confirmed), ctx, mode=mode)
     data = result.to_dict()
+    previous = session.scalar(select(ReconciliationRun).where(ReconciliationRun.invoice_id == inv.id)
+                              .order_by(ReconciliationRun.created_at.desc()).limit(1))
 
     run = ReconciliationRun(organization_id=org.id, invoice_id=inv.id, mode=mode, engine_version=result.engine_version,
                             outcome=result.outcome, tolerances=audit.to_jsonable(vars(ctx.tolerances)),
@@ -183,11 +189,20 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
                          meta={"invoice_id": str(inv.id), "run_id": str(run.id)})
         else:
             open_exc.discrepancy_types = types
-            open_exc.proposed_action = open_exc.proposed_action or action
+            if previous is not None and (previous.mode != mode or previous.result.get("findings") != run.result.get("findings")):
+                open_exc.title = f"{TITLE.get(main, main.replace('_', ' ').title())} — {inv.invoice_number or 'invoice'}"
+                open_exc.proposed_action, open_exc.proposed_action_detail = action, detail
+                if open_exc.ai_summary:
+                    open_exc.ai_summary = {**open_exc.ai_summary, "stale": True}
+                    audit.record(session, org_id=org.id, action="exception.advisory_stale", entity_type="exception",
+                                 entity_id=open_exc.id, actor_type="system", actor_label="reconciliation-engine",
+                                 meta={"previous_run_id": str(previous.id), "run_id": str(run.id)})
+            else:
+                open_exc.proposed_action = open_exc.proposed_action or action
             open_exc.priority = _priority_level(org, inv, actionable)
     elif open_exc is not None:
         open_exc.status = "resolved"
-        open_exc.decision_note = "Resolved automatically: re-reconciliation found no discrepancies."
+        open_exc.decision_note = open_exc.decision_note or "Resolved automatically: re-reconciliation found no discrepancies."
         audit.record(session, org_id=org.id, action="exception.auto_resolved", entity_type="exception",
                      entity_id=open_exc.id, actor_type="system", actor_label="reconciliation-engine")
 
@@ -200,7 +215,7 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
                  before={"status": before_status}, after={"status": inv.status, "outcome": result.outcome,
                                                           "findings": [f.type for f in result.findings]},
                  meta={"run_id": str(run.id), "engine_version": result.engine_version, "mode": mode})
-    events.publish(org.id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
+    events.after_commit(session, org.id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
     return run
 
 

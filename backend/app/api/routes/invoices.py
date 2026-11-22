@@ -203,7 +203,7 @@ def revision(inv: Invoice) -> str:
 def correct(invoice_id: uuid.UUID, body: CorrectionIn, p: Principal = Depends(require(Perm.INVOICE_EDIT)),
             db: Session = Depends(get_db)) -> dict:
     inv = db.scalars(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == p.org_id)
-                     .options(selectinload(Invoice.lines))).first()
+                     .options(selectinload(Invoice.lines)).with_for_update()).first()
     if not inv:
         raise HTTPException(404, "Invoice not found")
     if body.revision is not None and body.revision != revision(inv):

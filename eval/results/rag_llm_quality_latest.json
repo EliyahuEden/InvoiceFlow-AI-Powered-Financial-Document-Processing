@@ -1,0 +1,558 @@
+{
+  "generated_at": "2026-11-22T08:34:11+00:00",
+  "git_rev": "6c674f2",
+  "python": "3.13.0",
+  "dataset": "eval/datasets/rag/questions_heldout.jsonl",
+  "questions": 35,
+  "model": "openai/gpt-oss-120b",
+  "provider": "openai",
+  "prompt_version": "rag-answer-v3",
+  "embedding": "intfloat/multilingual-e5-large",
+  "retrieval": "hybrid_rerank",
+  "reranker": "jinaai/jina-reranker-v2-base-multilingual",
+  "retrieval_note": null,
+  "answer_correctness": 0.64,
+  "citation_accuracy": 0.9,
+  "abstention": {
+    "tp": 0,
+    "fp": 1,
+    "fn": 10,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "note": "positive class = question should be refused"
+  },
+  "injection_parroting": "0/0",
+  "passed": 16,
+  "per_question": [
+    {
+      "id": "ho-he-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "תבור מספקת את ההזמנה תוך 5 ימי עסקים.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#4",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "5. אספקה",
+          "quote": "האספקה תתבצע תוך 5 ימי עסקים ממועד ההזמנה",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "מוצרים פגומים יוחלפו על ידי הספק תוך 14 יום ללא חיוב נוסף.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#6",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "8. החזרות",
+          "quote": "מוצרים פגומים יוחלפו על ידי הספק תוך 14 יום ללא חיוב נוסף.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-03",
+      "passed": false,
+      "facts_correct": false,
+      "required_sources_cited": false,
+      "abstained": true,
+      "answer": "לא נמצאה אסמכתה שניתן לאמת במאגר הידע.",
+      "citations": []
+    },
+    {
+      "id": "ho-he-04",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "המחיר של קפה נטול קפאין מחרמון הוא 132 ש\"ח לק\"ג.",
+      "citations": [
+        {
+          "chunk_id": "agreement_hermon#0",
+          "knowledge_document_id": "agreement_hermon",
+          "document_id": null,
+          "title": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "quote": "מחיר פולי קפה נטול קפאין הוא 132 ש\"ח לק\"ג.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-05",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "עד 14 ימים יכולים לעבור מהקלייה ועד מועד האספקה.",
+      "citations": [
+        {
+          "chunk_id": "agreement_hermon#3",
+          "knowledge_document_id": "agreement_hermon",
+          "document_id": null,
+          "title": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "4. סטיית משקל",
+          "quote": "תאריך הקלייה של פולי הקפה לא יעלה על 14 יום ממועד האספקה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-06",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "להזמין ניקוי חלונות יש לבצע הזמנת עבודה מראש, שכן שירותים נוספים כגון ניקוי חלונות יבוצעו רק על פי הזמנת עבודה מראש וייחויבו בנפרד.",
+      "citations": [
+        {
+          "chunk_id": "agreement_carmel#3",
+          "knowledge_document_id": "agreement_carmel",
+          "document_id": null,
+          "title": "הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "4. שירותים נוספים",
+          "quote": "שירותים נוספים, כגון ניקוי חלונות או פוליש רצפות, יבוצעו רק על פי הזמנת עבודה מראש וייחויבו בנפרד.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-07",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "תבור יכולה לשנות מחיר רק אחרי שהודיעה בכתב לפחות 30 יום מראש וקיבלה אישור בכתב ממנהל הרכש של החברה.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-08",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "המחירים של תבור ציוד משרדי בע\"מ אינם צמודים למדד.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "המחירים המפורטים בנספח א' קבועים לכל תקופת ההסכם ואינם צמודים למדד.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-09",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "כאשר מדובר בשירותים, במקום תעודת קבלה נדרש \"אישור קבלת שירות\".",
+      "citations": [
+        {
+          "chunk_id": "policy_purchasing_2026#3",
+          "knowledge_document_id": "policy_purchasing_2026",
+          "document_id": null,
+          "title": "נוהל רכש והתקשרויות - כנרת אירוח (גרסה 3.0)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "3. התאמה משולשת",
+          "quote": "עבור שירותים נדרש אישור קבלת שירות במקום תעודת קבלה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-he-10",
+      "passed": false,
+      "facts_correct": false,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "לא ניתן לשלם לספק שאינו מופיע בכרטיס ספקים מאושר.",
+      "citations": [
+        {
+          "chunk_id": "policy_purchasing_2026#8",
+          "knowledge_document_id": "policy_purchasing_2026",
+          "document_id": null,
+          "title": "נוהל רכש והתקשרויות - כנרת אירוח (גרסה 3.0)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "8. ספקים",
+          "quote": "אין לשלם לספק שלא הוקם בכרטיס ספקים מאושר.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "The BlueWave agreement runs for 24 months, starting 1 February 2026.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#1",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "1. Term",
+          "quote": "This Master Services Agreement between Kinneret Hospitality Ltd (\"Customer\") and BlueWave IT Solutions Ltd (\"Supplier\") is effective from 1 February 2026 for a period of 24 months.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "The WD19S docking station costs ILS 890 per unit.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#2",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "2. Pricing",
+          "quote": "The Dell Latitude 5450 laptop is priced at ILS 5,380 per unit and the WD19S docking station at ILS 890 per unit.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-03",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "Hardware is accepted when the Customer signs the delivery note.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#4",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. Hardware delivery and acceptance",
+          "quote": "Hardware is accepted when the Customer signs the delivery note.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-04",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "Yes. The Master Services Agreement allows the Customer to withhold any disputed amount while paying the undisputed balance on time.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#8",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "7. Late payment",
+          "quote": "The Customer may withhold any disputed amount while paying the undisputed balance on time.",
+          "effective_date": "2026-02-01",
+          "version": null
+        },
+        {
+          "chunk_id": "procedure_finance_exceptions#3",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "3. Credit notes",
+          "quote": "hold payment of the disputed amount only.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-05",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "Exceptions that are not resolved within 10 business days are escalated to the Finance Manager.",
+      "citations": [
+        {
+          "chunk_id": "procedure_finance_exceptions#6",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "6. Service levels",
+          "quote": "Exceptions must be resolved within 10 business days. Unresolved exceptions are escalated to the Finance Manager.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-06",
+      "passed": false,
+      "facts_correct": false,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "Yes. The finance procedures allow partial payment of undisputed lines on a held invoice with Finance Manager approval, and the BlueWave MSA permits the customer to withhold disputed amounts while paying the undisputed balance on time.",
+      "citations": [
+        {
+          "chunk_id": "procedure_finance_exceptions#4",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "4. Payment holds",
+          "quote": "Partial payment of undisputed lines is allowed with Finance Manager approval.",
+          "effective_date": "2026-01-01",
+          "version": null
+        },
+        {
+          "chunk_id": "agreement_bluewave#8",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "7. Late payment",
+          "quote": "The Customer may withhold any disputed amount while paying the undisputed balance on time.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-en-07",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "The decision on an exception must be documented in the system with the reviewer’s reason.",
+      "citations": [
+        {
+          "chunk_id": "procedure_finance_exceptions#8",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "8. Documentation",
+          "quote": "Every decision on an exception must be documented in the system with the reviewer's reason.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-mx-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "A roll of סרט ההדבקה costs ILS 6.90.",
+      "citations": [
+        {
+          "chunk_id": "agreement_arava#0",
+          "knowledge_document_id": "agreement_arava",
+          "document_id": null,
+          "title": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "quote": "ILS 6.90 per roll :(סרט הדבקה)",
+          "effective_date": "2025-06-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-mx-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "abstained": false,
+      "answer": "החשבוניות צריכות להיות במטבע שקל חדש ישראלי (ILS).",
+      "citations": [
+        {
+          "chunk_id": "agreement_arava#0",
+          "knowledge_document_id": "agreement_arava",
+          "document_id": null,
+          "title": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "quote": "All prices and invoices are in Israeli New Shekels (ILS).",
+          "effective_date": "2025-06-01",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "ho-cl-01",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-cl-02",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-md-01",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-md-02",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-cf-01",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-cf-02",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-01",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-02",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-03",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-04",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-05",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-06",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-07",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-08",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-09",
+      "passed": false,
+      "error": "RateLimitError"
+    },
+    {
+      "id": "ho-un-10",
+      "passed": false,
+      "error": "RateLimitError"
+    }
+  ],
+  "failure_examples": [
+    {
+      "id": "ho-he-03",
+      "question": "כמה זמן מראש יש להודיע לתבור שלא רוצים להאריך את ההסכם?",
+      "answer": "לא נמצאה אסמכתה שניתן לאמת במאגר הידע.",
+      "abstained": true
+    },
+    {
+      "id": "ho-he-10",
+      "question": "האם אפשר לשלם לספק שאינו מופיע בכרטיס ספקים מאושר?",
+      "answer": "לא ניתן לשלם לספק שאינו מופיע בכרטיס ספקים מאושר.",
+      "abstained": false
+    },
+    {
+      "id": "ho-en-06",
+      "question": "Can we pay the undisputed lines of an invoice that is on hold?",
+      "answer": "Yes. The finance procedures allow partial payment of undisputed lines on a held invoice with Finance Manager approval, and the BlueWave MSA permits the customer to withhold disputed amounts while paying the undisputed balance on time.",
+      "abstained": false
+    }
+  ]
+}

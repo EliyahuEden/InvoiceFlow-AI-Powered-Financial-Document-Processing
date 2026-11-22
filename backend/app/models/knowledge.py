@@ -23,6 +23,7 @@ class KnowledgeDocument(UUIDPk, Timestamps, TenantScoped, Base):
     language: Mapped[str | None] = mapped_column(String(10))
     effective_date: Mapped[date | None] = mapped_column(Date)
     version: Mapped[str | None] = mapped_column(String(20))
+    policy_key: Mapped[str | None] = mapped_column(String(80))
     status: Mapped[str] = mapped_column(String(20), default="processing")  # processing | indexed | failed
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
 

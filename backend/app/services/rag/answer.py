@@ -18,6 +18,7 @@ import unicodedata
 
 from pydantic import BaseModel, Field
 
+from app.services.agent.faithfulness import unsupported_numbers
 from app.services.extraction.injection import detect_injection
 from app.services.rag.retriever import Hit
 from app.services.rag.text import tokens
@@ -35,7 +36,7 @@ def screen_hits(hits: list[Hit]) -> tuple[list[Hit], list[dict]]:
             safe.append(h)
     return safe, excluded
 
-PROMPT_VERSION = "rag-answer-v2"
+PROMPT_VERSION = "rag-answer-v3"
 # Calibrated on the original 50 calibration questions (eval/calibrate_abstention.py). A stricter
 # value (-0.326) learned with added near-miss questions refused every unanswerable held-out question
 # but also half of the answerable ones (held-out correctness 0.76 -> 0.52), so it was not adopted:
@@ -64,6 +65,7 @@ SYSTEM = """You answer questions about a company's supplier agreements and purch
 Use ONLY the numbered evidence passages provided. Do not use outside knowledge.
 - Every factual statement must be supported by at least one citation with a verbatim quote copied
   exactly from the cited passage.
+- Include each amount, duration or percentage you report in a cited quote.
 - If the passages do not contain the answer, set abstain=true and explain what is missing.
 - If passages conflict (for example an older and a newer policy), say so explicitly, cite both, and
   prefer the one with the later effective date or the supplier-specific agreement, stating why.
@@ -106,7 +108,7 @@ def citation_payload(hit: Hit, quote: str) -> dict:
     ch = hit.chunk
     return {"chunk_id": ch.id, "knowledge_document_id": ch.document_id, "document_id": ch.source_document_id,
             "title": ch.document_title, "doc_type": ch.doc_type, "page": ch.page, "section": ch.section,
-            "quote": quote.strip(), "effective_date": ch.effective_date}
+            "quote": quote.strip(), "effective_date": ch.effective_date, "version": ch.version}
 
 
 def answer_with_llm(llm, question: str, hits: list[Hit]) -> tuple[dict, object]:  # noqa: ANN001
@@ -119,11 +121,17 @@ def answer_with_llm(llm, question: str, hits: list[Hit]) -> tuple[dict, object]:
                          schema=RagAnswer.model_json_schema(), max_tokens=2000)
     ans = RagAnswer.model_validate(res.data)
     citations, dropped = verify_citations(ans, hits)
-    abstain = ans.abstain or not citations
+    cited = {c["chunk_id"] for c in citations}
+    unsupported = unsupported_numbers(ans.answer, [h.chunk.text for h in hits if h.chunk.id in cited],
+                                      max_derived=0, ignore_small=False)
+    unverifiable = not ans.answer.strip() or bool(unsupported) or (not ans.abstain and not citations)
+    abstain = ans.abstain or unverifiable
+    unavailable = ("לא נמצאה אסמכתה שניתן לאמת במאגר הידע." if re.search(r"[א-ת]", question)
+                   else "I could not find verifiable support for an answer in the knowledge base.")
     return {
-        "answer": ans.answer if not (abstain and not ans.abstain) else
-        "I could not find verifiable support for an answer in the knowledge base.",
-        "abstained": abstain, "conflict_detected": ans.conflict_detected, "citations": citations,
+        "answer": unavailable if unverifiable else ans.answer,
+        "abstained": abstain, "conflict_detected": ans.conflict_detected and bool(citations) and not unverifiable,
+        "citations": citations if not unverifiable else [],
         "dropped_citations": dropped, "mode": f"llm:{llm.model}", "prompt_version": PROMPT_VERSION,
         "excluded_passages": excluded,
     }, res
@@ -178,17 +186,31 @@ def answer_extractive(question: str, hits: list[Hit], min_strength: float = 0.34
                 "latency_ms": int((time.perf_counter() - t0) * 1000)}
     q = set(tokens(question))
     picked, citations = [], []
-    for h in hits[:3]:
+    current_revisions: dict[str, tuple[Hit, str]] = {}
+
+    def revision_family(h: Hit) -> tuple:
+        return h.chunk.doc_type, h.chunk.supplier_id, h.chunk.policy_family(), h.chunk.effective_date
+
+    top_revision = revision_family(top)
+    for index, h in enumerate(hits):
         if h is not top and evidence_strength(question, h) < max(min_strength, strength * 0.6):
             continue
         sents = sorted(_sentences(h.chunk.text), key=lambda s: -len(q & set(tokens(s))))
         if sents:
-            picked.append(sents[0])
-            citations.append(citation_payload(h, sents[0]))
-        if len(citations) >= 2:
-            break
-    docs = {c["knowledge_document_id"] for c in citations}
-    return {"answer": " ".join(picked), "abstained": False, "citations": citations, "mode": "offline-extractive",
-            "conflict_detected": False, "multi_source": len(docs) > 1, "evidence_strength": round(strength, 3),
+            if index < 3 and len(citations) < 2:
+                picked.append(sents[0])
+                citations.append(citation_payload(h, sents[0]))
+            if revision_family(h) == top_revision:
+                current_revisions.setdefault(h.chunk.document_id, (h, sents[0]))
+    conflict = len({_norm(sentence) for _, sentence in current_revisions.values()}) > 1
+    answer = " ".join(picked)
+    if conflict:
+        citations = [citation_payload(h, sentence) for h, sentence in current_revisions.values()]
+        answer = ("נמצאו גרסאות תקפות עם ראיות שונות. יש לבדוק את המקורות המצורפים."
+                  if re.search(r"[א-ת]", question) else
+                  "Current versions contain different evidence. Review the cited sources to resolve the conflict.")
+    return {"answer": answer, "abstained": conflict or not citations, "citations": citations, "mode": "offline-extractive",
+            "conflict_detected": conflict, "multi_source": len({c["knowledge_document_id"] for c in citations}) > 1,
+            "evidence_strength": round(strength, 3),
             "excluded_passages": excluded,
             "latency_ms": int((time.perf_counter() - t0) * 1000)}

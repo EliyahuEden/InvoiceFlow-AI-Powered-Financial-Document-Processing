@@ -11,8 +11,10 @@ const state = vi.hoisted(() => ({
   permissions: [] as string[],
   invoice: {} as InvoiceDetail,
   request: "",
+  search: "",
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/invoices" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/invoices",
+  useSearchParams: () => new URLSearchParams(state.search) }));
 vi.mock("@/components/session", () => ({
   useSession: () => ({ me: { user: { id: "reviewer" } }, can: (p: string) => state.permissions.includes(p) }),
 }));
@@ -25,6 +27,7 @@ vi.mock("@/lib/api", async (original) => ({ ...(await original<typeof import("@/
 }));
 beforeEach(() => {
   state.permissions = [];
+  state.search = "";
   state.invoice = {
     id: "invoice", status: "reconciled", invoice_number: "INV-42",
     approvals: [{ id: "second", step: 2, required_role: "admin", status: "pending" }],
@@ -33,6 +36,12 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const show = (page: React.ReactNode) => render(<I18nProvider initial="en">{page}</I18nProvider>);
+
+it("honors the dashboard link to invoices still processing", () => {
+  state.search = "status=processing";
+  show(<InboxPage />);
+  expect(state.request).toContain("status=processing&");
+});
 
 it("sorts the whole inbox through the API when a sortable column is selected", () => {
   show(<InboxPage />);
@@ -44,6 +53,18 @@ it("sorts the whole inbox through the API when a sortable column is selected", (
 it("withholds file intake on a direct visit without upload permission", () => {
   show(<UploadPage />);
   expect(screen.queryByTestId("file-input")).not.toBeInTheDocument();
+});
+
+it("starts at most three uploads at once and advances the queue as slots open", async () => {
+  state.permissions = ["invoice:upload"];
+  const releases: Array<(value: { invoice_id: string; job_id: string }) => void> = [];
+  const upload = vi.spyOn(api, "post").mockImplementation(() => new Promise((resolve) => { releases.push(resolve); }));
+  show(<UploadPage />);
+  const files = Array.from({ length: 4 }, (_, i) => new File(["pdf"], `doc-${i}.pdf`));
+  fireEvent.change(screen.getByTestId("file-input"), { target: { files } });
+  expect(upload).toHaveBeenCalledTimes(3);
+  await act(async () => { releases[0]({ invoice_id: "first-invoice", job_id: "first-job" }); });
+  expect(upload).toHaveBeenCalledTimes(4);
 });
 
 it("shows the worker's reported percentage and error for an uploaded file", async () => {

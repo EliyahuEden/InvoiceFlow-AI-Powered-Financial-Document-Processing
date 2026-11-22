@@ -22,7 +22,7 @@ def test_correct_invoice_reconciles_and_needs_two_distinct_approvers(client, as_
     inv = upload_invoice(client, proc, "01_correct_tavor_he.pdf")
     d = _detail(client, fin, inv["invoice_id"])
     assert d["status"] == "reconciled" and d["invoice_number"] == "TV-24518" and d["total"] == "7633.42"
-    assert d["supplier"]["tax_id"] == "514000127" and d["purchase_order"]["po_number"] == "PO-2026-1001"
+    assert d["supplier"]["tax_id"] == "514000124" and d["purchase_order"]["po_number"] == "PO-2026-1001"
     assert d["field_sources"]["total"]["bbox"]
     assert len(d["approvals"]) == 1  # below the dual-approval threshold
     # the uploader cannot approve their own invoice (segregation of duties)
@@ -225,3 +225,27 @@ def test_stale_correction_is_refused_with_409(client, as_user):
     ok = client.patch(f"/api/invoices/{inv['invoice_id']}", headers=fin,
                       json={"header": {"payment_terms": "Net 60"}, "revision": fresh})
     assert ok.status_code == 200
+
+
+def test_simultaneous_corrections_with_the_same_revision_have_one_winner(client, as_user):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    procurement = as_user("procurement@kinneret.example")
+    finance = as_user("finance@kinneret.example")
+    invoice_id = upload_invoice(client, procurement, "02_qty_mismatch_hermon_he.pdf")["invoice_id"]
+    revision = _detail(client, finance, invoice_id)["revision"]
+    start = Barrier(2, timeout=10)
+
+    def submit(headers, terms):
+        start.wait()
+        response = client.patch(f"/api/invoices/{invoice_id}", headers=headers,
+                                json={"header": {"payment_terms": terms}, "revision": revision})
+        return response.status_code, terms
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        tasks = [pool.submit(submit, headers, terms) for headers, terms in ((procurement, "Net 30"), (finance, "Net 60"))]
+        results = dict(task.result(timeout=15) for task in tasks)
+
+    assert set(results) == {200, 409}
+    assert _detail(client, finance, invoice_id)["payment_terms"] == results[200]

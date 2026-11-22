@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 
+const navigationGuards = new Set<() => boolean>();
+
+export function confirmDraftNavigation() {
+  return [...navigationGuards].every((confirm) => confirm());
+}
+
 /** Protect the current draft across links, browser history, reload and controlled navigation. */
 export function useUnsavedWork(dirty: boolean, message: string) {
   const state = useRef({ dirty, message, allowed: false });
@@ -11,6 +17,7 @@ export function useUnsavedWork(dirty: boolean, message: string) {
     const currentUrl = window.location.href;
     const currentHistory = window.history.state;
     const needsPrompt = () => state.current.dirty && !state.current.allowed;
+    const confirmNavigation = () => !needsPrompt() || window.confirm(state.current.message);
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (needsPrompt()) { event.preventDefault(); event.returnValue = ""; }
     };
@@ -20,12 +27,12 @@ export function useUnsavedWork(dirty: boolean, message: string) {
       const link = target.closest?.("a[href]") as HTMLAnchorElement | null;
       const nextButton = target.closest?.('[data-testid="review-next"]');
       if (!nextButton && (!link || link.target === "_blank" || link.hasAttribute("download") || link.href === window.location.href)) return;
-      if (needsPrompt() && !window.confirm(state.current.message)) {
+      if (!confirmNavigation()) {
         event.preventDefault(); event.stopPropagation();
       }
     };
     const onPopState = (event: PopStateEvent) => {
-      if (needsPrompt() && !window.confirm(state.current.message)) {
+      if (!confirmNavigation()) {
         event.stopImmediatePropagation();
         window.history.pushState(currentHistory, "", currentUrl);
       }
@@ -33,7 +40,9 @@ export function useUnsavedWork(dirty: boolean, message: string) {
     window.addEventListener("beforeunload", beforeUnload);
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPopState, true);
+    navigationGuards.add(confirmNavigation);
     return () => {
+      navigationGuards.delete(confirmNavigation);
       window.removeEventListener("beforeunload", beforeUnload);
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", onPopState, true);

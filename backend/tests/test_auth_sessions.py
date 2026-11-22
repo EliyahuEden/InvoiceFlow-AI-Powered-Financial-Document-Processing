@@ -124,6 +124,45 @@ def test_open_event_streams_notice_revocation(client):
     assert not auth_sessions.is_active(sid)
 
 
+def test_open_event_stream_ends_when_organization_membership_is_removed(client, monkeypatch):
+    import asyncio
+    import uuid
+    from types import SimpleNamespace
+
+    from sqlalchemy import delete
+    from starlette.requests import Request
+
+    from app.api.routes import system
+    from app.core.db import session_scope
+    from app.models import Membership
+
+    token = _login(client)["access_token"]
+    claims = _claims(token)
+    headers = [(b"authorization", f"Bearer {token}".encode())]
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    request = Request({"type": "http", "method": "GET", "headers": headers}, receive)
+    subscribed = []
+    pubsub = SimpleNamespace(subscribe=subscribed.append, close=lambda: None,
+                             get_message=lambda **_: {"type": "message", "data": '{"event":"example","data":{}}'})
+    monkeypatch.setattr(system, "get_redis", lambda: SimpleNamespace(pubsub=lambda **_: pubsub))
+    monkeypatch.setattr(system, "SESSION_RECHECK_SECONDS", 0)
+
+    async def check():
+        stream = (await system.events(request)).body_iterator
+        assert (await anext(stream))["event"] == "ready"
+        assert subscribed == [system.channel(claims["org"])]
+        with session_scope() as session:
+            session.execute(delete(Membership).where(Membership.user_id == uuid.UUID(claims["sub"]),
+                                                    Membership.organization_id == uuid.UUID(claims["org"])))
+        assert (await anext(stream))["event"] == "session.ended"
+        await stream.aclose()
+
+    asyncio.run(check())
+
+
 def _session_row(tok: str):
     import uuid
 

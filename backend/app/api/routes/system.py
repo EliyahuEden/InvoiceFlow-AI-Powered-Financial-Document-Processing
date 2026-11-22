@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -18,7 +19,7 @@ from app.api.deps import Principal, get_db, get_principal, principal_from_claims
 from app.core.db import new_session
 from app.core.security import hash_password
 from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, Job, Membership, Organization, Role, User
-from app.services import audit, auth_sessions, sse_tickets
+from app.services import audit, sse_tickets
 from app.services.events import channel, get_redis
 from app.services.llm.provider import mode_label
 from app.services.rbac import ROLE_PERMISSIONS, Perm
@@ -215,14 +216,23 @@ async def events(request: Request, ticket: str | None = None) -> EventSourceResp
         p = await asyncio.to_thread(principal_from_claims, claims)
     else:
         p = await asyncio.to_thread(get_principal, request)
+    stream_claims = {"sid": str(p.session_id), "sub": str(p.user.id), "org": str(p.org_id)}
 
     async def stream():  # noqa: ANN202
         pubsub = get_redis().pubsub(ignore_subscribe_messages=True)
         try:
             pubsub.subscribe(channel(p.org_id))
             yield {"event": "ready", "data": json.dumps({"org": str(p.org_id)})}
-            idle = since_check = 0
+            idle = 0
+            next_check = time.monotonic() + SESSION_RECHECK_SECONDS
             while not await request.is_disconnected():
+                if time.monotonic() >= next_check:
+                    try:
+                        await asyncio.to_thread(principal_from_claims, stream_claims)
+                    except HTTPException:
+                        yield {"event": "session.ended", "data": "{}"}
+                        return
+                    next_check = time.monotonic() + SESSION_RECHECK_SECONDS
                 msg = await asyncio.to_thread(pubsub.get_message, timeout=1.0)
                 if msg and msg.get("type") == "message":
                     payload = json.loads(msg["data"])
@@ -233,12 +243,6 @@ async def events(request: Request, ticket: str | None = None) -> EventSourceResp
                     if idle >= 15:
                         yield {"event": "ping", "data": "{}"}
                         idle = 0
-                since_check += 1
-                if since_check >= SESSION_RECHECK_SECONDS:
-                    since_check = 0
-                    if not await asyncio.to_thread(auth_sessions.is_active, str(p.session_id)):
-                        yield {"event": "session.ended", "data": "{}"}
-                        return
         except Exception:  # noqa: BLE001 - Redis unavailable: client falls back to polling
             yield {"event": "degraded", "data": json.dumps({"reason": "event bus unavailable"})}
         finally:

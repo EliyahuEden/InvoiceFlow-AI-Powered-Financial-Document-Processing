@@ -17,6 +17,8 @@ type Item = {
 };
 
 type JobStatus = { status: string; progress: number; message: string | null; error: string | null; entity_id: string | null };
+type UploadResponse = { invoice_id: string; job_id: string };
+const PARALLEL_UPLOADS = 3;
 
 export default function UploadPage() {
   const { t } = useI18n();
@@ -25,12 +27,17 @@ export default function UploadPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [drag, setDrag] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const queue = useRef<{ active: number; pending: (() => Promise<void>)[] }>({ active: 0, pending: [] });
+  const tracked = useRef<Item[]>([]);
+  const active = items.filter((i) => i.state === "processing" && i.jobId);
+  const hasActive = active.length > 0;
+  useEffect(() => { tracked.current = active; });
   const { data: samples, error: sampleError, mutate: reloadSamples } = useApi<{ items: { file: string; scenario: string; description: string; language: string }[] }>(
     allowed ? "/api/invoices/demo/samples" : null,
   );
 
-  const patch = useCallback((key: string, p: Partial<Item>) => {
-    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, ...p } : i)));
+  const patch = useCallback((key: string, p: Partial<Item>, onlyWhileProcessing = false) => {
+    setItems((prev) => prev.map((i) => i.key === key && (!onlyWhileProcessing || i.state === "processing") ? { ...i, ...p } : i));
   }, []);
 
   // live progress via SSE; polling below is the fallback
@@ -46,11 +53,13 @@ export default function UploadPage() {
   }), []);
 
   useEffect(() => {
-    const active = items.filter((i) => i.state === "processing" && i.jobId);
-    if (!active.length) return;
+    if (!hasActive) return;
     let cancelled = false;
+    let polling = false;
     const id = setInterval(async () => {
-      await Promise.all(active.map(async (it) => {
+      if (polling) return;
+      polling = true;
+      await Promise.all(tracked.current.map(async (it) => {
         try {
           const j = await api.get<JobStatus>(`/api/jobs/${it.jobId}`);
           const done = j.status === "succeeded";
@@ -58,24 +67,40 @@ export default function UploadPage() {
           let status: string | undefined;
           if (done && it.invoiceId) status = (await api.get<{ status: string }>(`/api/invoices/${it.invoiceId}`).catch(() => null))?.status;
           if (!cancelled) patch(it.key, { progress: j.progress, message: done ? undefined : failed ? j.error ?? j.message ?? undefined : j.message ?? undefined,
-            state: done ? "done" : failed ? "failed" : "processing", status });
-        } catch { /* transient */ }
+            state: done ? "done" : failed ? "failed" : "processing", status }, true);
+        } catch {
+          if (!cancelled) patch(it.key, { message: t.upload.trackingUnavailable }, true);
+        }
       }));
+      polling = false;
     }, 1500);
     return () => { cancelled = true; clearInterval(id); };
-  }, [items, patch]);
+  }, [hasActive, patch, t.upload.trackingUnavailable]);
 
-  const handleResult = (key: string, run: () => Promise<{ invoice_id: string; job_id: string }>) => {
-    patch(key, { state: "uploading" });
-    run().then((r) => patch(key, { state: "processing", invoiceId: r.invoice_id, jobId: r.job_id }))
-      .catch((e) => {
+  const enqueue = (key: string, run: () => Promise<UploadResponse>) => {
+    const pending = queue.current;
+    pending.pending.push(async () => {
+      patch(key, { state: "uploading" });
+      try {
+        const r = await run();
+        patch(key, { state: "processing", invoiceId: r.invoice_id, jobId: r.job_id });
+      } catch (e) {
         if (e instanceof ApiError && e.status === 409) {
           const d = e.detail as { invoice_id?: string };
           patch(key, { state: "duplicate", invoiceId: d?.invoice_id, message: t.upload.duplicate });
         } else {
           patch(key, { state: "rejected", message: e instanceof ApiError ? String(e.message) : t.common.error });
         }
-      });
+      }
+    });
+    function startNext() {
+      while (pending.active < PARALLEL_UPLOADS && pending.pending.length) {
+        const upload = pending.pending.shift()!;
+        pending.active++;
+        void upload().finally(() => { pending.active--; startNext(); });
+      }
+    }
+    startNext();
   };
 
   const addFiles = (files: FileList | File[]) => {
@@ -85,14 +110,14 @@ export default function UploadPage() {
     fresh.forEach((it, idx) => {
       const fd = new FormData();
       fd.append("file", list[idx]);
-      handleResult(it.key, () => api.post("/api/invoices/upload", fd));
+      enqueue(it.key, () => api.post("/api/invoices/upload", fd));
     });
   };
 
   const uploadSample = (file: string) => {
     const it: Item = { key: crypto.randomUUID(), name: file.split("/").pop()!, size: 0, state: "queued" };
     setItems((prev) => [it, ...prev]);
-    handleResult(it.key, () => api.post("/api/invoices/demo/samples/upload", { file }));
+    enqueue(it.key, () => api.post("/api/invoices/demo/samples/upload", { file }));
   };
 
   return (

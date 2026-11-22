@@ -10,6 +10,9 @@ import socket
 import time
 import traceback
 import uuid
+from threading import Event, Thread
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
 from app.core.db import new_session
@@ -18,6 +21,17 @@ from app.models import Job
 from app.services import jobs
 
 log = get_logger("worker")
+
+
+def _heartbeat(stop: Event, job_id: uuid.UUID, worker_id: str, attempt: int) -> None:
+    interval = min(30, get_settings().job_lock_timeout_seconds / 3)
+    while not stop.wait(interval):
+        try:
+            jobs.renew_lease(job_id, worker_id, attempt)
+        except jobs.LeaseLost:
+            return
+        except SQLAlchemyError as exc:
+            log.warning("job_heartbeat_failed", job_id=str(job_id), error=str(exc))
 
 
 def _handlers() -> dict:
@@ -43,8 +57,10 @@ def run_one(worker_id: str) -> bool:
         if job is None:
             claim.rollback()
             return False
-        job_id, org_id, job_type = job.id, job.organization_id, job.type
+        job_id, org_id, job_type, attempt = job.id, job.organization_id, job.type, job.attempts
         claim.commit()
+        if job.status == "failed":
+            return True
     finally:
         claim.close()
 
@@ -52,29 +68,40 @@ def run_one(worker_id: str) -> bool:
     log.info("job_started", **structlog_ctx)
     session = new_session(org_id)
     t0 = time.perf_counter()
+    stop_heartbeat = Event()
+    heartbeat = Thread(target=_heartbeat, args=(stop_heartbeat, job_id, worker_id, attempt), daemon=True)
+    heartbeat.start()
     try:
         job = session.get(Job, job_id)
+        if job is None or (job.status, job.locked_by, job.attempts) != ("running", worker_id, attempt):
+            raise jobs.LeaseLost(str(job_id))
         handler = _handlers().get(job_type)
         if handler is None:
             raise PermanentJobError(f"no handler for job type {job_type}")
         result = handler(session, job)
+        stop_heartbeat.set()
         jobs.mark_succeeded(session, job, result)
         session.commit()
         log.info("job_succeeded", duration_ms=int((time.perf_counter() - t0) * 1000), **structlog_ctx)
+    except jobs.LeaseLost:
+        session.rollback()
+        log.info("job_lease_lost", **structlog_ctx)
     except Exception as exc:  # noqa: BLE001
+        stop_heartbeat.set()
         session.rollback()
         permanent = isinstance(exc, PermanentJobError)
         log.error("job_failed", error=str(exc), permanent=permanent, trace=traceback.format_exc()[-2000:], **structlog_ctx)
         fail = new_session(org_id)
         try:
-            j = fail.get(Job, job_id)
-            if permanent:
-                j.attempts = j.max_attempts
-            jobs.mark_failed(fail, job_id, f"{type(exc).__name__}: {exc}")
+            jobs.lock_attempt(fail, job_id, worker_id, attempt)
+            jobs.mark_failed(fail, job_id, f"{type(exc).__name__}: {exc}", permanent=permanent)
             fail.commit()
+        except jobs.LeaseLost:
+            log.info("job_lease_lost", **structlog_ctx)
         finally:
             fail.close()
     finally:
+        stop_heartbeat.set()
         session.close()
     return True
 
@@ -99,11 +126,7 @@ def main() -> None:
 
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
-    rec = new_session()
-    n = jobs.requeue_stale(rec)
-    rec.commit()
-    rec.close()
-    log.info("worker_started", worker_id=worker_id, requeued_stale=n)
+    log.info("worker_started", worker_id=worker_id)
     while not stop["flag"]:
         try:
             if not run_one(worker_id):

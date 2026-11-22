@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from tempfile import SpooledTemporaryFile
 
 import structlog
 from fastapi import FastAPI, Request
@@ -10,6 +11,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api.routes import auth, copilot, documents, insights, invoices, knowledge, masterdata, queue, review, system
 from app.core.config import get_settings
@@ -18,6 +21,58 @@ from app.services.documents.validation import UploadRejected
 
 log = get_logger("api")
 
+UPLOAD_PATHS = {"/api/invoices/upload", "/api/knowledge/documents"}
+MULTIPART_OVERHEAD = 64 * 1024
+
+
+class UploadBodyLimit:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"].rstrip("/") not in UPLOAD_PATHS:
+            await self.app(scope, receive, send)
+            return
+
+        limit = get_settings().max_upload_bytes + MULTIPART_OVERHEAD
+        length = Headers(scope=scope).get("content-length", "")
+        too_large = JSONResponse({"detail": "Upload request exceeds the allowed size."}, status_code=413)
+        if length.isascii() and length.isdecimal() and len(length) < 20:
+            if int(length) > limit:
+                await too_large(scope, receive, send)
+            else:
+                # The HTTP server enforces the declared length when framing the body.
+                await self.app(scope, receive, send)
+            return
+
+        # Chunked requests have no declared size. Bound them before invoking the multipart parser.
+        with SpooledTemporaryFile(max_size=1024 * 1024) as body:
+            while True:
+                message = await receive()
+                if message["type"] == "http.disconnect":
+                    return
+                chunk = message.get("body", b"")
+                if body.tell() + len(chunk) > limit:
+                    await too_large(scope, receive, send)
+                    return
+                body.write(chunk)
+                if not message.get("more_body", False):
+                    break
+            remaining = body.tell()
+            body.seek(0)
+            replayed = False
+
+            async def replay():  # noqa: ANN202
+                nonlocal remaining, replayed
+                if replayed:
+                    return await receive()
+                chunk = body.read(64 * 1024)
+                remaining -= len(chunk)
+                replayed = remaining == 0
+                return {"type": "http.request", "body": chunk, "more_body": not replayed}
+
+            await self.app(scope, replay, send)
+
 
 def create_app() -> FastAPI:
     s = get_settings()
@@ -25,6 +80,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="InvoiceFlow API", version="1.0.0",
                   description="AI-assisted supplier-invoice processing with deterministic reconciliation.",
                   docs_url="/api/docs", openapi_url="/api/openapi.json")
+    app.add_middleware(UploadBodyLimit)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_credentials=True,
                        allow_methods=["GET", "POST", "PATCH", "DELETE"],
                        allow_headers=["Authorization", "Content-Type", "X-Requested-With"])

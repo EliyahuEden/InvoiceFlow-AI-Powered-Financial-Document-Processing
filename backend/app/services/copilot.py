@@ -17,7 +17,7 @@ import time
 import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.services.agent.faithfulness import unsupported_numbers
@@ -25,7 +25,7 @@ from app.services.agent.tools import TOOLS, ToolContext, call_tool
 from app.services.llm.provider import get_llm
 from app.services.llm.telemetry import record_call
 
-PROMPT_VERSION = "copilot-v1"
+PROMPT_VERSION = "copilot-v2"
 MAX_ROUNDS = 4
 MAX_TOOL_CALLS = 8
 COPILOT_TOOLS = ["review_queue", "queue_summary", "search_invoices", "get_invoice", "invoice_case", "get_exception",
@@ -34,13 +34,16 @@ COPILOT_TOOLS = ["review_queue", "queue_summary", "search_invoices", "get_invoic
                  "approval_rules", "my_activity", "app_help", "search_supplier_agreements", "retrieve_policy"]
 HEBREW = re.compile(r"[֐-׿]")
 ID_KEYS = {"invoice_id": "invoice", "exception_id": "exception", "supplier_id": "supplier",
-           "purchase_order_id": "purchase_order", "document_id": "document"}
+           "purchase_order_id": "purchase_order", "knowledge_document_id": "document"}
 HREF = {"invoice": "/invoices/{id}", "exception": "/exceptions/{id}", "supplier": "/suppliers/{id}",
         "purchase_order": "/purchase-orders/{id}", "document": "/knowledge/{id}"}
 
 SYSTEM = """You are the accounts-payable copilot inside InvoiceFlow. You help finance and procurement staff
 understand their review queue, invoices, suppliers, purchase orders and policies.
 - Use the tools to look things up; never guess figures, statuses or dates.
+- For a known PO number, use po_status. Use find_purchase_orders to look up unknown PO numbers.
+- Use queue_summary for an overview. Use review_queue with status=pending_info for cases waiting for
+  information and status=escalated for escalations.
 - You are read-only. You cannot approve, reject, pay or change anything; if asked, say a person must do it
   in the app and point to the record.
 - Amounts in different currencies are never added together.
@@ -49,7 +52,9 @@ understand their review queue, invoices, suppliers, purchase orders and policies
 ANSWER_SYSTEM = """Write the final answer for the reviewer from the tool results only.
 - Answer in {language}, briefly (a few sentences or a short list).
 - Every number must appear in the tool results, with its currency. Do not compute new totals.
+- An invoice amount specified in an approval-rules question is hypothetical. You may repeat it when explaining which rule applies.
 - Cite the records you rely on in "citations" with their kind and id exactly as the tools returned them.
+- For documents, cite the knowledge_document_id.
 - If the tools did not return enough to answer, say so plainly and suggest where to look.
 - Never claim an action was taken: you are read-only. If asked to approve, reject or pay, say a person must do
   it in the app.
@@ -68,12 +73,18 @@ class CopilotAnswer(BaseModel):
 
 
 UUID = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.IGNORECASE)
+APPROVAL_AMOUNT = re.compile(r"(?:\binvoice (?:of|for)|חשבונית (?:של|על סך|בסך))\s*(?:₪\s*|ILS\s+)?"
+                             r"(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(?![\w.,])", re.IGNORECASE)
 
 
-def answer_problems(answer: str, outputs: list[dict], lang: str) -> list[str]:
+def answer_problems(answer: str, outputs: list[dict], lang: str, question: str = "") -> list[str]:
     """Checks on the final answer: figures from the tool results only, no raw record ids (the
     citations link the records), and the reader's language."""
-    problems = unsupported_numbers(UUID.sub(" ", answer), outputs)
+    scenario = APPROVAL_AMOUNT.search(question) if any(out.get("tool") == "approval_rules" for out in outputs) else None
+    premise = scenario.group(1) + (scenario.group(2) or "") if scenario else None
+    problems = unsupported_numbers(UUID.sub(" ", answer), outputs, premise=premise)
+    if not answer.strip():
+        problems.append("the answer is empty")
     if UUID.search(answer):
         problems.append("the answer shows a raw record id; name the invoice number or supplier instead "
                         "(records are linked through citations)")
@@ -164,19 +175,24 @@ def _with_model(ctx: ToolContext, llm, question: str, lang: str, history: list[d
                 ctx.trace.append({"tool": tc.name, "input": tc.input, "status": "rejected", "latency_ms": 0,
                                   "error": "not available to the copilot (read-only)"})
                 out = {"error": "this tool is not available: the copilot is read-only"}
+            elif not isinstance(tc.input, dict):
+                ctx.trace.append({"tool": tc.name, "status": "rejected", "latency_ms": 0})
+                out = {"error": "tool arguments must be a JSON object"}
             else:
-                out = call_tool(ctx, tc.name, dict(tc.input), source="copilot")
-                outputs.append({"tool": tc.name, "output": out})
+                out = call_tool(ctx, tc.name, tc.input, source="copilot")
+                if "error" not in out:
+                    outputs.append({"tool": tc.name, "output": out})
             results.append((tc.id, json.dumps(out, ensure_ascii=False, default=str)[:6000]))
         tr = llm.tool_result_message(results)
         messages.extend(tr if isinstance(tr, list) else [tr])
         if calls >= MAX_TOOL_CALLS:
             break
 
+    if not outputs:
+        return _offline(ctx, question, lang, context)
+
     seen: dict[tuple[str, str], str] = {}
     _walk_ids(outputs, seen)
-    if context.get("invoice_id"):
-        seen.setdefault(("invoice", str(context["invoice_id"])), "this invoice")
     data = json.dumps(outputs, ensure_ascii=False, default=str)[:24000]
     content = f"<question>{question}</question>\n<tool_results>{data}</tool_results>"
     feedback: list[str] = []
@@ -187,11 +203,11 @@ def _with_model(ctx: ToolContext, llm, question: str, lang: str, history: list[d
             res = llm.structured(system=ANSWER_SYSTEM.format(language=language), content=prompt,
                                  schema_name="copilot_answer", schema=CopilotAnswer.model_json_schema(), max_tokens=1500)
             ans = CopilotAnswer.model_validate(res.data)
-        except (ValidationError, Exception) as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             record_call(ctx.session, org_id=ctx.org_id, kind="copilot", workflow="copilot.answer",
                         prompt_version=PROMPT_VERSION, provider=llm.name, model=llm.model, status="error", error=str(exc))
-            break
-        violations = answer_problems(ans.answer, outputs, lang)
+            return _offline(ctx, question, lang, context)
+        violations = answer_problems(ans.answer, outputs, lang, question)
         record_call(ctx.session, org_id=ctx.org_id, kind="copilot", workflow="copilot.answer", prompt_version=PROMPT_VERSION,
                     result=res, status="unfaithful" if violations else "ok",
                     meta={"attempt": attempt, "violations": violations[:10]})
@@ -230,10 +246,10 @@ def _offline(ctx: ToolContext, question: str, lang: str, context: dict) -> dict:
     from app.services.rag import service as rag
 
     t0 = time.perf_counter()
-    res = rag.ask(ctx.session, ctx.org_id, question, workflow="copilot.offline")
+    res = rag.ask(ctx.session, ctx.org_id, question, workflow="copilot.offline", use_model=False)
     ctx.trace.append({"tool": "knowledge_search", "input": {"query": question}, "status": "ok",
                       "latency_ms": int((time.perf_counter() - t0) * 1000)})
-    if res.get("abstained"):
+    if res.get("abstained") and not res.get("conflict_detected"):
         return {**base, "citations": [], "steps": _steps(ctx), "answer": (
             "לא מצאתי בנתונים ובמסמכים תשובה לשאלה הזו. אפשר לשאול למשל: מה דחוף? אילו חשבוניות באיחור? "
             "כמה אנחנו חייבים לכל ספק? מה הסטטוס של הזמנה PO-2026-1001? או 'מה אתה יודע לעשות?'" if he else

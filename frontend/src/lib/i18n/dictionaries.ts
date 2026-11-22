@@ -133,6 +133,7 @@ const en = {
     samples: "Try a sample", samplesHint: "Synthetic invoices in data/demo/upload_samples (not pre-loaded).",
     queued: "Queued", uploading: "Uploading", done: "Processed", duplicate: "Already uploaded", rejected: "Rejected",
     openInvoice: "Open invoice", steps: "Pipeline",
+    trackingUnavailable: "Processing status is temporarily unavailable. Retrying automatically.",
     pipeline: ["Validate file", "Store securely", "Text layer or OCR", "Extract fields", "Verify against document", "Reconcile"],
   },
   invoice: {
@@ -149,6 +150,7 @@ const en = {
     approvals: "Payment approval", approve: "Approve for payment", reject: "Reject", step: "Step", noApprovals: "Approval steps are created once the invoice reconciles without open exceptions.",
     processingNow: "Processing document", failedTitle: "Processing failed", page: "Page", hoverHint: "Hover a field to locate it on the page.",
     security: "Security notice", verifiedInDoc: "Every row verified against the document", ocrConfidence: "OCR confidence", nativeText: "Embedded text", ocr: "OCR", mixed: "Mixed",
+    evidenceUnavailable: "This document page could not be loaded.",
   },
   recon: {
     title: "Reconciliation", outcome: "Outcome", mode: "Mode", two_way: "Two-way", three_way: "Three-way", engine: "Engine",
@@ -163,7 +165,7 @@ const en = {
     note: "Reviewer note", notePlaceholder: "Why? This note is stored in the audit trail.", comments: "Notes & requests",
     addNote: "Add note", decided: "Decided", empty: "No exceptions match.", summary: "Investigation summary",
     deterministicFindings: "Findings (deterministic)", changeAction: "Choose a different resolution",
-    noAi: "No AI summary yet.", runAgent: "Run investigation",
+    noAi: "No AI summary yet.", staleAi: "The evidence changed after this investigation. Run a new investigation for an updated summary.", runAgent: "Run investigation",
   },
   suppliers: { title: "Suppliers", taxId: "Tax ID", terms: "Payment terms", invoices: "Invoices", openPos: "Open POs", aliases: "Also known as", new: "New supplier" },
   pos: {
@@ -175,6 +177,7 @@ const en = {
     title: "Agreements & knowledge", ask: "Ask the knowledge base", askPlaceholder: "למשל: מהי סטיית המחיר המותרת? / What are BlueWave's payment terms?",
     askCta: "Ask", documents: "Documents", type: { supplier_agreement: "Supplier agreement", purchasing_policy: "Purchasing policy", procedure: "Procedure", reference: "Reference" },
     chunks: "Chunks", effective: "Effective", version: "Version", retrieval: "Retrieved passages", mode: "Retrieval",
+    policyKey: "Policy series key (optional)", policyKeyHint: "Use the same key for each revision, for example purchasing-policy.",
     abstained: "Not enough evidence to answer", conflict: "Conflicting sources", upload: "Add document", scores: "Scores",
   },
   agent: { title: "AI investigations", trace: "Tool-call trace", path: "Workflow path", tools: "Tool calls", rejectedCalls: "Rejected calls", proposed: "Proposed action", decision: "Human decision" },
@@ -367,6 +370,7 @@ const he: Dict = {
     samples: "נסו קובץ לדוגמה", samplesHint: "חשבוניות סינתטיות בתיקייה data/demo/upload_samples (לא נטענו מראש).",
     queued: "בתור", uploading: "מעלה", done: "עובד", duplicate: "כבר הועלה", rejected: "נדחה", openInvoice: "לחשבונית",
     steps: "שלבי עיבוד",
+    trackingUnavailable: "לא ניתן לקבל כרגע את מצב העיבוד. ייעשה ניסיון נוסף באופן אוטומטי.",
     pipeline: ["בדיקת הקובץ", "אחסון מאובטח", "שכבת טקסט או OCR", "חילוץ שדות", "אימות מול המסמך", "התאמה"],
   },
   invoice: {
@@ -384,6 +388,7 @@ const he: Dict = {
     noApprovals: "שלבי האישור נוצרים לאחר שהחשבונית הותאמה ללא חריגות פתוחות.", processingNow: "המסמך בעיבוד",
     failedTitle: "העיבוד נכשל", page: "עמוד", hoverHint: "רחפו מעל שדה כדי לאתר אותו בעמוד.", security: "התראת אבטחה", verifiedInDoc: "כל שורה אומתה מול המסמך",
     ocrConfidence: "ביטחון OCR", nativeText: "טקסט מוטמע", ocr: "OCR", mixed: "מעורב",
+    evidenceUnavailable: "לא ניתן לטעון את עמוד המסמך.",
   },
   recon: {
     title: "התאמה", outcome: "תוצאה", mode: "סוג", two_way: "דו-כיוונית", three_way: "תלת-כיוונית", engine: "מנוע",
@@ -397,7 +402,7 @@ const he: Dict = {
     approve: "אישור הפתרון", reject: "דחיית ההצעה", requestInfo: "בקשת מידע", note: "הערת סוקר",
     notePlaceholder: "למה? ההערה נשמרת ביומן הביקורת.", comments: "הערות ובקשות", addNote: "הוספת הערה", decided: "הוחלט",
     empty: "אין חריגות תואמות.", summary: "סיכום חקירה", deterministicFindings: "ממצאים (דטרמיניסטיים)",
-    changeAction: "בחירת פתרון אחר", noAi: "אין עדיין סיכום AI.", runAgent: "הפעלת חקירה",
+    changeAction: "בחירת פתרון אחר", noAi: "אין עדיין סיכום AI.", staleAi: "הראיות השתנו מאז החקירה. הפעילו חקירה חדשה לקבלת סיכום עדכני.", runAgent: "הפעלת חקירה",
   },
   suppliers: { title: "ספקים", taxId: "ח.פ.", terms: "תנאי תשלום", invoices: "חשבוניות", openPos: "הזמנות פתוחות", aliases: "שמות נוספים", new: "ספק חדש" },
   pos: {
@@ -409,6 +414,7 @@ const he: Dict = {
     title: "הסכמים ומאגר ידע", ask: "שאלו את מאגר הידע", askPlaceholder: "למשל: מהי סטיית המחיר המותרת? / What are BlueWave's payment terms?",
     askCta: "שאלה", documents: "מסמכים", type: { supplier_agreement: "הסכם ספק", purchasing_policy: "נוהל רכש", procedure: "נוהל", reference: "עיון" },
     chunks: "קטעים", effective: "בתוקף מ", version: "גרסה", retrieval: "קטעים שאוחזרו", mode: "אחזור",
+    policyKey: "מזהה סדרת גרסאות (אופציונלי)", policyKeyHint: "השתמשו באותו מזהה לכל הגרסאות. לדוגמה, purchasing-policy.",
     abstained: "אין די ראיות כדי לענות", conflict: "מקורות סותרים", upload: "הוספת מסמך", scores: "ציונים",
   },
   agent: { title: "חקירות AI", trace: "מעקב קריאות כלים", path: "מסלול התהליך", tools: "קריאות כלים", rejectedCalls: "קריאות שנדחו", proposed: "פעולה מוצעת", decision: "החלטה אנושית" },

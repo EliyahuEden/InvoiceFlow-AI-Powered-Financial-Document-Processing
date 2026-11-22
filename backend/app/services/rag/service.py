@@ -5,7 +5,8 @@ import time
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -23,15 +24,16 @@ from app.services.rag.retriever import load_index
 from app.services.rag.text import tokens
 from app.services.storage import get_storage
 
-_INDEX_CACHE: dict[str, tuple[int, object]] = {}
+_INDEX_CACHE: dict[str, tuple[str | None, object]] = {}
 
 
 def create_knowledge_upload(session: Session, *, org_id: uuid.UUID, user: User | None, data: bytes, filename: str,
                             title: str, doc_type: str, supplier_id: uuid.UUID | None, effective_date: date | None,
-                            version: str | None) -> tuple[KnowledgeDocument, Job]:
+                            version: str | None, policy_key: str | None = None) -> tuple[KnowledgeDocument, Job]:
     doc, _ = store_upload(session, org_id=org_id, user=user, data=data, filename=filename, purpose="knowledge")
     kd = KnowledgeDocument(organization_id=org_id, document_id=doc.id, title=title, doc_type=doc_type,
-                           supplier_id=supplier_id, effective_date=effective_date, version=version, status="processing")
+                           supplier_id=supplier_id, effective_date=effective_date, version=version, policy_key=policy_key,
+                           status="processing")
     session.add(kd)
     session.flush()
     job = jobs.enqueue(session, org_id=org_id, job_type="knowledge.ingest", payload={"knowledge_document_id": str(kd.id)},
@@ -72,7 +74,6 @@ def handle_knowledge_ingest(session: Session, job: Job) -> dict:
             section=c.section, text=c.text, search_text=" ".join(tokens(c.text)), char_start=c.char_start,
             char_end=c.char_end, strategy=c.strategy, embedding=v.tolist()))
     kd.status, kd.chunk_count = "indexed", len(chunks)
-    _INDEX_CACHE.pop(str(kd.organization_id), None)
     audit.record(session, org_id=kd.organization_id, action="knowledge.indexed", entity_type="knowledge_document",
                  entity_id=kd.id, actor_type="system", actor_label="worker",
                  after={"chunks": len(chunks), "embedding_model": embedder.name, "strategy": s.chunking_strategy})
@@ -80,32 +81,39 @@ def handle_knowledge_ingest(session: Session, job: Job) -> dict:
 
 
 def get_index(session: Session, org_id: uuid.UUID):  # noqa: ANN201
-    n = session.scalar(select(func.count(KnowledgeChunk.id)).where(KnowledgeChunk.organization_id == org_id)) or 0
+    # PostgreSQL row versions detect edits as well as same-count replacements across API and worker processes.
+    revision = func.concat(KnowledgeChunk.id, ":", literal_column("knowledge_chunks.xmin"),
+                           ":", literal_column("knowledge_documents.xmin"))
+    signature = session.scalar(select(func.md5(func.string_agg(revision, aggregate_order_by(",", KnowledgeChunk.id))))
+                               .select_from(KnowledgeChunk).join(KnowledgeDocument)
+                               .where(KnowledgeChunk.organization_id == org_id,
+                                      KnowledgeDocument.organization_id == org_id, KnowledgeDocument.status == "indexed"))
     key = str(org_id)
     cached = _INDEX_CACHE.get(key)
-    if cached and cached[0] == n:
+    if cached and cached[0] == signature:
         return cached[1]
     index = load_index(session, org_id, get_embedder())
-    _INDEX_CACHE[key] = (n, index)
+    _INDEX_CACHE[key] = (signature, index)
     return index
 
 
 def search(session: Session, org_id: uuid.UUID, query: str, *, k: int = 5, mode: str | None = None,
-           supplier_id: uuid.UUID | None = None, doc_types: list[str] | None = None) -> list:
+           supplier_id: uuid.UUID | None = None, doc_types: list[str] | None = None, as_of: date | None = None) -> list:
     mode = mode or get_settings().retrieval_mode
     reranker = get_reranker() if mode == "hybrid_rerank" else None
     if mode == "hybrid_rerank" and reranker is None:
         mode = "hybrid"
     return get_index(session, org_id).search(query, mode=mode, k=k, supplier_id=str(supplier_id) if supplier_id else None,
-                                             doc_types=doc_types, reranker=reranker)
+                                             doc_types=doc_types, reranker=reranker, as_of=as_of or date.today())
 
 
 def ask(session: Session, org_id: uuid.UUID, question: str, *, supplier_id: uuid.UUID | None = None,
-        mode: str | None = None, k: int = 5, workflow: str = "rag.ask", agent_run_id: uuid.UUID | None = None) -> dict:
+        mode: str | None = None, k: int = 5, workflow: str = "rag.ask", agent_run_id: uuid.UUID | None = None,
+        as_of: date | None = None, use_model: bool = True) -> dict:
     t0 = time.perf_counter()
-    hits = search(session, org_id, question, k=k, mode=mode, supplier_id=supplier_id)
+    hits = search(session, org_id, question, k=k, mode=mode, supplier_id=supplier_id, as_of=as_of)
     retrieval_ms = int((time.perf_counter() - t0) * 1000)
-    llm = get_llm()
+    llm = get_llm() if use_model else None
     if llm is not None and hits:
         try:
             result, res = A.answer_with_llm(llm, question, hits)
@@ -130,7 +138,7 @@ def ask(session: Session, org_id: uuid.UUID, question: str, *, supplier_id: uuid
                                                          for k2, v in h.scores.items()},
                   "doc_type": h.chunk.doc_type, "document_id": h.chunk.source_document_id,
                   "knowledge_document_id": h.chunk.document_id, "section": h.chunk.section,
-                  "preview": h.chunk.text[:300], "effective_date": h.chunk.effective_date} for h in hits],
+                  "preview": h.chunk.text[:300], "effective_date": h.chunk.effective_date, "version": h.chunk.version} for h in hits],
     }
     result["ai_generated"] = True
     return result

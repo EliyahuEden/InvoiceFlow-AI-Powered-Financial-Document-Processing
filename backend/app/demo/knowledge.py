@@ -16,6 +16,7 @@ class KnowledgeSpec:
     version: str
     blocks: list[tuple[str, str]]
     meta: list[str]
+    policy_key: str | None = None
 
 
 KNOWLEDGE = [
@@ -24,7 +25,7 @@ KNOWLEDGE = [
         date(2026, 1, 1), "1.0",
         [
             ("h", "1. הצדדים"),
-            ("p", "הסכם זה נחתם בין כנרת אירוח בע\"מ (\"החברה\") לבין תבור ציוד משרדי בע\"מ, ח.פ. 514000127 (\"הספק\"), "
+            ("p", "הסכם זה נחתם בין כנרת אירוח בע\"מ (\"החברה\") לבין תבור ציוד משרדי בע\"מ, ח.פ. 514000124 (\"הספק\"), "
                   "לאספקת ציוד משרדי, נייר וחומרים מתכלים."),
             ("h", "2. תקופת ההסכם"),
             ("p", "ההסכם בתוקף מיום 1 בינואר 2026 ועד 31 בדצמבר 2026, ויוארך לשנה נוספת אלא אם אחד הצדדים הודיע אחרת "
@@ -169,6 +170,7 @@ KNOWLEDGE = [
             ("p", "עובד שהזמין סחורה או העלה חשבונית לא יאשר את תשלומה. האישור הסופי ייעשה על ידי בעל תפקיד אחר."),
         ],
         ["גרסה 3.0 · בתוקף מ-01/01/2026 · מחליף את גרסה 2.1"],
+        policy_key="purchasing-policy",
     ),
     KnowledgeSpec(
         "policy_purchasing_2023", "נוהל רכש - גרסה 2.1 (2023)", "purchasing_policy", None, "he",
@@ -184,6 +186,7 @@ KNOWLEDGE = [
             ("p", "כל חשבונית מאושרת על ידי מנהל הכספים בלבד."),
         ],
         ["גרסה 2.1 · בתוקף מ-01/03/2023"],
+        policy_key="purchasing-policy",
     ),
     KnowledgeSpec(
         "procedure_finance_exceptions", "Finance Procedures - Exception Handling and Payment Holds", "procedure", None, "en",

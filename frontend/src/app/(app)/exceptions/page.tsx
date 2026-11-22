@@ -29,10 +29,10 @@ function QueuePage() {
   const filters = { level: params.get("level") ?? "", type: params.get("type") ?? "", supplier_id: params.get("supplier_id") ?? "", due: params.get("due") ?? "", status: params.get("status") ?? "", q: params.get("q") ?? "", page: Math.max(1, Number(params.get("page")) || 1), page_size: 20 };
   const activeFilterCount = [filters.level, filters.type, filters.supplier_id, filters.due, filters.status].filter(Boolean).length;
   const [showFilters, setShowFilters] = useState(false);
-  const { data, error, mutate } = useApi<Page<ReviewQueueItem>>(`/api/review/queue${qs(filters)}`);
-  const { data: summary, error: summaryError, mutate: retrySummary } = useApi<ReviewSummary>("/api/review/summary");
+  const { data, error, mutate } = useApi<Page<ReviewQueueItem>>(`/api/review/queue${qs(filters)}`, { refreshInterval: 30_000 });
+  const { data: summary, error: summaryError, mutate: retrySummary } = useApi<ReviewSummary>("/api/review/summary", { refreshInterval: 30_000 });
   const { data: suppliers } = useApi<Page<{ id: string; name: string; name_en: string | null }>>("/api/suppliers?page_size=100");
-  const { data: approvals, error: approvalError, mutate: retryApprovals } = useApi<{ pending_approvals: PendingApproval[] }>("/api/exceptions?page_size=1");
+  const { data: approvals, error: approvalError, mutate: retryApprovals } = useApi<{ pending_approvals: PendingApproval[] }>("/api/exceptions?page_size=1", { refreshInterval: 30_000 });
   const update = useCallback((key: string, value: string) => {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value); else next.delete(key);

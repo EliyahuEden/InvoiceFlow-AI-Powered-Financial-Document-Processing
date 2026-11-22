@@ -108,3 +108,9 @@ def test_ocr_preprocessing_binarizes():
     img = Image.new("RGB", (800, 400), (200, 200, 200))
     out = preprocess_for_ocr(img)
     assert out.mode == "L" and out.width >= 1600 and set(out.getdata()) <= {0, 255}
+def test_demo_business_identifiers_have_valid_check_digits():
+    from app.demo.spec import ORG, OTHER_ORG_SUPPLIERS, SUPPLIERS
+
+    assert rule_based.israeli_id_valid(ORG["tax_id"])
+    for supplier in [*SUPPLIERS, *OTHER_ORG_SUPPLIERS]:
+        assert rule_based.israeli_id_valid(supplier.tax_id), supplier.key

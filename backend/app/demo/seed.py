@@ -155,7 +155,7 @@ def seed(reset: bool = False, process: bool = True) -> dict:
             create_knowledge_upload(s, org_id=org_id, user=user, data=(DATA_DIR / "knowledge" / f"{k.key}.pdf").read_bytes(),
                                     filename=f"{k.key}.pdf", title=k.title, doc_type=k.doc_type,
                                     supplier_id=sup_ids.get(k.supplier) if k.supplier else None,
-                                    effective_date=k.effective_date, version=k.version)
+                                    effective_date=k.effective_date, version=k.version, policy_key=k.policy_key)
     if process:
         drain()
     # Invoices in scenario order (the original must exist before its duplicate arrives).
