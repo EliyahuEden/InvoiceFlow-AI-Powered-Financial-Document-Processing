@@ -100,4 +100,5 @@ def search(body: SearchIn, p: Principal = Depends(require(Perm.KNOWLEDGE_READ)),
 
 @router.post("/ask")
 def ask(body: SearchIn, p: Principal = Depends(require(Perm.KNOWLEDGE_READ)), db: Session = Depends(get_db)) -> dict:
+    check_rate_limit(f"ai:{p.user.id}", get_settings().rate_limit_ai_per_minute)  # a model call per question
     return rag.ask(db, p.org_id, body.query, supplier_id=body.supplier_id, mode=body.mode, k=body.k, as_of=body.as_of)

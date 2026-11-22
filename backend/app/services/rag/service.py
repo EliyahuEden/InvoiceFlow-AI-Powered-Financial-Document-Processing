@@ -113,7 +113,7 @@ def ask(session: Session, org_id: uuid.UUID, question: str, *, supplier_id: uuid
     t0 = time.perf_counter()
     hits = search(session, org_id, question, k=k, mode=mode, supplier_id=supplier_id, as_of=as_of)
     retrieval_ms = int((time.perf_counter() - t0) * 1000)
-    llm = get_llm() if use_model else None
+    llm = get_llm(org_id) if use_model else None
     if llm is not None and hits:
         try:
             result, res = A.answer_with_llm(llm, question, hits)

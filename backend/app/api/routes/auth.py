@@ -131,7 +131,7 @@ def signup(body: SignupIn, request: Request, response: Response) -> dict:
     from app.models.tenancy import DEFAULT_ORG_SETTINGS
 
     s_cfg = get_settings()
-    if not s_cfg.allow_signup:
+    if not s_cfg.signup_enabled:
         raise HTTPException(403, "Sign-up is disabled on this installation.")
     ip = _ip(request)
     check_rate_limit(f"signup:{ip}", s_cfg.rate_limit_signup_per_hour, window_seconds=3600)

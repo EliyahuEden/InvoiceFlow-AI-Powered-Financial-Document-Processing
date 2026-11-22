@@ -44,7 +44,7 @@ def scripted(monkeypatch):
     def install(llm):  # noqa: ANN001, ANN202
         from app.services import copilot
 
-        monkeypatch.setattr(copilot, "get_llm", lambda: llm)
+        monkeypatch.setattr(copilot, "get_llm", lambda org_id=None: llm)
         return llm
     return install
 

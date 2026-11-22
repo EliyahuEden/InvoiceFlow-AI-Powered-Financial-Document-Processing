@@ -232,6 +232,7 @@ def rerun_reconciliation(invoice_id: uuid.UUID, mode: str = "three_way",
 
 @router.post("/{invoice_id}/investigate", status_code=202)
 def investigate(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.AGENT_RUN)), db: Session = Depends(get_db)) -> dict:
+    check_rate_limit(f"investigate:{p.user.id}", get_settings().rate_limit_ai_per_minute)  # each run makes model calls
     inv = db.scalars(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == p.org_id)).first()
     if not inv:
         raise HTTPException(404, "Invoice not found")

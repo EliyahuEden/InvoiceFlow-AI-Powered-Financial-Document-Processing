@@ -9,12 +9,12 @@ from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, get_db, require
+from app.core.config import get_settings
 from app.services import copilot
 from app.services.ratelimit import check_rate_limit
 from app.services.rbac import Perm
 
 router = APIRouter(prefix="/api/copilot", tags=["copilot"])
-COPILOT_PER_MINUTE = 20
 
 
 class Turn(BaseModel):
@@ -35,7 +35,7 @@ class AskIn(BaseModel):
 
 @router.post("/ask")
 def ask(body: AskIn, p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = Depends(get_db)) -> dict:
-    check_rate_limit(f"copilot:{p.user.id}", COPILOT_PER_MINUTE)
+    check_rate_limit(f"copilot:{p.user.id}", get_settings().rate_limit_ai_per_minute)
     ctx = {k: str(v) for k, v in body.context.model_dump().items() if v}
     return copilot.ask(db, p.org_id, p.user.id, p.role.value, body.question,
                        history=[t.model_dump() for t in body.history], context=ctx)

@@ -83,9 +83,9 @@ def _time(client, method, url, headers, json=None, runs=7):  # noqa: ANN001, ANN
 
 
 def test_screens_and_copilot_stay_fast_at_volume(client, as_user, volume, monkeypatch):
-    from app.api.routes import copilot as copilot_route
+    from app.core.config import get_settings
 
-    monkeypatch.setattr(copilot_route, "COPILOT_PER_MINUTE", 100_000)
+    monkeypatch.setattr(get_settings(), "rate_limit_ai_per_minute", 100_000)
     h = {**as_user("finance@kinneret.example"), "X-Requested-With": "invoiceflow"}
     checks = [
         ("GET", "/api/review/queue", None), ("GET", "/api/review/summary", None), ("GET", "/api/review/next", None),

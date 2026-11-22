@@ -96,6 +96,7 @@ The 13 seeded invoices cover each scenario: correct, quantity mismatch, price mi
 ### AI modes
 - **Groq (default):** the app is set up for Groq's free tier with `openai/gpt-oss-120b`. Copy `.env.example` to `.env`, paste a free key from console.groq.com/keys into `OPENAI_API_KEY`, then run `docker compose up -d api worker`. The model only fills fields the rules could not read, writes answers with verified citations, and runs the AP Copilot and case investigations.
 - **Offline (no key):** without a key nothing leaves your machine and nothing costs money. Extraction uses the rule-based baseline, explanations come from templates, and answers are extractive. The UI labels this *Offline demo mode*, and nothing pre-recorded is presented as live inference. Set `LLM_PROVIDER=offline` to force it even with a key.
+- **Spending guards:** each business gets a daily model-token budget (`AI_DAILY_TOKEN_BUDGET`, default 100,000) and then continues in offline mode until the next UTC day. Policy answers, Copilot questions and investigations are limited per user per minute (`RATE_LIMIT_AI_PER_MINUTE`, default 20). Public sign-up is off by default when `ENVIRONMENT=production`.
 - **Other providers:** `LLM_PROVIDER=anthropic` with `ANTHROPIC_API_KEY`, or `LLM_PROVIDER=openai` with `OPENAI_BASE_URL` set to `https://api.openai.com/v1` (plus `OPENAI_API_KEY`) or to a local Ollama/vLLM server (no key needed). See `.env.example`.
 
 ## Measured results

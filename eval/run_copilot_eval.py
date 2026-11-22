@@ -80,6 +80,9 @@ def main() -> None:
     llm = get_llm()
     if llm is None:
         parser.error("Configure the live model provider before starting the benchmark.")
+    # The per-business daily token budget would switch the demo org to offline answers part-way through and
+    # silently mix offline answers into a model benchmark. The run is deliberate and paced, so it is uncapped.
+    get_settings().ai_daily_token_budget = 0
     with session_scope() as session:
         org_id = session.scalar(select(Organization.id).where(Organization.slug == "kinneret"))
         user_id = session.scalar(select(User.id).where(User.email == "finance@kinneret.example"))

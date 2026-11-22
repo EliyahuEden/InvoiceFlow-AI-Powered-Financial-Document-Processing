@@ -24,10 +24,10 @@ LEAKS = ("dev-only-change-me", "test-secret-0123456789", "sk-", "gsk_", "Invoice
 
 @pytest.fixture()
 def seeded(client, as_user, monkeypatch):
-    from app.api.routes import copilot as copilot_route
+    from app.core.config import get_settings
     from tests.conftest import upload_invoice
 
-    monkeypatch.setattr(copilot_route, "COPILOT_PER_MINUTE", 100_000)
+    monkeypatch.setattr(get_settings(), "rate_limit_ai_per_minute", 100_000)
     upload_invoice(client, as_user("procurement@kinneret.example"), "02_qty_mismatch_hermon_he.pdf")
 
 

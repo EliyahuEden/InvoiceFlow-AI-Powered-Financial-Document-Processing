@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { StatusPill } from "@/components/domain";
 import { useSession } from "@/components/session";
 import { Button, cx, ErrorState, Skeleton } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { date, money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useInvoice } from "@/lib/use-invoice";
@@ -39,7 +39,7 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
       await api.post(`/api/invoices/${id}/investigate`);
       toast.success(t.invoice.investigate);
       mutate();
-    } catch (e) { toast.error(String((e as Error).message)); }
+    } catch (e) { toast.error(e instanceof ApiError && e.status === 429 ? t.login.rateLimited : String((e as Error).message)); }
   };
   const supplierLabel = inv ? (locale === "en" && inv.supplier?.name_en ? inv.supplier.name_en : inv.supplier?.name ?? inv.supplier_name_raw) : null;
   const agentBusy = inv?.agent_runs.some((r) => ["queued", "running"].includes(r.status));

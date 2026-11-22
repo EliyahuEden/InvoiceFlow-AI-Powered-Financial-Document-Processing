@@ -16,11 +16,15 @@ from __future__ import annotations
 import copy
 import json
 import time
+import uuid
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any
 
 from app.core.config import get_settings
+from app.core.logging import get_logger
+
+log = get_logger(__name__)
 
 
 class LLMUnavailable(RuntimeError):
@@ -224,9 +228,22 @@ class OpenAICompatibleProvider:
         return [{"role": "tool", "tool_call_id": tid, "content": out} for tid, out in results]
 
 
+def get_llm(org_id: uuid.UUID | str | None = None) -> AnthropicProvider | OpenAICompatibleProvider | None:
+    """Return the configured provider, or None in offline mode, without credentials, or when the business
+    (``org_id``) has used its daily AI token budget. The budget is checked on every call, never cached."""
+    llm = _configured_llm()
+    if llm is None or org_id is None:
+        return llm
+    from app.services import ai_budget
+
+    if get_settings().ai_daily_token_budget > 0 and not ai_budget.allowed(org_id):
+        log.info("ai_budget_exhausted", org_id=str(org_id))
+        return None
+    return llm
+
+
 @lru_cache
-def get_llm() -> AnthropicProvider | OpenAICompatibleProvider | None:
-    """Return the configured provider, or None in offline mode / without credentials."""
+def _configured_llm() -> AnthropicProvider | OpenAICompatibleProvider | None:
     s = get_settings()
     if not s.llm_enabled:
         return None

@@ -87,9 +87,9 @@ def _hostile_for(schema: dict, spec: dict) -> list:
 
 @pytest.fixture()
 def fuzz_client(client, as_user, monkeypatch):
-    from app.api.routes import copilot as copilot_route
+    from app.core.config import get_settings
 
-    monkeypatch.setattr(copilot_route, "COPILOT_PER_MINUTE", 100_000)  # rate limiting is tested elsewhere
+    monkeypatch.setattr(get_settings(), "rate_limit_ai_per_minute", 100_000)  # rate limiting is tested elsewhere
     headers = {**as_user("admin@kinneret.example"), "X-Requested-With": "invoiceflow"}
     return client, headers
 

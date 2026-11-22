@@ -144,7 +144,10 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
   const runAgent = async () => {
     setBusy("agent");
     try { await api.post(`/api/invoices/${e.invoice_id}/investigate`); toast.success(t.exceptions.runAgent); refresh(); }
-    catch (error) { toast.error(error instanceof Error ? error.message : t.common.error); } finally { setBusy(null); }
+    catch (error) {
+      toast.error(error instanceof ApiError && error.status === 429 ? t.login.rateLimited
+        : error instanceof Error ? error.message : t.common.error);
+    } finally { setBusy(null); }
   };
   if (queueClear) return <Panel data-testid="queue-clear"><EmptyState icon={<CheckCircle2 className="h-8 w-8 text-ok" />}
     title={t.review.clearTitle} body={t.review.clearBody}

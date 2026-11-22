@@ -124,7 +124,7 @@ def investigate(state: AgentState, config: RunnableConfig) -> dict:
     supplier_id = (state.get("reconciliation") or {}).get("supplier_id") or (state.get("invoice") or {}).get("supplier_id")
     evidence: list[dict] = []
     seen: set[str] = set()
-    llm = get_llm()
+    llm = get_llm(ctx.org_id)
     if llm is not None:
         evidence = _investigate_llm(ctx, llm, state, supplier_id)
     if not evidence:  # offline mode, or the model gathered nothing usable
@@ -354,7 +354,7 @@ def explain(state: AgentState, config: RunnableConfig) -> dict:
     main = primary_finding([f["type"] for f in findings])
     action = ACTION_FOR_FINDING.get(main, ("manual_review", ""))[0] if main else "accept_variance"
     report: dict | None = None
-    llm = get_llm()
+    llm = get_llm(ctx.org_id)
     if llm is not None and findings:
         report, calls = build_llm_report(llm, findings, evidence, state["invoice"], action)
         for call in calls:

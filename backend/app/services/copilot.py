@@ -131,7 +131,7 @@ def ask(session: Session, org_id: uuid.UUID, user_id: uuid.UUID, role: str, ques
         history: list[dict] | None = None, context: dict | None = None) -> dict:
     ctx = ToolContext(session, org_id, user_id, role)
     lang = _language(question)
-    llm = get_llm()
+    llm = get_llm(org_id)
     t0 = time.perf_counter()
     if llm is None:
         result = _offline(ctx, question, lang, context or {})

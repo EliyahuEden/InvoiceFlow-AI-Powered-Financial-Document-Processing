@@ -50,7 +50,12 @@ class Settings(BaseSettings):
     sse_ticket_seconds: int = 30
     rate_limit_refresh_per_minute: int = 60
     # self-service business sign-up (each sign-up creates an isolated organization and its first administrator)
-    allow_signup: bool = True
+    # None = on, except in production, where public sign-up must be turned on explicitly.
+    allow_signup: bool | None = None
+    # Tokens per business per UTC day across all model calls; then that business runs offline. 0 = unlimited.
+    ai_daily_token_budget: int = 100_000
+    # Model-backed requests (policy answers, Copilot, investigations) per user per minute.
+    rate_limit_ai_per_minute: int = 20
     rate_limit_signup_per_hour: int = 10
     cookie_secure: bool = False
 
@@ -174,6 +179,10 @@ class Settings(BaseSettings):
             return json.loads(self.llm_pricing_json or "{}")
         except json.JSONDecodeError:
             return {}
+
+    @property
+    def signup_enabled(self) -> bool:
+        return self.allow_signup if self.allow_signup is not None else self.environment != "production"
 
     @property
     def effective_llm_model(self) -> str:

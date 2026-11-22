@@ -47,4 +47,8 @@ def record_call(
     )
     session.add(call)
     session.flush()
+    if result is not None and (result.input_tokens or result.output_tokens):
+        from app.services import ai_budget
+
+        ai_budget.charge(org_id, (result.input_tokens or 0) + (result.output_tokens or 0))
     return call

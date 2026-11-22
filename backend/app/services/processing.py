@@ -158,7 +158,7 @@ def run_extraction(session: Session, org: Organization, inv: Invoice, doc: Docum
     exclude = {org.settings.get("tax_id")} - {None}
     all_pages = pages
     pages, duplicate_pages = drop_duplicate_pages(pages)  # a printed copy must not be billed twice
-    extraction, method, calls = choose_extraction(get_llm(), pages, data, doc.mime_type, exclude,
+    extraction, method, calls = choose_extraction(get_llm(org.id), pages, data, doc.mime_type, exclude,
                                                   get_settings().extraction_mode)
     for call in calls:
         record_call(session, org_id=org.id, kind="extraction", workflow="invoice.extract", invoice_id=inv.id, **call)

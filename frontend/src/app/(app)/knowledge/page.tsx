@@ -79,7 +79,8 @@ export default function KnowledgePage() {
     setAnswer(null);
     setAsking(true);
     try { setAnswer(await api.post<Answer>("/api/knowledge/ask", { query: question, mode, k: 5 })); }
-    catch (e) { toast.error(String((e as Error).message)); } finally { setAsking(false); }
+    catch (e) { toast.error(e instanceof ApiError && e.status === 429 ? t.login.rateLimited : String((e as Error).message)); }
+    finally { setAsking(false); }
   };
 
   return (
