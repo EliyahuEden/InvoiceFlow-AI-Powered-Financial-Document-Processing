@@ -193,6 +193,7 @@ def apply_normalized(session: Session, inv: Invoice, norm, raw: dict) -> None:  
     inv.currency = norm.currency
     inv.po_reference = norm.po_reference
     inv.payment_terms = norm.payment_terms
+    inv.allocation_number = norm.allocation_number
     inv.subtotal = norm.subtotal
     inv.discount_total = norm.discount_total
     inv.tax_total = norm.tax_amount

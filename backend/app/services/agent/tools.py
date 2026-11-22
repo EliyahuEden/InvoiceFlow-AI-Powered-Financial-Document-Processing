@@ -112,7 +112,8 @@ class SupplierListIn(BaseModel):
 
 class FindingsIn(BaseModel):
     finding_type: str = Field(..., max_length=60, description="e.g. DUPLICATE_INVOICE, PRICE_MISMATCH, "
-                              "QUANTITY_EXCEEDS_RECEIVED, MISSING_GOODS_RECEIPT, NOT_AN_INVOICE, CURRENCY_MISMATCH")
+                              "QUANTITY_EXCEEDS_RECEIVED, MISSING_GOODS_RECEIPT, NOT_AN_INVOICE, CURRENCY_MISMATCH, "
+                              "MISSING_ALLOCATION_NUMBER")
     limit: int = Field(15, ge=1, le=50)
 
 
@@ -702,7 +703,8 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
          "invoices): status, tax ID, payment terms, invoice and open-case counts.", SupplierListIn,
          Perm.MASTERDATA_READ, list_suppliers),
     Tool("findings_by_type", "Open problems of one type across all invoices (duplicates, price above PO, missing goods "
-         "receipt, quantity over received, not an invoice, currency mismatch...).", FindingsIn, Perm.INVOICE_READ,
+         "receipt, quantity over received, not an invoice, currency mismatch, missing Tax Authority allocation "
+         "number...).", FindingsIn, Perm.INVOICE_READ,
          findings_by_type),
     Tool("invoice_case", "Why an invoice is in its state: status, open findings, its review case and approval steps. "
          "Look up by invoice number or id.", InvoiceRefIn, Perm.INVOICE_READ, invoice_case),

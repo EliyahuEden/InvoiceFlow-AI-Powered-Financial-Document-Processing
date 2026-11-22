@@ -6,7 +6,7 @@ Three components are measured **separately**, each with metrics suited to it. No
 |---|---|---|
 | Extraction | `eval/run_extraction_eval.py` | `eval/datasets/extraction` (73 synthetic docs: 57 original + 16 on held-out set v2; labels exact by construction) |
 | RAG | `eval/run_rag_eval.py`, `eval/calibrate_abstention.py` | `questions.jsonl` (50 hand-written, calibration) + `questions_heldout.jsonl` (35 hand-written, held out) |
-| Reconciliation | `eval/run_reconciliation_eval.py` | 348 generated controlled cases, plus 13 demo PDFs end to end |
+| Reconciliation | `eval/run_reconciliation_eval.py` | 468 generated controlled cases, plus 13 demo PDFs end to end |
 
 To reproduce, run `make eval` (or the commands in each script's docstring). Extraction and end-to-end reconciliation need Tesseract, so run them in the backend image.
 
@@ -201,8 +201,9 @@ and 16 of the 19 served requests passed the rubric. [Quota-limited rerun](../eva
 **Results**
 | Metric | Value |
 |---|---|
-| Controlled cases | 348 (123 clean or near miss) |
-| Precision / recall, all 12 finding types | 1.00 / 1.00 |
+| Controlled cases | 468 (204 clean or near miss) |
+| Precision / recall, all 13 finding types | 1.00 / 1.00 |
+| Allocation-number rule (dated cases, 2025 and 2026 thresholds) | 39 must flag, 81 must not; all exact |
 | False alarms on clean / near-miss invoices | 0.0% |
 | End to end (PDF → findings), exact scenarios | 13/13; P 1.00 / R 1.00 (was 12/13, P 0.90) |
 

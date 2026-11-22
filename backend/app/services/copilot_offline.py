@@ -38,6 +38,7 @@ FINDING_WORDS = [
     ("NOT_AN_INVOICE", r"not (an? )?invoices?|aren'?t invoices|isn'?t an invoice|לא חשבוני|אינ(ו|ם|ן) חשבוני"),
     ("CURRENCY_MISMATCH", r"currency mismatch|different currenc|wrong currenc|מטבע שונה|מטבע לא תואם|במטבע אחר"),
     ("MISSING_PURCHASE_ORDER", r"without (a )?po|no purchase order|missing po|בלי הזמנ|ללא הזמנ"),
+    ("MISSING_ALLOCATION_NUMBER", r"allocation|הקצאה"),
 ]
 HELP_TOPICS = [  # Hebrew stems, so מאשרים / לאשר / אישור all match
     ("escalate", r"escalat|הסל|סלמ|סלימ"), ("request_info", r"request (info|clarif)|ask the supplier|בקשת מידע|הבהרה|לבקש מידע"),

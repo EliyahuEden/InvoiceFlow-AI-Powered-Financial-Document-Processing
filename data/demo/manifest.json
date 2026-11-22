@@ -22,6 +22,7 @@
         "tax_rate": "18",
         "tax_amount": "1164.42",
         "total": "7633.42",
+        "allocation_number": "714164452",
         "lines": [
           {
             "sku": "TV-PAP-A4",
@@ -70,6 +71,7 @@
         "tax_rate": "18",
         "tax_amount": "1663.20",
         "total": "10903.20",
+        "allocation_number": "304124584",
         "lines": [
           {
             "sku": "HC-ESP-1KG",
@@ -118,6 +120,7 @@
         "tax_rate": "18",
         "tax_amount": "6021.00",
         "total": "39471.00",
+        "allocation_number": "175242903",
         "lines": [
           {
             "sku": "BW-LAP-14",
@@ -166,6 +169,7 @@
         "tax_rate": "18",
         "tax_amount": "1164.42",
         "total": "7633.42",
+        "allocation_number": "986865499",
         "lines": [
           {
             "sku": "TV-PAP-A4",
@@ -214,6 +218,7 @@
         "tax_rate": "18",
         "tax_amount": "205.20",
         "total": "1345.20",
+        "allocation_number": null,
         "lines": [
           {
             "sku": "AR-FILM-50",
@@ -248,6 +253,7 @@
         "tax_rate": "18",
         "tax_amount": "1224.00",
         "total": "8024.00",
+        "allocation_number": "429061149",
         "lines": [
           {
             "sku": null,
@@ -280,6 +286,7 @@
         "tax_rate": "18",
         "tax_amount": "712.80",
         "total": "4672.80",
+        "allocation_number": null,
         "lines": [
           {
             "sku": "HC-ESP-1KG",
@@ -321,6 +328,7 @@
         "tax_rate": "18",
         "tax_amount": "756.00",
         "total": "4956.00",
+        "allocation_number": null,
         "lines": [
           {
             "sku": "BW-SUP-MON",
@@ -355,6 +363,7 @@
         "tax_rate": "18",
         "tax_amount": "432.00",
         "total": "2832.00",
+        "allocation_number": null,
         "lines": [
           {
             "sku": null,
@@ -389,6 +398,7 @@
         "tax_rate": "18",
         "tax_amount": "9331.20",
         "total": "61171.20",
+        "allocation_number": "113263203",
         "lines": [
           {
             "sku": "BW-M365-E3",
@@ -423,6 +433,7 @@
         "tax_rate": "18",
         "tax_amount": "527.04",
         "total": "3455.04",
+        "allocation_number": null,
         "lines": [
           {
             "sku": "AR-BOX-40",
@@ -462,6 +473,7 @@
         "tax_rate": "18",
         "tax_amount": "1141.60",
         "total": "7483.80",
+        "allocation_number": "313012985",
         "lines": [
           {
             "sku": "TV-CAT-000",
@@ -655,6 +667,7 @@
         "tax_rate": "18",
         "tax_amount": "1404.00",
         "total": "9204.00",
+        "allocation_number": "745535339",
         "lines": [
           {
             "sku": "BW-KB-MX",
@@ -698,6 +711,7 @@
         "tax_rate": "18",
         "tax_amount": "1082.88",
         "total": "7098.88",
+        "allocation_number": "383424518",
         "lines": [
           {
             "sku": "HC-ESP-1KG",
@@ -737,6 +751,7 @@
         "tax_rate": "18",
         "tax_amount": "694.08",
         "total": "4550.08",
+        "allocation_number": null,
         "lines": [
           {
             "sku": "TV-PAP-A4",
@@ -751,6 +766,48 @@
             "quantity": "4",
             "unit_price": "389.00",
             "line_total": "1556.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "upload_samples/upload_hermon_no_allocation_he.pdf",
+      "scenario": "missing_allocation_number",
+      "template": "he_classic",
+      "render": "native",
+      "language": "he",
+      "expected_findings": [
+        "MISSING_ALLOCATION_NUMBER"
+      ],
+      "description": "Agreed prices, but the tax invoice has no allocation number, so its input VAT cannot be deducted. Upload it instead of the price-mismatch sample (both bill PO-2026-1011).",
+      "truth": {
+        "supplier_key": "hermon",
+        "supplier_name": "חרמון קלייה בע\"מ",
+        "supplier_tax_id": "515000230",
+        "invoice_number": "HC-8871",
+        "invoice_date": "2026-10-25",
+        "currency": "ILS",
+        "po_reference": "PO-2026-1011",
+        "payment_terms": "שוטף + 30",
+        "subtotal": "5776.00",
+        "tax_rate": "18",
+        "tax_amount": "1039.68",
+        "total": "6815.68",
+        "allocation_number": null,
+        "lines": [
+          {
+            "sku": "HC-ESP-1KG",
+            "description": "פולי קפה אספרסו בלנד הבית 1 ק\"ג",
+            "quantity": "40",
+            "unit_price": "118.00",
+            "line_total": "4720.00"
+          },
+          {
+            "sku": "HC-DEC-1KG",
+            "description": "פולי קפה נטול קפאין 1 ק\"ג",
+            "quantity": "8",
+            "unit_price": "132.00",
+            "line_total": "1056.00"
           }
         ]
       }

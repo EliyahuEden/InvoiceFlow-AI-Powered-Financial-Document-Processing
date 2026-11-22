@@ -31,6 +31,7 @@ def invoice_truth(inv: InvoiceSpec) -> dict:
         "tax_rate": str(inv.vat_rate),
         "tax_amount": str(inv.vat),
         "total": str(inv.total),
+        "allocation_number": inv.allocation_number,
         "lines": [{"sku": ln.sku, "description": ln.description, "quantity": str(ln.quantity),
                    "unit_price": str(ln.unit_price), "line_total": str(ln.total)} for ln in inv.lines],
     }

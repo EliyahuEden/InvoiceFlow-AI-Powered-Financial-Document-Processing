@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 FIELD_NAMES = [
     "supplier_name", "supplier_tax_id", "invoice_number", "invoice_date", "due_date", "currency",
     "po_reference", "payment_terms", "subtotal", "discount_total", "tax_rate", "tax_amount", "total",
+    "allocation_number",
 ]
 MONEY_FIELDS = {"subtotal", "discount_total", "tax_amount", "total"}
 DATE_FIELDS = {"invoice_date", "due_date"}
@@ -51,6 +52,9 @@ class InvoiceExtraction(BaseModel):
     currency: ExtractedField = Field(default_factory=ExtractedField, description="Currency symbol or code as printed.")
     po_reference: ExtractedField = Field(default_factory=ExtractedField, description="Purchase order number if printed.")
     payment_terms: ExtractedField = Field(default_factory=ExtractedField)
+    allocation_number: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="Israel Tax Authority allocation number (מספר הקצאה), usually 9 digits, if printed.")
     subtotal: ExtractedField = Field(default_factory=ExtractedField, description="Amount before tax.")
     discount_total: ExtractedField = Field(default_factory=ExtractedField)
     tax_rate: ExtractedField = Field(default_factory=ExtractedField, description="Tax/VAT rate as printed, e.g. 18%.")
@@ -93,6 +97,7 @@ class NormalizedInvoice(BaseModel):
     currency: str | None = None
     po_reference: str | None = None
     payment_terms: str | None = None
+    allocation_number: str | None = None
     subtotal: Decimal | None = None
     discount_total: Decimal | None = None
     tax_rate: Decimal | None = None

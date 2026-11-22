@@ -14,6 +14,7 @@ import random
 import uuid
 from collections import defaultdict
 from dataclasses import replace
+from datetime import date
 from decimal import Decimal
 
 from common import DATA, prf, write_result
@@ -124,6 +125,25 @@ def cases(ctx: E.Context, po_by_no: dict, sups: dict) -> list[tuple[str, E.Invoi
             inv = base(pair)
             inv.supplier_tax_id_raw = None  # identified by exact name only
             out.append(("supplier_by_name", inv, set(), ctx))
+            # Israel allocation number. Labels use the published amounts directly (NIS 5,000 from 2026-06-01,
+            # 20,000 in 2025), not the engine's table, so the rule is checked independently.
+            def needs_number(inv: E.InvoiceData, limit: int) -> bool:
+                return inv.currency == "ILS" and inv.tax_amount > 0 and inv.total - inv.tax_amount > limit
+            inv = base(pair)
+            inv.invoice_date, inv.allocation_number = date(2026, 9, 1), str(rng.randint(100_000_000, 999_999_999))
+            out.append(("allocation_present", inv, set(), ctx))
+            inv = base(pair)
+            inv.invoice_date = date(2026, 9, 1)
+            out.append(("allocation_missing" if needs_number(inv, 5000) else "allocation_not_required", inv,
+                        {"MISSING_ALLOCATION_NUMBER"} if needs_number(inv, 5000) else set(), ctx))
+            inv = base(pair)
+            inv.invoice_date, inv.allocation_number = date(2026, 9, 1), str(rng.randint(10_000, 99_999))
+            out.append(("allocation_invalid" if needs_number(inv, 5000) else "allocation_not_required", inv,
+                        {"MISSING_ALLOCATION_NUMBER"} if needs_number(inv, 5000) else set(), ctx))
+            inv = base(pair)
+            inv.invoice_date = date(2025, 6, 1)  # the 2025 threshold was NIS 20,000
+            out.append(("allocation_missing_2025" if needs_number(inv, 20000) else "allocation_below_2025_threshold", inv,
+                        {"MISSING_ALLOCATION_NUMBER"} if needs_number(inv, 20000) else set(), ctx))
         for pair in partial:
             inv = base(pair)  # billed == received, below ordered: clean partial invoice
             out.append(("clean_partial_delivery", inv, set(), ctx))
@@ -212,7 +232,8 @@ def end_to_end() -> dict:
                             n.po_reference, n.subtotal, n.discount_total, n.tax_amount, n.total,
                             [E.InvLine(uuid.uuid4(), ln.line_no, ln.description, ln.sku, ln.quantity, ln.unit_price, ln.discount,
                                        ln.line_total) for ln in n.lines],
-                            security_flags=detect_injection("\n".join(p.text for p in pages)))
+                            security_flags=detect_injection("\n".join(p.text for p in pages)),
+                            allocation_number=n.allocation_number)
         res = E.reconcile(inv, replace(ctx, prior_invoices=list(priors)))
         got = {f.type for f in res.findings if ACTIONABLE(f)}
         expected = set(m["expected_findings"]) | ({"SUSPICIOUS_CONTENT"} if "SUSPICIOUS_INSTRUCTIONS" in m["expected_findings"] else set())

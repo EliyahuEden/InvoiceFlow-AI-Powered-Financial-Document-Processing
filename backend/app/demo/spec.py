@@ -72,6 +72,20 @@ class InvoiceSpec:
     supplier_display_name: str | None = None
     expected_findings: list[str] = field(default_factory=list)
     description: str = ""
+    print_allocation: bool = True  # False: a tax invoice that should carry an allocation number but does not
+
+    @property
+    def allocation_number(self) -> str | None:
+        """A deterministic, fictional 9-digit Tax Authority allocation number, printed where the law requires one."""
+        import hashlib
+
+        from app.services.reconciliation.engine import allocation_threshold
+
+        threshold = allocation_threshold(self.invoice_date)
+        required = self.currency == "ILS" and self.vat > 0 and threshold is not None and self.subtotal > threshold
+        if not required or not self.print_allocation:
+            return None
+        return str(int(hashlib.sha256(self.key.encode()).hexdigest(), 16) % 900_000_000 + 100_000_000)
 
     @property
     def subtotal(self) -> Decimal:
@@ -289,4 +303,9 @@ UPLOAD_SAMPLES = [
     InvoiceSpec("upload_tavor_correct_he", "correct_invoice", "tavor", "TV-24655", D26(10, 28),
                 _po_lines("PO-2026-1012"), po_reference="PO-2026-1012", template="he_boxed",
                 payment_terms="שוטף + 30", description="Clean Hebrew invoice; reconciles and goes to approval."),
+    InvoiceSpec("upload_hermon_no_allocation_he", "missing_allocation_number", "hermon", "HC-8871", D26(10, 25),
+                _po_lines("PO-2026-1011"), po_reference="PO-2026-1011", template="he_classic",
+                payment_terms="שוטף + 30", print_allocation=False, expected_findings=["MISSING_ALLOCATION_NUMBER"],
+                description="Agreed prices, but the tax invoice has no allocation number, so its input VAT cannot be "
+                            "deducted. Upload it instead of the price-mismatch sample (both bill PO-2026-1011)."),
 ]

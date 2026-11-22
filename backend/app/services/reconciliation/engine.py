@@ -11,7 +11,8 @@ POSSIBLE_DUPLICATE, MISSING_PURCHASE_ORDER, PO_SUPPLIER_MISMATCH, PO_CLOSED,
 CURRENCY_MISMATCH, CURRENCY_NOT_STATED, AMBIGUOUS_DESCRIPTION, ITEM_NOT_ON_PO,
 PRICE_MISMATCH, QUANTITY_EXCEEDS_ORDERED, QUANTITY_EXCEEDS_RECEIVED,
 MISSING_GOODS_RECEIPT, LINE_TOTAL_MISMATCH, SUBTOTAL_MISMATCH, TOTAL_MISMATCH,
-UNBILLED_PO_LINES, INCOMPLETE_EXTRACTION, SUSPICIOUS_CONTENT, NOT_AN_INVOICE, AMBIGUOUS_PURCHASE_ORDER
+UNBILLED_PO_LINES, INCOMPLETE_EXTRACTION, SUSPICIOUS_CONTENT, NOT_AN_INVOICE, AMBIGUOUS_PURCHASE_ORDER,
+MISSING_ALLOCATION_NUMBER
 """
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ from decimal import Decimal
 from app.core.money import D, round_money, within_tolerance
 from app.services.reconciliation.text_match import name_similarity, normalize_doc_number, similarity
 
-ENGINE_VERSION = "recon-1.2"
+ENGINE_VERSION = "recon-1.3"
 ZERO = Decimal("0")
 
 SEVERITY = {
@@ -35,6 +36,7 @@ SEVERITY = {
     "MISSING_GOODS_RECEIPT": "critical", "LINE_TOTAL_MISMATCH": "warning", "SUBTOTAL_MISMATCH": "warning",
     "TOTAL_MISMATCH": "critical", "UNBILLED_PO_LINES": "info", "INCOMPLETE_EXTRACTION": "critical",
     "SUSPICIOUS_CONTENT": "warning", "NOT_AN_INVOICE": "critical", "AMBIGUOUS_PURCHASE_ORDER": "critical",
+    "MISSING_ALLOCATION_NUMBER": "warning",
 }
 BLOCKING = {"UNRECOGNIZED_SUPPLIER", "AMBIGUOUS_SUPPLIER", "DUPLICATE_INVOICE", "MISSING_PURCHASE_ORDER",
             "PO_SUPPLIER_MISMATCH", "SUPPLIER_BLOCKED", "INCOMPLETE_EXTRACTION", "NOT_AN_INVOICE",
@@ -72,7 +74,36 @@ MESSAGE_PARAMS: dict[str, set[str]] = {
     "NOT_AN_INVOICE": {"phrase"},
     "AMBIGUOUS_PURCHASE_ORDER": {"reference", "count"},
     "AMBIGUOUS_PURCHASE_ORDER_INFERRED": {"count"},
+    "MISSING_ALLOCATION_NUMBER": {"amount", "threshold", "vat"},
+    "MISSING_ALLOCATION_NUMBER_INVALID": {"number", "amount", "threshold", "vat"},
 }
+
+# Israel Invoices (חשבוניות ישראל): a tax invoice above this amount before VAT needs a Tax Authority allocation
+# number, or the buyer may not deduct its input VAT. The threshold in force on the invoice date applies.
+# Source: gov.il "Application for an allocation number for a tax invoice" (2025 / 2026 schedule).
+ALLOCATION_THRESHOLDS: list[tuple[date, Decimal]] = [
+    (date(2024, 5, 5), Decimal("25000")),
+    (date(2025, 1, 1), Decimal("20000")),
+    (date(2026, 1, 1), Decimal("10000")),
+    (date(2026, 6, 1), Decimal("5000")),
+]
+
+
+def allocation_threshold(day: date | None) -> Decimal | None:
+    """The amount before VAT above which an allocation number is required on ``day`` (None: not required)."""
+    if day is None:
+        return None
+    current = None
+    for start, amount in ALLOCATION_THRESHOLDS:
+        if day >= start:
+            current = amount
+    return current
+
+
+def normalize_allocation_number(raw: str | None) -> str | None:
+    """Nine digits as issued by the Tax Authority; spaces and dashes are ignored. Anything else is None."""
+    digits = "".join(ch for ch in (raw or "") if ch not in " -")
+    return digits if len(digits) == 9 and digits.isascii() and digits.isdigit() else None
 
 
 def amt(v: Decimal | None) -> str | None:
@@ -142,6 +173,7 @@ class InvoiceData:
     supplier_id: uuid.UUID | None = None  # set when a human confirmed the supplier
     security_flags: list[str] = field(default_factory=list)  # e.g. embedded prompt-injection text
     document_kind: tuple[str, str] | None = None  # (kind, printed title) when not a supplier invoice
+    allocation_number: str | None = None  # Tax Authority allocation number, as printed
 
 
 @dataclass
@@ -551,6 +583,30 @@ def check_arithmetic(inv: InvoiceData, tol: Tolerances) -> list[Finding]:
     return out
 
 
+def check_allocation_number(inv: InvoiceData) -> list[Finding]:
+    """A shekel tax invoice that charges VAT above the threshold on its date needs a valid allocation number."""
+    threshold = allocation_threshold(inv.invoice_date)
+    if threshold is None or (inv.currency or "").upper() not in ("ILS", "NIS") or not inv.tax_amount or inv.tax_amount <= 0:
+        return []
+    before_vat = inv.total - inv.tax_amount if inv.total is not None else inv.subtotal
+    if before_vat is None or before_vat <= threshold or normalize_allocation_number(inv.allocation_number):
+        return []
+    params = {"amount": amt(before_vat), "threshold": amt(threshold), "vat": amt(inv.tax_amount)}
+    if inv.allocation_number:
+        return [Finding("MISSING_ALLOCATION_NUMBER",
+                        f"The allocation number '{inv.allocation_number}' is not a valid 9-digit number. Without a valid "
+                        f"number the input VAT of {params['vat']} cannot be deducted (threshold {params['threshold']}).",
+                        actual=inv.allocation_number, amount_at_risk=amt(inv.tax_amount),
+                        evidence={"threshold": params["threshold"], "before_vat": params["amount"]},
+                        params={"number": inv.allocation_number, **params}, message_key="MISSING_ALLOCATION_NUMBER_INVALID")]
+    return [Finding("MISSING_ALLOCATION_NUMBER",
+                    f"The invoice is {params['amount']} before VAT, above the {params['threshold']} threshold on its date, "
+                    f"but has no Tax Authority allocation number. The input VAT of {params['vat']} cannot be deducted "
+                    f"without it.",
+                    amount_at_risk=amt(inv.tax_amount),
+                    evidence={"threshold": params["threshold"], "before_vat": params["amount"]}, params=params)]
+
+
 def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result:
     checks: list[dict] = []
     findings: list[Finding] = []
@@ -601,6 +657,9 @@ def reconcile(inv: InvoiceData, ctx: Context, mode: str = "three_way") -> Result
     findings += dups
     check("not_duplicate", not any(d.type == "DUPLICATE_INVOICE" for d in dups))
     findings += check_arithmetic(inv, ctx.tolerances)
+    allocation = check_allocation_number(inv)
+    findings += allocation
+    check("allocation_number", not allocation)
     check("document_arithmetic", not any(x.type.endswith("TOTAL_MISMATCH") for x in findings))
 
     po, po_match, matches = None, {"method": "skipped"}, []

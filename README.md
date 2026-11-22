@@ -39,6 +39,7 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 - **Multi-tenant SaaS foundations:**
   - RBAC (4 roles), tenant isolation in the app **and** in PostgreSQL row-level security;
   - self-service organization sign-up, team management and workspace switching;
+  - Israel's invoice allocation number (מספר הקצאה): read from the invoice and checked against the threshold on the invoice date (NIS 5,000 before VAT from June 2026), with the deductible VAT at risk ranked in the review queue;
   - revocable server-side sessions: 15-minute access tokens, rotating refresh tokens with reuse detection, single-use SSE tickets;
   - segregated two-step approvals;
   - append-only, hash-chained audit log;
@@ -109,7 +110,7 @@ These come from the scripts in `/eval`; the JSON is in `eval/results/` and is re
 | Offline extractive answers on the held-out set | **72%** answer correctness on the 25 answerable questions and **73.3%** citation accuracy. The system refused 6 of 10 unanswerable questions and 2 of 25 answerable ones. [Results](eval/results/rag_e5_latest.json) |
 | Live policy answers on 35 held-out questions | **33/35 passed** with Groq GPT-OSS 120B. The model answered 23 of 25 answerable questions correctly and refused all 10 unanswerable questions. A pass requires the labelled facts and sources for an answer, or a correct refusal. Measured on prompt `rag-answer-v2`. The current prompt (`v3`) also refuses any answer whose amounts, durations or percentages are not in a cited quote. Two `v3` runs were cut short by Groq's free-tier token limit: on the 19 questions that completed, `v3` passed 16 and `v2` passed 17 of the same 19. A full `v3` run is still to do. [Results](eval/results/rag_llm_latest.json) |
 | Live AP Copilot on 32 catalogue prompts | The initial Groq GPT-OSS 120B run passed **23/32 (71.9%)** against expected tools, filters and facts, on prompt `copilot-v1`. A rerun on the current prompt passed 24/32, but Groq's token limit meant only 5 of those answers were model-written; the other 27 came from the offline path. [Results](eval/results/copilot_llm_latest.json) · [rerun](eval/results/copilot_quality_latest.json) |
-| Reconciliation, 348 controlled cases | P = R = 1.00 on all 12 types; **0 false alarms** on 123 clean or near-miss invoices |
+| Reconciliation, 468 controlled cases | P = R = 1.00 on all 13 types, including the Israeli allocation-number rule (39 cases that must be flagged, 81 that must not); **0 false alarms** on 204 clean or near-miss invoices |
 | End to end (PDF → OCR/extraction → engine), 13 demo docs | 13/13 scenarios exact, P = R = 1.00 (was 12/13 because of a PO-label extraction bug, now fixed). |
 
 The benchmark datasets are synthetic. See the dataset definitions, scoring rules and limitations in the evaluation plan. [Evaluation methodology](docs/EVALUATION_PLAN.md)

@@ -32,6 +32,21 @@ def test_rule_based_extracts_demo_invoices_exactly(inv):
     assert [(ln.quantity, ln.unit_price, ln.line_total) for ln in n.lines] == \
            [(ln.quantity, ln.unit_price, ln.total) for ln in inv.lines]
     assert not [i for i in n.issues if i.code in ("LINE_ARITHMETIC", "TOTAL_MISMATCH", "SUBTOTAL_MISMATCH")]
+    assert n.allocation_number == inv.allocation_number
+
+
+def test_demo_invoices_carry_allocation_numbers_where_the_law_requires_them():
+    from app.demo.spec import UPLOAD_SAMPLES
+    from app.services.reconciliation.engine import allocation_threshold, normalize_allocation_number
+
+    for inv in INVOICES + UPLOAD_SAMPLES:
+        threshold = allocation_threshold(inv.invoice_date)
+        required = inv.currency == "ILS" and inv.vat > 0 and threshold is not None and inv.subtotal > threshold
+        if inv.scenario == "missing_allocation_number":
+            assert required and inv.allocation_number is None
+        else:
+            assert (normalize_allocation_number(inv.allocation_number) is not None) == required, inv.key
+    assert any(i.scenario == "missing_allocation_number" for i in UPLOAD_SAMPLES)
 
 
 def test_customer_tax_id_is_not_taken_as_supplier():

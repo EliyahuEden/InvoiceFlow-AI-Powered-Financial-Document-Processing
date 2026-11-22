@@ -188,6 +188,9 @@ def render_invoice_pdf(inv: InvoiceSpec) -> bytes:
                                                      orgid=ORG["tax_id"]), 10, False, a_start)
         if pi > 0:
             draw(c, x_end, y - 88, "המשך" if rtl else "(continued)", 9, False, a_end)
+        elif inv.allocation_number:
+            label = t.get("alloc", "מספר הקצאה: {a}" if rtl else "Allocation No.: {a}")
+            draw(c, x_end, y - 88, label.format(a=inv.allocation_number), 10, False, a_end)
 
         # --- table
         ty = y - 120

@@ -81,6 +81,8 @@ def _scenarios() -> list[E.Result]:
     inv = invoice(po, invoice_date=date(2026, 3, 1))
     out.append(E.reconcile(inv, replace(c, prior_invoices=[
         E.PriorInvoice(uuid.uuid4(), S1, "HC-0", date(2026, 2, 20), inv.total, "approved")])))
+    out.append(E.reconcile(invoice(po, invoice_date=date(2026, 9, 1)), c))  # no allocation number above 5,000
+    out.append(E.reconcile(invoice(po, invoice_date=date(2026, 9, 1), allocation_number="12345"), c))  # malformed
     return out
 
 

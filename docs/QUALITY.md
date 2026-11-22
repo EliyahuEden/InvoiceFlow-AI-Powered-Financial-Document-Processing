@@ -29,7 +29,7 @@ automated test in `backend/tests/`, so it can be re-run.
 | Copilot catalogue | 32 question types × Hebrew and English, plus 5 how-to topics — `test_copilot_catalogue.py` | All pass |
 | Date understanding | "today", "last month", "בחודש שעבר", "בדצמבר", "January 2026", "last 30 days"; "may I ask" and "march on" are not dates | All pass |
 | Extraction | `run_extraction_eval.py`, 73 labelled documents | Rules 0.920 field accuracy; rules-first with Groq `gpt-oss-120b` 0.925 (12 model calls, 0 errors) — unchanged by this pass |
-| Reconciliation | `run_reconciliation_eval.py` | 348/348 controlled cases exact, 0 clean false alarms, 13/13 end to end — unchanged |
+| Reconciliation | `run_reconciliation_eval.py` | 468/468 controlled cases exact (348 before the allocation-number cases were added), 0 clean false alarms, 13/13 end to end |
 | RAG | `run_rag_eval.py` (35 held-out questions) | Unchanged since the e5 measurement (`docs/EVALUATION_PLAN.md`); no retrieval code changed in this pass |
 
 Hebrew-specific lessons (each one was a real miss): match word stems, not whole words (חשבונית is not inside

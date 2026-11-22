@@ -17,7 +17,7 @@ Each bullet points to the code, test or benchmark output that supports it. Numbe
 - Enforced tenant isolation in two layers (application filters + PostgreSQL row-level security with a non-owner role), segregated two-step payment approvals, and an append-only, hash-chained audit trail with tamper-detection tests.
   *(alembic/versions/0002_security_rls.py, tests/test_security_integration.py)*
 - Hardened the system against prompt injection in invoices and contracts: detection blocks auto-approval, and injected passages are excluded from RAG answers. This came from a benchmark finding (injection parroting dropped from 1/1 to 0/1).
-- Built an evaluation and observability layer: separate extraction, retrieval and reconciliation benchmarks (348 controlled cases, 0 false alarms; end-to-end PDF-to-findings 13/13), plus per-call telemetry for latency, tokens and cost.
+- Built an evaluation and observability layer: separate extraction, retrieval and reconciliation benchmarks (468 controlled cases, 0 false alarms; end-to-end PDF-to-findings 13/13), plus per-call telemetry for latency, tokens and cost.
 - Delivered a production-style stack:
   - a Postgres-backed job queue with retries and idempotency, and SSE progress;
   - pytest (unit + PostgreSQL integration), Vitest, and Playwright E2E;

@@ -44,6 +44,7 @@ export type InvoiceDetail = {
   total: string | null; po_reference: string | null; language: string | null; extraction_method: string | null;
   created_at: string; filename: string | null; text_method: string | null; security_flag: boolean;
   supplier_name_raw: string | null; supplier_tax_id_raw: string | null; due_date: string | null; payment_terms: string | null;
+  allocation_number?: string | null;
   subtotal: string | null; discount_total: string | null; tax_total: string | null; tax_rate: string | null;
   field_sources: Record<string, Source>; missing_fields: string[];
   validation_warnings: { code: string; message: string; severity?: string; field?: string; snippets?: string[] }[];

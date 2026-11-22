@@ -13,6 +13,7 @@ export const FIELD_DEFS: { key: string; src: string; label: (t: ReturnType<typeo
   { key: "invoice_date", src: "invoice_date", label: (t) => t.invoice.invoiceDate, kind: "date" },
   { key: "po_reference", src: "po_reference", label: (t) => t.invoice.poReference, kind: "ltr" },
   { key: "payment_terms", src: "payment_terms", label: (t) => t.invoice.paymentTerms },
+  { key: "allocation_number", src: "allocation_number", label: (t) => t.invoice.allocationNumber, kind: "ltr" },
   { key: "currency", src: "currency", label: (t) => t.invoice.currency, kind: "ltr" },
   { key: "subtotal", src: "subtotal", label: (t) => t.invoice.subtotal, kind: "money" },
   { key: "tax_rate", src: "tax_rate", label: (t) => t.invoice.taxRate, kind: "ltr" },

@@ -20,7 +20,8 @@ from app.services.rbac import Perm, has_perm
 from app.services.reconciliation.service import ensure_approval_steps, reconcile_invoice
 
 EDITABLE_HEADER = {"supplier_name_raw", "supplier_tax_id_raw", "invoice_number", "invoice_date", "due_date", "currency",
-                   "po_reference", "payment_terms", "subtotal", "discount_total", "tax_total", "tax_rate", "total"}
+                   "po_reference", "payment_terms", "subtotal", "discount_total", "tax_total", "tax_rate", "total",
+                   "allocation_number"}
 MONEY = {"subtotal", "discount_total", "tax_total", "tax_rate", "total"}
 
 # Outcome of approving an exception's proposed action (deterministic mapping).

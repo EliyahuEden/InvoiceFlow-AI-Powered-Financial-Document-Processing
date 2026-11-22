@@ -70,6 +70,7 @@ class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     currency: Mapped[str | None] = mapped_column(String(3))
     po_reference: Mapped[str | None] = mapped_column(String(50))
     payment_terms: Mapped[str | None] = mapped_column(String(200))
+    allocation_number: Mapped[str | None] = mapped_column(String(40))  # Israel Tax Authority מספר הקצאה
     subtotal: Mapped[Decimal | None] = mapped_column(Money)
     discount_total: Mapped[Decimal | None] = mapped_column(Money)
     tax_total: Mapped[Decimal | None] = mapped_column(Money)

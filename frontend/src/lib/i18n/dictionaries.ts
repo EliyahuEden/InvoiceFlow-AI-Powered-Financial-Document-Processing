@@ -50,6 +50,7 @@ const en = {
     SUSPICIOUS_CONTENT: "Suspicious embedded instructions",
     NOT_AN_INVOICE: "Not an invoice",
     AMBIGUOUS_PURCHASE_ORDER: "Purchase order unclear",
+    MISSING_ALLOCATION_NUMBER: "Allocation number missing",
   },
   findingMessage: {
     UNRECOGNIZED_SUPPLIER: "Supplier '{name}' (tax ID {tax_id}) is not in the supplier master.",
@@ -78,6 +79,8 @@ const en = {
     SUSPICIOUS_CONTENT: "The document contains instruction-like text aimed at automated systems. It was ignored; a reviewer should verify the invoice with the supplier through a known channel.",
     AMBIGUOUS_PURCHASE_ORDER: "{count} purchase orders match the reference {reference}. Confirm which one this invoice bills.",
     AMBIGUOUS_PURCHASE_ORDER_INFERRED: "No purchase order is referenced and {count} open orders of this supplier cover the lines equally. Confirm which one applies.",
+    MISSING_ALLOCATION_NUMBER: "The invoice is {amount} before VAT, above the {threshold} threshold on its date, but has no Tax Authority allocation number. Without it the input VAT of {vat} cannot be deducted.",
+    MISSING_ALLOCATION_NUMBER_INVALID: "The allocation number {number} is not a valid 9-digit number. Without a valid number the input VAT of {vat} cannot be deducted (the invoice is {amount} before VAT; threshold {threshold}).",
     NOT_AN_INVOICE: "The document is titled \"{phrase}\" and does not look like a supplier invoice, so it was not matched against purchase orders. Reject it and ask for the tax invoice if one is due.",
   },
   action: {
@@ -142,7 +145,7 @@ const en = {
     tabs: { overview: "Document", review: "Extraction review", reconciliation: "Reconciliation", investigation: "AI investigation", audit: "History" },
     fields: "Extracted fields", lineItems: "Line items", sourceLine: "Source", missing: "Missing", unverified: "Not found in document",
     invoiceNumber: "Invoice number", invoiceDate: "Invoice date", dueDate: "Due date", currency: "Currency", poReference: "PO reference",
-    paymentTerms: "Payment terms", subtotal: "Subtotal", tax: "Tax", taxRate: "Tax rate", total: "Total", supplierName: "Supplier (printed)",
+    paymentTerms: "Payment terms", allocationNumber: "Allocation number", subtotal: "Subtotal", tax: "Tax", taxRate: "Tax rate", total: "Total", supplierName: "Supplier (printed)",
     supplierTaxId: "Supplier tax ID", description: "Description", sku: "SKU", qty: "Qty", unitPrice: "Unit price", lineTotal: "Line total",
     discount: "Discount", warnings: "Validation", method: "Extraction method", textMethod: "Text source", reprocess: "Re-run reconciliation",
     investigate: "Run AI investigation", corrections: "Corrections are audited and trigger a new reconciliation run.",
@@ -287,6 +290,7 @@ const he: Dict = {
     SUSPICIOUS_CONTENT: "הוראות חשודות במסמך",
     NOT_AN_INVOICE: "לא חשבונית",
     AMBIGUOUS_PURCHASE_ORDER: "הזמנת רכש לא ברורה",
+    MISSING_ALLOCATION_NUMBER: "חסר מספר הקצאה",
   },
   findingMessage: {
     UNRECOGNIZED_SUPPLIER: "הספק '{name}' (ח.פ. {tax_id}) אינו מופיע ברשימת הספקים.",
@@ -315,6 +319,8 @@ const he: Dict = {
     SUSPICIOUS_CONTENT: "המסמך מכיל טקסט דמוי הוראות שמכוון למערכות אוטומטיות. הטקסט לא בוצע; יש לאמת את החשבונית מול הספק בערוץ מוכר.",
     AMBIGUOUS_PURCHASE_ORDER: "{count} הזמנות רכש מתאימות להפניה {reference}. יש לאשר לאיזו מהן החשבונית מתייחסת.",
     AMBIGUOUS_PURCHASE_ORDER_INFERRED: "לא צוינה הזמנת רכש, ו-{count} הזמנות פתוחות של הספק מכסות את השורות באותה מידה. יש לאשר איזו מהן חלה.",
+    MISSING_ALLOCATION_NUMBER: "החשבונית בסך {amount} לפני מע\"מ, מעל סף {threshold} במועד הפקתה, ואין בה מספר הקצאה מרשות המסים. ללא מספר הקצאה לא ניתן לקזז את מע\"מ התשומות בסך {vat}.",
+    MISSING_ALLOCATION_NUMBER_INVALID: "מספר ההקצאה {number} אינו מספר תקין בן 9 ספרות. ללא מספר תקין לא ניתן לקזז את מע\"מ התשומות בסך {vat} (החשבונית {amount} לפני מע\"מ, הסף {threshold}).",
     NOT_AN_INVOICE: "המסמך נושא את הכותרת \"{phrase}\" ואינו נראה כחשבונית ספק, ולכן לא הותאם להזמנות רכש. יש לדחות אותו ולבקש חשבונית מס אם מגיעה.",
   },
   action: {
@@ -379,7 +385,7 @@ const he: Dict = {
     tabs: { overview: "מסמך", review: "בדיקת חילוץ", reconciliation: "התאמה", investigation: "חקירת AI", audit: "היסטוריה" },
     fields: "שדות שחולצו", lineItems: "שורות", sourceLine: "מקור", missing: "חסר", unverified: "לא נמצא במסמך",
     invoiceNumber: "מספר חשבונית", invoiceDate: "תאריך חשבונית", dueDate: "תאריך פירעון", currency: "מטבע",
-    poReference: "הזמנת רכש", paymentTerms: "תנאי תשלום", subtotal: "סכום ביניים", tax: "מע\"מ", taxRate: "שיעור מע\"מ",
+    poReference: "הזמנת רכש", paymentTerms: "תנאי תשלום", allocationNumber: "מספר הקצאה", subtotal: "סכום ביניים", tax: "מע\"מ", taxRate: "שיעור מע\"מ",
     total: "סה\"כ", supplierName: "ספק (כפי שמודפס)", supplierTaxId: "ח.פ. ספק", description: "תיאור", sku: "מק\"ט", qty: "כמות",
     unitPrice: "מחיר יחידה", lineTotal: "סה\"כ שורה", discount: "הנחה", warnings: "בדיקות", method: "שיטת חילוץ",
     textMethod: "מקור טקסט", reprocess: "הרצת התאמה מחדש", investigate: "הפעלת חקירת AI",

@@ -139,6 +139,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
         **invoice_row(inv, supplier, doc),
         "supplier_name_raw": inv.supplier_name_raw, "supplier_tax_id_raw": inv.supplier_tax_id_raw,
         "due_date": inv.due_date.isoformat() if inv.due_date else None, "payment_terms": inv.payment_terms,
+        "allocation_number": inv.allocation_number,
         "subtotal": money(inv.subtotal), "discount_total": money(inv.discount_total), "tax_total": money(inv.tax_total),
         "tax_rate": dec(inv.tax_rate), "field_sources": inv.field_sources, "missing_fields": inv.missing_fields,
         "validation_warnings": inv.validation_warnings, "revision": revision(inv),

@@ -51,6 +51,8 @@ LABELS: dict[str, list[str]] = {
     "po_reference": ["מס' הזמנה", "מספר הזמנה", "הזמנת רכש", "הזמנה", "PO Number", "PO No", "Purchase Order",
                      "Your reference", "PO"],
     "payment_terms": ["תנאי תשלום", "תשלום", "Payment Terms", "Terms"],
+    "allocation_number": ["מספר הקצאה", "מס' הקצאה", "מס הקצאה", "Allocation number", "Allocation No.",
+                          "Allocation No", "Allocation #"],
     "supplier_tax_id": ["עוסק מורשה", "ח.פ.", "ח.פ", "ע.מ.", "ע.מ", "Company No.", "Company No", "VAT No.", "VAT No",
                         "Reg. No", "Tax ID"],
 }
@@ -513,6 +515,7 @@ def extract(pages: list[tuple[int, str]], exclude_tax_ids: set[str] | None = Non
     if terms.value:
         terms.value = re.split(r"\s{2,}", terms.value)[0].strip()
     out.payment_terms = terms
+    out.allocation_number = _find_labeled(lines, "allocation_number", r"[:#.\s]*(\d[\d -]{6,14}\d)")
 
     for label in LABELS["supplier_tax_id"]:
         found = False

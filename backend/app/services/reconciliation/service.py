@@ -48,6 +48,9 @@ ACTION_FOR_FINDING = {
     "SUSPICIOUS_CONTENT": ("manual_review", "Verify the invoice with the supplier through a known channel; the "
                                             "embedded instructions were ignored."),
     "PO_SUPPLIER_MISMATCH": ("request_corrected_invoice", "The referenced PO belongs to another supplier."),
+    "MISSING_ALLOCATION_NUMBER": ("request_corrected_invoice", "Ask the supplier for a tax invoice with a valid Tax "
+                                                               "Authority allocation number; without it the input VAT "
+                                                               "cannot be deducted."),
 }
 PRIORITY_ORDER = list(ACTION_FOR_FINDING)
 TITLE = {
@@ -58,6 +61,7 @@ TITLE = {
     "AMBIGUOUS_DESCRIPTION": "Ambiguous line description", "CURRENCY_MISMATCH": "Currency mismatch",
     "ITEM_NOT_ON_PO": "Item not on PO", "TOTAL_MISMATCH": "Totals do not add up",
     "INCOMPLETE_EXTRACTION": "Extraction incomplete", "SUSPICIOUS_CONTENT": "Suspicious embedded instructions", "NOT_AN_INVOICE": "Not an invoice", "AMBIGUOUS_PURCHASE_ORDER": "Purchase order unclear",
+    "MISSING_ALLOCATION_NUMBER": "Allocation number missing",
     "PO_CLOSED": "PO is closed", "POSSIBLE_DUPLICATE": "Possible duplicate",
 }
 
@@ -116,7 +120,7 @@ def to_engine_invoice(inv: Invoice, sha: str | None, confirmed_supplier: bool) -
         id=inv.id, supplier_name_raw=inv.supplier_name_raw, supplier_tax_id_raw=inv.supplier_tax_id_raw,
         invoice_number=inv.invoice_number, invoice_date=inv.invoice_date, currency=inv.currency,
         po_reference=inv.po_reference, subtotal=inv.subtotal, discount_total=inv.discount_total,
-        tax_amount=inv.tax_total, total=inv.total,
+        tax_amount=inv.tax_total, total=inv.total, allocation_number=inv.allocation_number,
         lines=[E.InvLine(ln.id, ln.line_no, ln.description, ln.sku, ln.quantity, ln.unit_price, ln.discount, ln.line_total)
                for ln in inv.lines],
         document_sha256=sha, supplier_id=inv.supplier_id if confirmed_supplier else None,
