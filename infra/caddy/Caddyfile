@@ -1,0 +1,29 @@
+# Front door: HTTPS, security headers, and the real client address.
+#
+# /api and /health go straight to the API and everything else to the web app. Caddy replaces any
+# X-Forwarded-For a client sends with the address it actually connected from (it trusts no incoming
+# forwarding headers by default), so per-client rate limits cannot be shared by everyone or spoofed.
+#
+# Local:      SITE_ADDRESS unset -> plain HTTP on :8080 (http://localhost:8080).
+# Production: SITE_ADDRESS=invoices.example.co.il -> Caddy obtains and renews the HTTPS certificate itself.
+{$SITE_ADDRESS::8080} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@api path /api/* /health/*
+	handle @api {
+		reverse_proxy api:8000 {
+			flush_interval -1 # live updates (server-sent events) must not be buffered
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -1,0 +1,31 @@
+# Production override: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Only Caddy is reachable from outside (80/443, automatic HTTPS for SITE_ADDRESS). The database, Redis, file
+# storage, API and web app have no published ports, so nobody can reach the API around Caddy or spoof the
+# client address it records. Set in .env: SITE_ADDRESS, APP_BASE_URL (https://SITE_ADDRESS), CORS_ORIGINS,
+# JWT_SECRET, the S3_* settings of an encrypted bucket (S3_SSE), and the SMTP_* settings of your provider.
+# The API refuses to start in production on unsafe values (see backend/app/core/config.py).
+
+x-prod-env: &prod-env
+  ENVIRONMENT: production
+  COOKIE_SECURE: "true"
+  CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS to your https origin, e.g. ["https://invoices.example.co.il"]}
+  APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL to https://your-domain}
+  TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+
+services:
+  postgres: { ports: !reset [] }
+  redis: { ports: !reset [] }
+  s3: { ports: !reset [] }
+  api:
+    ports: !reset []
+    environment: *prod-env
+  worker:
+    environment: *prod-env
+  web: { ports: !reset [] }
+  mailpit: { profiles: ["local-mail"] }   # the test inbox never runs in production
+  caddy:
+    profiles: !reset []
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS to your domain, e.g. invoices.example.co.il}
+    ports: !override ["80:80", "443:443"]

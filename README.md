@@ -81,6 +81,8 @@ docker compose exec api python -m app.cli seed --reset   # fictional demo org + 
 ```
 Then open http://localhost:3000.
 
+For production, `docker-compose.prod.yml` puts Caddy in front (automatic HTTPS, only ports 80/443 published); see [Deployment](docs/DEPLOYMENT.md).
+
 Emails (password resets, invitations) go to a local Mailpit inbox at http://localhost:8025, so nothing leaves your machine. For real delivery set the `SMTP_*`, `EMAIL_FROM` and `APP_BASE_URL` values in `.env` (any SMTP provider works).
 
 On the first run the worker downloads multilingual-e5-large, a roughly 2.1 GB embedding model. The reranker downloads separately on first use. Set `RERANKER_BACKEND=none` to skip the reranker.

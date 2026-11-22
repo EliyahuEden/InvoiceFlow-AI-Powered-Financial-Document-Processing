@@ -20,6 +20,7 @@ from app.core.config import get_settings
 from app.core.db import session_scope, set_session_org
 from app.models import Document, Invoice, Job, KnowledgeDocument
 from app.services import audit, events
+from app.services.public_errors import public_error
 
 
 class LeaseLost(RuntimeError):
@@ -155,7 +156,7 @@ def mark_failed(session: Session, job_id: uuid.UUID, error: str, *, permanent: b
     session.flush()
     events.after_commit(session, job.organization_id, "job.failed" if job.status == "failed" else "job.retrying",
                    {"job_id": str(job.id), "type": job.type, "entity_id": str(job.entity_id) if job.entity_id else None,
-                    "status": job.status, "error": job.last_error[:300]})
+                    "status": job.status, "error": public_error(job.last_error)})
     return job
 
 

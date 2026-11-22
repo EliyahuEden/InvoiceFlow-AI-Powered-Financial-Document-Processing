@@ -178,7 +178,8 @@ def test_ocr_unavailable_marks_invoice_failed(client, as_user, monkeypatch):
     r = client.post("/api/invoices/upload", headers=proc, files={"file": (path.name, path.read_bytes(), "application/pdf")})
     drain()
     d = _detail(client, proc, r.json()["invoice_id"])
-    assert d["status"] == "failed" and "Tesseract" in (d["document"]["error"] or "")
+    shown = d["document"]["error"] or ""
+    assert d["status"] == "failed" and shown.startswith("Text recognition is not available") and "Tesseract" not in shown
     with session_scope() as s:
         job = s.scalars(select(Job).where(Job.entity_id == d["id"])).first()
         assert job.status == "failed" and job.attempts == job.max_attempts  # permanent: not retried

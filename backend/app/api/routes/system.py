@@ -20,6 +20,7 @@ from app.core.db import new_session
 from app.core.security import hash_password
 from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, Job, Membership, Organization, Role, User
 from app.core.config import get_settings
+from app.services.public_errors import public_error
 from app.services import audit, auth_tokens, sse_tickets
 from app.services import email as mail
 from app.services.events import channel, get_redis
@@ -207,7 +208,7 @@ def job_status(job_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOICE_RE
             raise HTTPException(404, "Job not found")
         return {"id": str(j.id), "type": j.type, "status": j.status, "progress": j.progress,
                 "message": j.progress_message, "attempts": j.attempts, "max_attempts": j.max_attempts,
-                "error": j.last_error, "entity_id": str(j.entity_id) if j.entity_id else None}
+                "error": public_error(j.last_error), "entity_id": str(j.entity_id) if j.entity_id else None}
     finally:
         s.close()
 

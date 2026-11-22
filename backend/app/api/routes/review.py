@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import Principal, get_db, money, page_params, paginated, require
 from app.models import AgentRun, Approval, AuditLog, Discrepancy, ExceptionCase, Invoice, Supplier, User
+from app.services.public_errors import public_error
 from app.services import workflow
 from app.services.audit import verify_chain
 from app.services.rbac import Perm
@@ -150,7 +151,7 @@ def get_run(run_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOICE_READ)
         raise HTTPException(404, "Agent run not found")
     inv = db.get(Invoice, r.invoice_id)
     return {"id": str(r.id), "status": r.status, "mode": r.mode, "prompt_version": r.prompt_version,
-            "thread_id": r.thread_id, "steps": r.steps, "result": r.result, "error": r.error,
+            "thread_id": r.thread_id, "steps": r.steps, "result": r.result, "error": public_error(r.error),
             "invoice_id": str(inv.id), "invoice_number": inv.invoice_number, "created_at": r.created_at.isoformat(),
             "updated_at": r.updated_at.isoformat()}
 

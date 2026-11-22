@@ -16,6 +16,7 @@ docker compose exec api python -m app.cli seed --reset
 | web | frontend/Dockerfile | Next.js standalone; proxies `/api` to the API (set `BACKEND_URL` at build time) |
 
 ## Production checklist (single region)
+0. **Front door:** run `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`. Only Caddy (`infra/caddy/Caddyfile`) is published, on 80/443, with automatic HTTPS for `SITE_ADDRESS`; the database, Redis, storage, API and web app have no published ports. Caddy sends `/api` straight to the API and sets `X-Forwarded-For` from the real connection, which the API's per-client rate limits rely on (`TRUSTED_PROXY_HOPS=1`; use 2 if a cloud load balancer sits in front of Caddy). Never expose the API or the Next.js server directly: the Next.js proxy forwards a client-supplied `X-Forwarded-For` unchanged.
 1. **Database:** managed PostgreSQL 16 with `pgvector`. Create two roles: an owner for migrations and an app role (non-owner, non-superuser) for runtime. Set `MIGRATION_DATABASE_URL` and `DATABASE_URL`. Run `python -m app.cli migrate` as a release step.
 2. **Object storage:** S3, R2 or GCS with S3 interop. Use a private bucket, SSE-KMS and a lifecycle policy. Set `STORAGE_BACKEND=s3`, `S3_*` and leave `S3_ENDPOINT_URL` empty for AWS. Set `S3_SSE=aws:kms` and `S3_KMS_KEY_ID` (startup refuses `ENVIRONMENT=production` without encryption).
 3. **Secrets:** inject from a secret manager. Use a random `JWT_SECRET` of at least 32 characters. Provide LLM keys only when that mode is wanted.

@@ -23,6 +23,7 @@ from app.models import (
     ReconciliationRun,
     Supplier,
 )
+from app.services.public_errors import public_error
 from app.services import workflow
 from app.services.agent.runner import start_investigation
 from app.services.documents.validation import UploadRejected
@@ -148,7 +149,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
                    "line_total": money(ln.line_total), "source": ln.source} for ln in inv.lines],
         "document": {"id": str(doc.id), "filename": doc.filename, "mime_type": doc.mime_type, "page_count": doc.page_count,
                      "text_method": doc.text_method, "language": doc.language, "status": doc.status,
-                     "error": doc.error, "size_bytes": doc.size_bytes, "sha256": doc.sha256} if doc else None,
+                     "error": public_error(doc.error), "size_bytes": doc.size_bytes, "sha256": doc.sha256} if doc else None,
         "supplier": {"id": str(supplier.id), "name": supplier.name, "name_en": supplier.name_en,
                      "tax_id": supplier.tax_id} if supplier else None,
         "purchase_order": {"id": str(po.id), "po_number": po.po_number, "currency": po.currency, "status": po.status,
@@ -171,7 +172,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
         "agent_runs": [{"id": str(r.id), "status": r.status, "mode": r.mode, "created_at": r.created_at.isoformat()}
                        for r in agent_runs],
         "job": {"id": str(job.id), "status": job.status, "progress": job.progress, "message": job.progress_message,
-                "attempts": job.attempts, "error": job.last_error} if job else None,
+                "attempts": job.attempts, "error": public_error(job.last_error)} if job else None,
     }
 
 
