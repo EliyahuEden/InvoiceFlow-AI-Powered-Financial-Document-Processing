@@ -6,7 +6,7 @@ from app.core.config import Settings
 
 def test_comment_only_value_is_empty():
     s = Settings(openai_base_url="# e.g. http://host.docker.internal:11434/v1 for a local Ollama")
-    assert s.openai_base_url in (None, "")
+    assert s.openai_base_url == Settings.model_fields["openai_base_url"].default  # the default, never the comment
 
 
 def test_trailing_comment_is_dropped():

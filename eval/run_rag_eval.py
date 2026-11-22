@@ -12,6 +12,7 @@ chunkers. Relevance is strategy-independent: a chunk is relevant to a label
 from __future__ import annotations
 
 import argparse
+import re
 import json
 import math
 import time
@@ -221,6 +222,19 @@ def main() -> None:
     })
 
 
+def _with_rate_limit_retry(call, attempts: int = 5):  # noqa: ANN001, ANN202
+    """A free-tier tokens-per-minute limit is not an answer-quality failure: wait and retry the same question.
+    A daily limit cannot be waited out within a run, so it still surfaces as an error."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return call()
+        except Exception as exc:  # noqa: BLE001
+            daily = "per day" in str(exc).lower() or "tokens per day" in str(exc).lower()
+            if "RateLimit" not in type(exc).__name__ or daily or attempt == attempts:
+                raise
+            time.sleep(20 * attempt)
+
+
 def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chunks, *, llm=None, pace=0) -> dict:  # noqa: ANN001
     correct = cited = cited_ok = 0
     abst_tp = abst_fp = abst_fn = 0
@@ -232,9 +246,10 @@ def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chun
         hits = idx.search(q["question"], mode=mode, k=5, reranker=reranker if mode == "hybrid_rerank" else None)
         if llm is not None and hits:
             try:
-                ans, _ = A.answer_with_llm(llm, q["question"], hits)
+                ans = _with_rate_limit_retry(lambda: A.answer_with_llm(llm, q["question"], hits)[0])
             except Exception as exc:  # keep provider errors visible and count them as failures
-                per_question.append({"id": q["id"], "passed": False, "error": type(exc).__name__})
+                per_question.append({"id": q["id"], "passed": False, "error": type(exc).__name__,
+                                     "detail": re.sub(r"org_\w+", "org_***", str(exc))[:200]})
                 answerable_n += q["answerable"]
                 abst_fn += not q["answerable"]
                 continue

@@ -228,7 +228,7 @@ def llm_info(requested: bool) -> dict | None:
     from app.services.llm.provider import get_llm
 
     llm, s = get_llm(), get_settings()
-    return {"model": llm.model if llm else None, "provider": s.llm_provider,
+    return {"model": llm.model if llm else None, "provider": s.llm_provider if llm else "offline",
             "endpoint": urlparse(s.openai_base_url).hostname if s.openai_base_url else "provider default",
             "max_output_tokens": s.llm_max_output_tokens}
 

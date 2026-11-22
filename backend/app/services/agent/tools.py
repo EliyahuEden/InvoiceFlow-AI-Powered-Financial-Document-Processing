@@ -15,6 +15,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date as _date
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
@@ -38,6 +39,8 @@ class ToolContext:
     role: str
     agent_run_id: uuid.UUID | None = None
     trace: list[dict] = field(default_factory=list)
+    # Policies and agreements are read as they stood on this date (the invoice date for investigations); None = today.
+    as_of: _date | None = None
 
 
 # ------------------------------------------------------------------ inputs
@@ -235,7 +238,8 @@ def _search(ctx: ToolContext, inp: SearchIn, doc_types: list[str]) -> dict:
     from app.services.rag.answer import screen_hits
 
     hits = search(ctx.session, ctx.org_id, inp.query, k=4,
-                  supplier_id=_uuid(inp.supplier_id) if inp.supplier_id else None, doc_types=doc_types)
+                  supplier_id=_uuid(inp.supplier_id) if inp.supplier_id else None, doc_types=doc_types,
+                  as_of=ctx.as_of)
     hits, excluded = screen_hits(hits)  # injected instructions never reach the model or the citations
     return {"excluded_passages": excluded, "passages": [{"chunk_id": h.chunk.id, "title": h.chunk.document_title, "doc_type": h.chunk.doc_type,
                           "page": h.chunk.page, "section": h.chunk.section, "effective_date": h.chunk.effective_date,
@@ -335,7 +339,6 @@ def queue_summary(ctx: ToolContext, inp: EmptyIn) -> dict:
 
 
 def search_invoices(ctx: ToolContext, inp: InvoiceSearchIn) -> dict:
-    from datetime import date as _date
     from decimal import Decimal, InvalidOperation
 
     from sqlalchemy import or_
@@ -437,8 +440,6 @@ def list_suppliers(ctx: ToolContext, inp: SupplierListIn) -> dict:
 
 
 def _by_supplier(ctx: ToolContext, statuses: tuple[str, ...], date_from=None, date_to=None):  # noqa: ANN001, ANN202
-    from datetime import date as _date
-
     from sqlalchemy import func
 
     q = (select(Supplier.id, Supplier.name, Supplier.name_en, Invoice.currency, Invoice.status,
@@ -574,7 +575,6 @@ def po_status(ctx: ToolContext, inp: PORefIn) -> dict:
 
 
 def period_totals(ctx: ToolContext, inp: PeriodIn) -> dict:
-    from datetime import date as _date
     from decimal import Decimal
 
     from sqlalchemy import func

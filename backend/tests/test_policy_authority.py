@@ -70,3 +70,21 @@ def test_demo_purchasing_policy_excludes_superseded_version_with_a_different_tit
 
         assert versions(date(2026, 6, 1)) == {"3.0"}
         assert versions(date(2024, 6, 1)) == {"2.1"}
+
+
+def test_agent_policy_lookup_uses_the_invoice_date(world):
+    """AI-03: an investigation of an older invoice reads the policy that applied on the invoice date."""
+    from app.services.agent.tools import SearchIn, ToolContext, retrieve_policy
+
+    org_id = world["org_id"]
+    with session_scope(org_id) as session:
+        old = add_policy(session, org_id, "old-rule", "Freight threshold was 100.", date(2025, 1, 1))
+        new = add_policy(session, org_id, "new-rule", "Freight threshold is 200.", date(2026, 1, 1))
+        old_id, new_id = str(old.id), str(new.id)
+    with session_scope(org_id) as session:
+        def chunk_ids(as_of):
+            ctx = ToolContext(session, org_id, None, "finance_reviewer", as_of=as_of)
+            return {p["chunk_id"] for p in retrieve_policy(ctx, SearchIn(query="freight threshold"))["passages"]}
+
+        assert old_id in chunk_ids(date(2025, 6, 1)) and new_id not in chunk_ids(date(2025, 6, 1))
+        assert new_id in chunk_ids(None) and old_id not in chunk_ids(None)

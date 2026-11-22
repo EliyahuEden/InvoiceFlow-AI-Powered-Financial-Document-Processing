@@ -10,12 +10,18 @@ import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_core import PydanticUseDefault
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b"
+LOCAL_LLM_HOSTS = {"localhost", "127.0.0.1", "::1", "host.docker.internal", "ollama"}
 
 
 class Settings(BaseSettings):
@@ -64,13 +70,14 @@ class Settings(BaseSettings):
     max_pdf_pages: int = 50
 
     # --- LLM ---
-    llm_provider: Literal["offline", "anthropic", "openai"] = "offline"
+    # Default: Groq (OpenAI-compatible). Without OPENAI_API_KEY the app runs fully offline.
+    llm_provider: Literal["offline", "anthropic", "openai"] = "openai"
     llm_model: str = ""
     # Reasoning models (gpt-5 family, o-series): minimal | low | medium | high. Default low keeps cost down.
     llm_reasoning_effort: str | None = None
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
-    openai_base_url: str | None = None  # e.g. http://localhost:11434/v1 for Ollama
+    openai_base_url: str | None = GROQ_BASE_URL  # empty = api.openai.com; http://localhost:11434/v1 for Ollama
     # rules_first: the free rule-based extractor reads every invoice and the LLM is asked only for
     # fields that are missing or do not add up. llm_first: every invoice goes to the LLM, rules as backup.
     extraction_mode: Literal["rules_first", "llm_first"] = "rules_first"
@@ -172,6 +179,8 @@ class Settings(BaseSettings):
     def effective_llm_model(self) -> str:
         if self.llm_model:
             return self.llm_model
+        if self.llm_provider == "openai" and (self.openai_base_url or "").rstrip("/") == GROQ_BASE_URL:
+            return GROQ_DEFAULT_MODEL
         return {"anthropic": "claude-opus-5-5", "openai": "gpt-5.4-nano", "offline": "offline-deterministic"}[
             self.llm_provider
         ]
@@ -181,9 +190,11 @@ class Settings(BaseSettings):
         if self.llm_provider == "anthropic":
             return self.anthropic_api_key is not None and bool(self.anthropic_api_key.get_secret_value())
         if self.llm_provider == "openai":
-            return bool(self.openai_base_url) or (
-                self.openai_api_key is not None and bool(self.openai_api_key.get_secret_value())
-            )
+            if self.openai_api_key is not None and self.openai_api_key.get_secret_value():
+                return True
+            # A local server (Ollama, vLLM) needs no key; a hosted one without a key would only return 401s.
+            host = urlparse(self.openai_base_url or "").hostname or ""
+            return host in LOCAL_LLM_HOSTS
         return False
 
 

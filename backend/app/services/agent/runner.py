@@ -57,7 +57,9 @@ def _system_role(session: Session, org_id: uuid.UUID) -> str:
 
 def _execute(session: Session, run: AgentRun, role: str, user_id: uuid.UUID | None, resume: dict | None,
              job: Job) -> None:
-    ctx = ToolContext(session=session, org_id=run.organization_id, user_id=user_id, role=role, agent_run_id=run.id)
+    invoice_date = session.scalar(select(Invoice.invoice_date).where(Invoice.id == run.invoice_id))
+    ctx = ToolContext(session=session, org_id=run.organization_id, user_id=user_id, role=role, agent_run_id=run.id,
+                      as_of=invoice_date)
     key = f"{run.id}:{job.id}:{job.attempts}"
     G.CONTEXTS[key] = ctx
     config = {"configurable": {"thread_id": run.thread_id, "run_key": key}}
