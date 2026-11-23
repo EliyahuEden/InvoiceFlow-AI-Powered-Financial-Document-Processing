@@ -16,9 +16,9 @@ from sqlalchemy.exc import IntegrityError
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.deps import Principal, get_db, get_principal, principal_from_claims, require
-from app.core.db import new_session
+from app.core.db import new_session, set_session_org
 from app.core.security import hash_password
-from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, Job, Membership, Organization, Role, User
+from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, AICall, Job, Membership, Organization, Role, User
 from app.core.config import get_settings
 from app.services.public_errors import public_error
 from app.services import audit, auth_tokens, sse_tickets
@@ -274,6 +274,63 @@ async def events(request: Request, ticket: str | None = None) -> EventSourceResp
             pubsub.close()
 
     return EventSourceResponse(stream())
+
+
+LOCAL_AI_KINDS = ("embedding", "ocr")  # run on this server: they say nothing about the model provider
+
+
+@router.get("/health/alerts")
+def alerts() -> JSONResponse:
+    """For an uptime monitor: 200 while healthy, 503 with reason codes when a person should look. Counts only."""
+    from sqlalchemy import func, or_
+
+    cfg = get_settings()
+    now = datetime.now(UTC)
+    found: list[str] = []
+    checks: dict = {}
+    s = new_session()
+    try:
+        s.execute(text("SELECT 1"))
+        oldest = s.scalar(select(func.min(Job.created_at)).where(
+            Job.status == "queued", or_(Job.run_after.is_(None), Job.run_after <= now)))
+        checks["queue_oldest_minutes"] = round((now - oldest).total_seconds() / 60) if oldest else 0
+        if oldest and now - oldest > timedelta(minutes=cfg.alert_queue_max_minutes):
+            found.append("worker_backlog")
+        failed = s.scalar(select(func.count()).select_from(Job).where(
+            Job.status == "failed", Job.updated_at >= now - timedelta(hours=24))) or 0
+        checks["failed_jobs_24h"] = failed
+        if failed > cfg.alert_failed_jobs_24h:
+            found.append("failed_jobs")
+        calls = errors = 0
+        for org_id in s.scalars(select(Organization.id)).all():  # AI calls are tenant data: counted per business
+            set_session_org(s, org_id)
+            row = s.execute(select(func.count(), func.count().filter(AICall.status != "ok"))
+                            .where(AICall.created_at >= now - timedelta(hours=1),
+                                   AICall.kind.notin_(LOCAL_AI_KINDS))).one()
+            calls, errors = calls + row[0], errors + row[1]
+        checks["ai_calls_1h"], checks["ai_errors_1h"] = calls, errors
+        if calls >= cfg.alert_ai_min_calls and errors / calls > cfg.alert_ai_error_rate:
+            found.append("ai_errors")
+    except Exception:  # noqa: BLE001 - the database itself is the problem
+        found.append("database")
+    finally:
+        s.close()
+    try:
+        get_redis().ping()
+    except Exception:  # noqa: BLE001
+        found.append("redis")
+    if cfg.backup_status_file:
+        try:
+            with open(cfg.backup_status_file, encoding="utf-8") as f:
+                age_h = (now.timestamp() - int(f.read().strip())) / 3600
+            checks["backup_age_hours"] = round(age_h, 1)
+            if age_h > cfg.alert_backup_max_hours:
+                found.append("backup_stale")
+        except (OSError, ValueError):
+            checks["backup_age_hours"] = None
+            found.append("backup_stale")
+    return JSONResponse({"status": "alert" if found else "ok", "alerts": found, "checks": checks},
+                        status_code=503 if found else 200)
 
 
 @router.get("/health/live")

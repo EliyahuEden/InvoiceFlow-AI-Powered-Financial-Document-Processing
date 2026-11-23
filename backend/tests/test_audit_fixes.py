@@ -157,7 +157,9 @@ def _prod(**kw):
     from app.core.config import Settings
 
     base = dict(environment="production", jwt_secret="a" * 48, cookie_secure=True, storage_backend="s3", s3_sse="AES256",
-                cors_origins=["https://invoiceflow.example.com"])
+                cors_origins=["https://invoiceflow.example.com"], s3_secret_key="k" * 40,
+                database_url="postgresql+psycopg://invoiceflow_app:Q7vT2mW9xL4pR8sZ@db.internal:5432/invoiceflow",
+                migration_database_url="postgresql+psycopg://invoiceflow:N3kD8fH2jP6tY1cV@db.internal:5432/invoiceflow")
     base.update(kw)
     return Settings(**base)
 
@@ -171,6 +173,9 @@ def test_a_safe_production_configuration_starts():
     ({"cookie_secure": False}, "COOKIE_SECURE"),
     ({"storage_backend": "local"}, "STORAGE_BACKEND"),
     ({"cors_origins": ["http://localhost:3000"]}, "CORS_ORIGINS"),
+    ({"database_url": "postgresql+psycopg://invoiceflow_app:invoiceflow_app_dev@postgres:5432/invoiceflow"}, "DATABASE_URL"),
+    ({"migration_database_url": "postgresql+psycopg://invoiceflow:invoiceflow_dev@postgres:5432/invoiceflow"}, "MIGRATION_DATABASE_URL"),
+    ({"s3_secret_key": "invoiceflow_dev_secret"}, "S3_SECRET_KEY"),
 ])
 def test_unsafe_production_configurations_refuse_to_start(override, message):
     with pytest.raises(ValueError, match=message):

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -74,8 +75,18 @@ def migrate() -> None:
         conn.execute(text("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO invoiceflow_app"))
         conn.execute(text("REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM invoiceflow_app"))
         conn.execute(text("REVOKE ALL ON alembic_version FROM invoiceflow_app"))
+        password = os.environ.get("APP_DB_PASSWORD")
+        if password:  # production: the role created at first boot must not keep the development password
+            conn.exec_driver_sql(app_role_password_statement(password))
     eng.dispose()
     print("migrations applied")
+
+
+def app_role_password_statement(password: str) -> str:
+    """ALTER ROLE for the application role with the password as a quoted SQL literal (quotes doubled)."""
+    if len(password) < 16 or password in ("invoiceflow_app_dev", "invoiceflow_dev"):
+        raise ValueError("APP_DB_PASSWORD must be at least 16 characters and not a development password")
+    return 'ALTER ROLE "invoiceflow_app" PASSWORD ' + "'" + password.replace("'", "''") + "'"
 
 
 def main(argv: list[str] | None = None) -> int:

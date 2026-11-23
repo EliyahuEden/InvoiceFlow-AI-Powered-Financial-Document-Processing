@@ -112,6 +112,26 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
+  backup:  # nightly database dumps (infra/backup). Local: docker compose --profile backup up -d backup
+    build: { context: ./infra/backup }
+    profiles: ["backup"]
+    environment:
+      PGHOST: postgres
+      PGUSER: invoiceflow
+      PGPASSWORD: ${POSTGRES_PASSWORD:-invoiceflow_dev}
+      PGDATABASE: invoiceflow
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_S3_URI: ${BACKUP_S3_URI:-}            # offsite copy, e.g. s3://my-backups/invoiceflow
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      AWS_DEFAULT_REGION: ${BACKUP_S3_REGION:-auto}
+      AWS_ENDPOINT_URL: ${BACKUP_S3_ENDPOINT:-}    # for R2, B2 or another S3-compatible store
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
+
   caddy:  # HTTPS front door (infra/caddy/Caddyfile). Local: docker compose --profile proxy up -d -> http://localhost:8080
     image: caddy:2.8.4-alpine
     profiles: ["proxy"]
@@ -130,3 +150,4 @@ volumes:
   s3data:
   models:
   caddy_data:
+  backups:

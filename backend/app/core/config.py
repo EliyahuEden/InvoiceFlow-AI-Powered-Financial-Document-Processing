@@ -20,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+DEV_DB_PASSWORDS = (":invoiceflow_dev@", ":invoiceflow_app_dev@")
 GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b"
 LOCAL_LLM_HOSTS = {"localhost", "127.0.0.1", "::1", "host.docker.internal", "ollama"}
 
@@ -72,6 +73,13 @@ class Settings(BaseSettings):
     email_from: str = "InvoiceFlow <no-reply@invoiceflow.local>"
     app_base_url: str = "http://localhost:3000"  # the web app's public address, used in emailed links
     password_reset_ttl_minutes: int = 60
+    # --- /health/alerts thresholds (an uptime monitor polls it; 503 means a person should look)
+    alert_queue_max_minutes: int = 15        # a runnable job waiting longer means the worker is down or stuck
+    alert_failed_jobs_24h: int = 5
+    alert_ai_error_rate: float = 0.5         # share of AI calls failing in the last hour...
+    alert_ai_min_calls: int = 5              # ...counted only from this many calls on
+    backup_status_file: str | None = None    # the backup service's last_success marker (unset: not checked)
+    alert_backup_max_hours: int = 26
     invite_ttl_hours: int = 72
     cookie_secure: bool = False
 
@@ -181,6 +189,12 @@ class Settings(BaseSettings):
             problems.append("STORAGE_BACKEND=local is not durable; use s3")
         if any("localhost" in o or "127.0.0.1" in o or o == "*" for o in self.cors_origins):
             problems.append("CORS_ORIGINS must list the real HTTPS origins, not localhost or *")
+        # the passwords shipped for local development are public (they are in this repository)
+        for name, url in (("DATABASE_URL", self.database_url), ("MIGRATION_DATABASE_URL", self.migration_database_url)):
+            if any(dev in url for dev in DEV_DB_PASSWORDS):
+                problems.append(f"{name} uses the development database password; set a strong one")
+        if self.s3_secret_key.get_secret_value() == "invoiceflow_dev_secret":
+            problems.append("S3_SECRET_KEY is the development secret")
         if problems:
             raise ValueError("Unsafe production configuration: " + "; ".join(problems))
         return self

@@ -3,7 +3,8 @@
 # Only Caddy is reachable from outside (80/443, automatic HTTPS for SITE_ADDRESS). The database, Redis, file
 # storage, API and web app have no published ports, so nobody can reach the API around Caddy or spoof the
 # client address it records. Set in .env: SITE_ADDRESS, APP_BASE_URL (https://SITE_ADDRESS), CORS_ORIGINS,
-# JWT_SECRET, the S3_* settings of an encrypted bucket (S3_SSE), and the SMTP_* settings of your provider.
+# JWT_SECRET, POSTGRES_PASSWORD and APP_DB_PASSWORD (16+ letters and digits), the S3_* settings of an encrypted
+# bucket (S3_SSE), the SMTP_* settings of your provider, and BACKUP_S3_* for offsite backups.
 # The API refuses to start in production on unsafe values (see backend/app/core/config.py).
 
 x-prod-env: &prod-env
@@ -12,18 +13,39 @@ x-prod-env: &prod-env
   CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS to your https origin, e.g. ["https://invoices.example.co.il"]}
   APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL to https://your-domain}
   TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+  BACKUP_STATUS_FILE: /backups/last_success
+  ALLOW_SIGNUP: ${ALLOW_SIGNUP:-false}   # true while you create your first business, or for a public SaaS
+  # every secret comes from .env: the development values in docker-compose.yml are public
+  DATABASE_URL: postgresql+psycopg://invoiceflow_app:${APP_DB_PASSWORD:?set APP_DB_PASSWORD (16+ letters and digits)}@postgres:5432/invoiceflow
+  MIGRATION_DATABASE_URL: postgresql+psycopg://invoiceflow:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (16+ letters and digits)}@postgres:5432/invoiceflow
+  APP_DB_PASSWORD: ${APP_DB_PASSWORD}   # migrate sets the application role's password to it
+  S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}  # empty for AWS; your provider's endpoint for R2, B2...
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY for the documents bucket}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY for the documents bucket}
+  S3_BUCKET: ${S3_BUCKET:?set S3_BUCKET (private, versioned)}
+  S3_SSE: ${S3_SSE:?set S3_SSE to AES256 or aws:kms}
 
 services:
-  postgres: { ports: !reset [] }
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}   # applies when the database volume is first created
   redis: { ports: !reset [] }
-  s3: { ports: !reset [] }
+  s3: { profiles: ["local-storage"] }   # production uses a real, encrypted S3-compatible bucket
   api:
     ports: !reset []
     environment: *prod-env
+    depends_on: !override
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      - backups:/backups:ro               # /health/alerts reports a stale or missing backup
   worker:
     environment: *prod-env
   web: { ports: !reset [] }
   mailpit: { profiles: ["local-mail"] }   # the test inbox never runs in production
+  backup:
+    profiles: !reset []                  # nightly dumps always run in production (infra/backup)
   caddy:
     profiles: !reset []
     environment:

@@ -21,7 +21,9 @@ def test_sse_s3_and_sse_kms_headers():
 
 
 def test_production_with_s3_requires_server_side_encryption():
-    safe = {"cookie_secure": True, "cors_origins": ["https://invoiceflow.example.com"]}  # the other production gates
+    safe = {"cookie_secure": True, "cors_origins": ["https://invoiceflow.example.com"], "s3_secret_key": "k" * 40,  # the other gates
+            "database_url": "postgresql+psycopg://invoiceflow_app:Q7vT2mW9xL4pR8sZ@db.internal:5432/invoiceflow",
+            "migration_database_url": "postgresql+psycopg://invoiceflow:N3kD8fH2jP6tY1cV@db.internal:5432/invoiceflow"}
     with pytest.raises(ValidationError, match="S3_SSE"):
         Settings(jwt_secret=SECRET, environment="production", storage_backend="s3", **safe)
     Settings(jwt_secret=SECRET, environment="production", storage_backend="s3", s3_sse="aws:kms", **safe)
