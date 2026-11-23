@@ -25,6 +25,7 @@ from app.services import audit, auth_tokens, sse_tickets
 from app.services import email as mail
 from app.services.events import channel, get_redis
 from app.services.llm.provider import mode_label
+from app.services.ratelimit import check_rate_limit
 from app.services.rbac import ROLE_PERMISSIONS, Perm
 
 router = APIRouter(tags=["system"])
@@ -85,7 +86,8 @@ def members(p: Principal = Depends(require(Perm.INVOICE_READ))) -> dict:
         rows = s.execute(select(Membership, User).join(User, User.id == Membership.user_id)
                          .where(Membership.organization_id == p.org_id).order_by(User.full_name)).all()
         return {"items": [{"id": str(u.id), "email": u.email, "full_name": u.full_name, "role": m.role.value,
-                           "is_active": u.is_active, "locale": u.locale} for m, u in rows]}
+                           "is_active": u.is_active, "locale": u.locale, "two_factor": u.totp_enabled_at is not None}
+                          for m, u in rows]}
     finally:
         s.close()
 
@@ -195,6 +197,61 @@ def change_role(user_id: uuid.UUID, body: RoleIn, p: Principal = Depends(require
                      actor_id=p.user.id, actor_label=p.user.email, before={"role": before}, after={"role": body.role.value})
         s.commit()
         return {"role": body.role.value}
+    finally:
+        s.close()
+
+
+class ResetTwoFactorIn(BaseModel):
+    password: str = Field(..., min_length=1, max_length=200)  # the administrator's own, to confirm
+
+
+@router.post("/api/org/members/{user_id}/reset-2fa")
+def reset_member_two_factor(user_id: uuid.UUID, body: ResetTwoFactorIn, request: Request, background: BackgroundTasks,
+                            p: Principal = Depends(require(Perm.ORG_MANAGE))) -> dict:
+    """Turn off two-factor sign-in for a teammate who lost their phone and recovery codes.
+
+    Two-factor belongs to the account, not to one business, so an administrator may reset it only when they are an
+    administrator of every business the person belongs to. The person's sessions end everywhere and they are told by
+    email who did it; they sign in with their password and can set up a new app."""
+    from app.core.security import verify_password
+    from app.services import auth_sessions
+
+    if request.headers.get("x-requested-with") != "invoiceflow":
+        raise HTTPException(403, "Missing CSRF header")
+    if user_id == p.user.id:
+        raise HTTPException(422, "Turn off your own two-factor sign-in in your settings.")
+    check_rate_limit(f"mfa-admin-reset:{p.user.id}", get_settings().rate_limit_mfa_per_5min, window_seconds=300)
+    s = new_session()  # memberships across businesses, as at sign-in
+    try:
+        admin = s.get(User, p.user.id)
+        if not verify_password(body.password, admin.password_hash):
+            raise HTTPException(403, "Your password is not correct.")
+        theirs = s.scalars(select(Membership).where(Membership.user_id == user_id)).all()
+        if not any(m.organization_id == p.org_id for m in theirs):
+            raise HTTPException(404, "Member not found")
+        mine = {m.organization_id for m in s.scalars(select(Membership).where(
+            Membership.user_id == p.user.id, Membership.role == Role.ADMIN)).all()}
+        if any(m.organization_id not in mine for m in theirs):
+            raise HTTPException(409, "This person also belongs to another business, where you are not an administrator. "
+                                     "An administrator of every business they belong to can reset it.")
+        user = s.scalars(select(User).where(User.id == user_id).with_for_update()).one()
+        if user.totp_enabled_at is None:
+            return {"two_factor": False, "sessions_ended": 0}
+        user.totp_secret_enc = user.totp_enabled_at = user.totp_last_step = None
+        user.recovery_codes = []
+        ended = auth_sessions.active_sessions(s, user.id)
+        for a in ended:
+            auth_sessions.revoke(s, a.id, "two_factor_reset")
+        org_name = s.get(Organization, p.org_id).name
+        set_session_org(s, p.org_id)
+        audit.record(s, org_id=p.org_id, action="member.2fa_reset", entity_type="user", entity_id=user.id,
+                     actor_id=p.user.id, actor_label=p.user.email,
+                     meta={"email": user.email, "sessions_ended": len(ended)})
+        s.commit()
+        if get_settings().email_enabled:
+            background.add_task(mail.send, mail.two_factor_reset(user.email, user.full_name, org_name,
+                                                                 f"{admin.full_name} ({admin.email})", user.locale))
+        return {"two_factor": False, "sessions_ended": len(ended)}
     finally:
         s.close()
 

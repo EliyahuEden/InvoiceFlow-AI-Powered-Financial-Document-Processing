@@ -552,9 +552,9 @@ def two_factor_disable(body: DisableIn, request: Request, p: Principal = Depends
         if user.totp_enabled_at is None:
             return {"enabled": False}
         if not verify_password(body.password, user.password_hash):
-            raise HTTPException(401, "The password is not correct.")
+            raise HTTPException(403, "The password is not correct.")
         if _check_second_factor(user, body.code, body.recovery_code) is None:
-            raise HTTPException(401, "The code is not correct.")
+            raise HTTPException(403, "The code is not correct.")
         user.totp_secret_enc = user.totp_enabled_at = user.totp_last_step = None
         user.recovery_codes = []
         _audit_user(s, p, "auth.2fa_disabled")
@@ -575,7 +575,7 @@ def two_factor_new_recovery_codes(body: CodeIn, request: Request, p: Principal =
         if user.totp_enabled_at is None:
             raise HTTPException(409, "Two-factor sign-in is off.")
         if _check_second_factor(user, body.code, None) is None:
-            raise HTTPException(401, "The code is not correct.")
+            raise HTTPException(403, "The code is not correct.")
         codes = mfa.new_recovery_codes()
         user.recovery_codes = [mfa.hash_code(c) for c in codes]
         _audit_user(s, p, "auth.2fa_recovery_codes_replaced")

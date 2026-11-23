@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { expect, type APIRequestContext, type Page, test } from "@playwright/test";
+import { expect, type APIRequestContext, type Locator, type Page, test } from "@playwright/test";
 
 // Account flows in the browser: sign-up, password reset by email, team invitation by email, two-factor sign-in.
 // Emails are read from the stack's Mailpit inbox, so run this only against the throwaway stack
@@ -23,6 +23,14 @@ test.beforeEach(async ({ page }) => { await english(page); });
 
 const unique = (tag: string) => `e2e-${tag}-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`;
 
+/** Fill a field and make sure the value stuck: typing before React hydrates the page is otherwise lost. */
+async function fill(field: Locator, value: string): Promise<void> {
+  await expect(async () => {
+    await field.fill(value);
+    await expect(field).toHaveValue(value, { timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 async function signUpByApi(request: APIRequestContext, email: string): Promise<void> {
   const r = await request.post("/api/auth/signup", {
     headers: { "X-Requested-With": "invoiceflow" },
@@ -33,8 +41,8 @@ async function signUpByApi(request: APIRequestContext, email: string): Promise<v
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(password);
+  await fill(page.locator("#email"), email);
+  await fill(page.locator("#password"), password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
 
@@ -70,10 +78,10 @@ function totp(secret: string, at = Date.now()): string {
 test("a new business signs up and lands in its own empty workspace", async ({ page }) => {
   const email = unique("signup");
   await page.goto("/signup");
-  await page.locator("#company").fill("Galilee Test Bakery Ltd");
-  await page.locator("#name").fill("Noa Tester");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
+  await fill(page.locator("#company"), "Galilee Test Bakery Ltd");
+  await fill(page.locator("#name"), "Noa Tester");
+  await fill(page.locator("#email"), email);
+  await fill(page.locator("#password"), PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText("Noa Tester")).toBeVisible();
@@ -84,10 +92,10 @@ test("a new business signs up and lands in its own empty workspace", async ({ pa
   // a second sign-up with the same email is refused with a clear message
   await signOut(page);
   await page.goto("/signup");
-  await page.locator("#company").fill("Another Co");
-  await page.locator("#name").fill("Someone Else");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
+  await fill(page.locator("#company"), "Another Co");
+  await fill(page.locator("#name"), "Someone Else");
+  await fill(page.locator("#email"), email);
+  await fill(page.locator("#password"), PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("An account with this email already exists")).toBeVisible();
 });
@@ -97,14 +105,15 @@ test("forgot password: the emailed link sets a new password and works only once"
   await signUpByApi(request, email);
   await page.goto("/login");
   await page.getByRole("link", { name: "Forgot your password?" }).click();
-  await page.locator("#email").fill(email);
+  await expect(page).toHaveURL(/forgot-password/);
+  await fill(page.locator("#email"), email);
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByRole("status")).toContainText("reset link is on its way");
 
   const link = await emailedLink(request, email, "reset-password");
   await page.goto(link);
-  await page.locator("#new-password").fill(NEW_PASSWORD);
-  await page.locator("#confirm-password").fill(NEW_PASSWORD);
+  await fill(page.locator("#new-password"), NEW_PASSWORD);
+  await fill(page.locator("#confirm-password"), NEW_PASSWORD);
   await page.getByRole("button", { name: "Save password" }).click();
   await expect(page.getByRole("status")).toBeVisible();
 
@@ -115,8 +124,8 @@ test("forgot password: the emailed link sets a new password and works only once"
 
   await signOut(page);
   await page.goto(link);                                                // the same link again
-  await page.locator("#new-password").fill(PASSWORD);
-  await page.locator("#confirm-password").fill(PASSWORD);
+  await fill(page.locator("#new-password"), PASSWORD);
+  await fill(page.locator("#confirm-password"), PASSWORD);
   await page.getByRole("button", { name: "Save password" }).click();
   await expect(alertIn(page)).toBeVisible();
 });
@@ -127,8 +136,8 @@ test("an administrator invites a teammate, who chooses a password from the email
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/settings");
   await page.getByRole("button", { name: "Add user" }).click();
-  await page.locator("#tm-name").fill("Invited Teammate");
-  await page.locator("#tm-email").fill(email);
+  await fill(page.locator("#tm-name"), "Invited Teammate");
+  await fill(page.locator("#tm-email"), email);
   await page.locator("#tm-role").selectOption("finance_reviewer");
   await page.getByRole("button", { name: "Add to team" }).click();
   await expect(page.getByText(`${email} was invited.`)).toBeVisible();
@@ -136,8 +145,8 @@ test("an administrator invites a teammate, who chooses a password from the email
   await signOut(page);
   await page.goto(await emailedLink(request, email, "accept-invite"));
   await expect(page.getByText("Choose your password")).toBeVisible();
-  await page.locator("#new-password").fill(PASSWORD);
-  await page.locator("#confirm-password").fill(PASSWORD);
+  await fill(page.locator("#new-password"), PASSWORD);
+  await fill(page.locator("#confirm-password"), PASSWORD);
   await page.getByRole("button", { name: "Save password" }).click();
   await expect(page.getByRole("status")).toBeVisible();
 
@@ -157,7 +166,7 @@ test("two-factor sign-in: set up with the app, then the password alone is not en
   await page.getByRole("button", { name: "Set up", exact: true }).click();
   await expect(page.getByRole("img", { name: "QR code for your authenticator app" })).toBeVisible();
   const secret = (await page.locator("code.ltr").textContent()) ?? "";
-  await page.locator("#tf-enable").fill(totp(secret));
+  await fill(page.locator("#tf-enable"), totp(secret));
   await page.getByRole("button", { name: "Turn on" }).click();
   await expect(page.getByText("Save these recovery codes")).toBeVisible();
   const codes = await page.locator("ul.ltr li").allTextContents();
@@ -168,10 +177,10 @@ test("two-factor sign-in: set up with the app, then the password alone is not en
   await signOut(page);
   await signIn(page, email, PASSWORD);
   await expect(page.getByText("Enter the code from your authenticator app")).toBeVisible();
-  await page.locator("#code").fill("000000");
+  await fill(page.locator("#code"), "000000");
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(alertIn(page)).toContainText("not correct");
-  await page.locator("#code").fill(totp(secret, Date.now() + 30_000)); // setup used this window; codes never replay
+  await fill(page.locator("#code"), totp(secret, Date.now() + 30_000)); // setup used this window; codes never replay
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page).toHaveURL(/\/$/);
 
@@ -179,9 +188,49 @@ test("two-factor sign-in: set up with the app, then the password alone is not en
   await signOut(page);
   await signIn(page, email, PASSWORD);
   await page.getByRole("button", { name: "Use a recovery code instead" }).click();
-  await page.locator("#code").fill(codes[0]!);
+  await fill(page.locator("#code"), codes[0]!);
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/settings");
   await expect(page.getByText("9 recovery codes left")).toBeVisible();
+});
+
+test("an administrator resets two-factor for a teammate who lost their phone", async ({ page, request, playwright, baseURL }) => {
+  const admin = unique("admin");
+  const mate = unique("mate");
+  await signUpByApi(request, admin);
+  await signIn(page, admin, PASSWORD);
+  await expect(page).toHaveURL(/\/$/);
+  // the admin adds a teammate with an initial password (no invitation email)
+  const add = await page.request.post("/api/org/members", {
+    headers: { "X-Requested-With": "invoiceflow" },
+    data: { email: mate, full_name: "Lost Phone", role: "finance_reviewer", password: PASSWORD },
+  });
+  expect(add.status(), await add.text()).toBe(201);
+
+  // the teammate turns two-factor on, in their own browser context
+  const theirs = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { "X-Requested-With": "invoiceflow" } });
+  expect((await theirs.post("/api/auth/login", { data: { email: mate, password: PASSWORD } })).ok()).toBe(true);
+  const { secret } = await (await theirs.post("/api/auth/2fa/setup")).json();
+  expect((await theirs.post("/api/auth/2fa/enable", { data: { code: totp(secret) } })).ok()).toBe(true);
+
+  await page.goto("/settings");
+  const row = page.getByRole("row", { name: /Lost Phone/ });
+  await expect(row.getByText("On", { exact: true })).toBeVisible();
+  await row.getByRole("button", { name: "Reset two-factor · Lost Phone" }).click();
+  await fill(page.getByLabel("Your password"), "wrong-password-here");
+  await page.getByRole("button", { name: "Reset two-factor", exact: true }).click();
+  await expect(page.getByText("The current password is not correct.")).toBeVisible();
+  await fill(page.getByLabel("Your password"), PASSWORD);
+  await page.getByRole("button", { name: "Reset two-factor", exact: true }).click();
+  await expect(page.getByText("Two-factor reset for Lost Phone")).toBeVisible();
+  await expect(row.getByText("Off", { exact: true })).toBeVisible();
+
+  // their old session is gone, the password alone signs them in again, and they were told by email
+  expect((await theirs.get("/api/auth/me")).status()).toBe(401);
+  const again = await (await theirs.post("/api/auth/login", { data: { email: mate, password: PASSWORD } })).json();
+  expect(again.access_token).toBeTruthy();
+  const found = await (await request.get(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${mate}"`)}`)).json();
+  expect(found.messages?.[0]?.Subject).toContain("two-factor");
+  await theirs.dispose();
 });

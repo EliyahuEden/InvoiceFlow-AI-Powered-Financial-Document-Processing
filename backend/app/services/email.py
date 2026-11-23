@@ -114,3 +114,18 @@ def added_to_organization(to: str, name: str, org_name: str, inviter: str, local
     return Message(to, f"You were added to {org_name} on InvoiceFlow", (
         f"Hello {name},\n\n{inviter} added you to {org_name} on InvoiceFlow. Sign in with your existing password and "
         f"switch businesses from the organization menu:\n{url}\n"))
+
+
+def two_factor_reset(to: str, name: str, org_name: str, admin: str, locale: str) -> Message:
+    url = get_settings().app_base_url.rstrip("/")
+    if locale == "he":
+        return Message(to, "האימות הדו-שלבי שלך ב-InvoiceFlow אופס", (
+            f"שלום {name},\n\n{admin}, מנהל/ת המערכת של {org_name}, כיבה/תה את האימות הדו-שלבי בחשבון שלך, "
+            "וכל המכשירים המחוברים נותקו.\n"
+            f"אפשר להיכנס עם הסיסמה שלך ולהגדיר אפליקציית אימות חדשה בהגדרות:\n{url}\n\n"
+            "אם לא ביקשת זאת, פנה/י מיד למנהל/ת המערכת ושנה/י את הסיסמה.\n"))
+    return Message(to, "Your InvoiceFlow two-factor sign-in was reset", (
+        f"Hello {name},\n\n{admin}, an administrator of {org_name}, turned off two-factor sign-in on your account, "
+        "and all your devices were signed out.\n"
+        f"Sign in with your password and set up a new authenticator app in Settings:\n{url}\n\n"
+        "If you did not ask for this, contact your administrator right away and change your password.\n"))

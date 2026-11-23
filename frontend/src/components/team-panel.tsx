@@ -1,7 +1,7 @@
 "use client";
 
-import { Copy, KeyRound, UserMinus, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { Copy, KeyRound, ShieldCheck, ShieldOff, UserMinus, UserPlus } from "lucide-react";
+import { Fragment, useState } from "react";
 import { toast } from "sonner";
 import { api, ApiError, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
@@ -9,7 +9,7 @@ import { useSession } from "./session";
 import { Button, Field, Input, Panel, PanelHeader, Select, Table, Td, Th } from "./ui";
 import { label } from "@/lib/i18n/label";
 
-type Member = { id: string; email: string; full_name: string; role: string; is_active: boolean };
+type Member = { id: string; email: string; full_name: string; role: string; is_active: boolean; two_factor?: boolean };
 const ROLES = ["admin", "finance_reviewer", "procurement_manager", "read_only"];
 
 /** A one-time password for a new teammate: 16 characters from a crypto source, no look-alike characters. */
@@ -33,6 +33,8 @@ export function TeamPanel() {
   const { data: options } = useApi<{ email_enabled: boolean }>("/api/auth/options");
   const emailOn = !!options?.email_enabled;
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [resetting, setResetting] = useState<string | null>(null); // member whose two-factor is being reset
+  const [adminPassword, setAdminPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   const add = async () => {
@@ -52,6 +54,16 @@ export function TeamPanel() {
   const remove = async (id: string) => {
     try { await api.del(`/api/org/members/${id}`); toast.success(tm.removed); setConfirming(null); mutate(); }
     catch (e) { toast.error(e instanceof ApiError ? String(e.message) : t.common.error); }
+  };
+  const resetTwoFactor = async (m: Member) => {
+    setBusy(true);
+    try {
+      await api.post(`/api/org/members/${m.id}/reset-2fa`, { password: adminPassword });
+      toast.success(tm.twoFactorResetDone.replace("{name}", m.full_name));
+      setResetting(null); setAdminPassword(""); mutate();
+    } catch (e) {
+      toast.error(e instanceof ApiError && e.status === 403 ? tm.wrongPassword : e instanceof ApiError ? e.message : t.common.error);
+    } finally { setBusy(false); }
   };
   const changeRole = async (id: string, role: string) => {
     try { await api.patch(`/api/org/members/${id}`, { role }); mutate(); toast.success(t.common.save); }
@@ -99,21 +111,47 @@ export function TeamPanel() {
         </form>
       )}
       <Table>
-        <thead><tr><Th>{tm.name}</Th><Th>{t.login.email}</Th><Th>{t.common.role}</Th>{admin && <Th />}</tr></thead>
+        <thead><tr><Th>{tm.name}</Th><Th>{t.login.email}</Th><Th>{t.common.role}</Th><Th>{t.twoFactor.title}</Th>{admin && <Th />}</tr></thead>
         <tbody>{data?.items.map((m) => (
-          <tr key={m.id}>
+          <Fragment key={m.id}>
+          <tr>
             <Td className="font-medium" dir="auto">{m.full_name}</Td>
             <Td><span className="ltr font-mono text-sm">{m.email}</span></Td>
             <Td>{admin && m.id !== me?.user.id ? (
               <Select aria-label={`${t.common.role} · ${m.full_name}`} value={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
                 {ROLES.map((r) => <option key={r} value={r}>{label(t.roles, r)}</option>)}
               </Select>) : label(t.roles, m.role)}</Td>
-            {admin && <Td className="text-end">{m.id !== me?.user.id && (confirming === m.id
+            <Td>{m.two_factor
+              ? <span className="inline-flex items-center gap-1.5 text-sm text-ok"><ShieldCheck className="h-4 w-4" aria-hidden />{t.twoFactor.on}</span>
+              : <span className="text-sm text-ink-3">{t.twoFactor.off}</span>}</Td>
+            {admin && <Td className="whitespace-nowrap text-end">
+              {m.id !== me?.user.id && m.two_factor && resetting !== m.id && (
+                <Button size="sm" variant="ghost" aria-label={`${tm.resetTwoFactor} · ${m.full_name}`}
+                  onClick={() => { setResetting(m.id); setAdminPassword(""); }}>
+                  <ShieldOff className="h-4 w-4" aria-hidden />{tm.resetTwoFactor}</Button>)}
+              {m.id !== me?.user.id && (confirming === m.id
               ? <span className="inline-flex gap-1.5"><Button size="sm" variant="danger" onClick={() => remove(m.id)}>{tm.confirmRemove}</Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirming(null)}>{t.common.cancel}</Button></span>
               : <Button size="sm" variant="ghost" aria-label={`${tm.remove} · ${m.full_name}`} onClick={() => setConfirming(m.id)}>
                 <UserMinus className="h-4 w-4" aria-hidden />{tm.remove}</Button>)}</Td>}
-          </tr>))}</tbody>
+          </tr>
+          {admin && resetting === m.id && (
+            <tr className="bg-sunken/50">
+              <Td colSpan={5}>
+                <form className="flex flex-wrap items-end gap-3 py-1" onSubmit={(e) => { e.preventDefault(); resetTwoFactor(m); }}>
+                  <p className="basis-full text-sm text-ink-2">{tm.resetTwoFactorHint.replace("{name}", m.full_name)}</p>
+                  <div className="w-full max-w-[280px]">
+                    <Field label={tm.yourPassword} htmlFor={`reset-pw-${m.id}`}>
+                      <Input id={`reset-pw-${m.id}`} type="password" dir="ltr" autoComplete="current-password" autoFocus
+                        value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+                    </Field>
+                  </div>
+                  <Button type="submit" size="sm" variant="danger" loading={busy} disabled={!adminPassword}>{tm.resetTwoFactor}</Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setResetting(null)}>{t.common.cancel}</Button>
+                </form>
+              </Td>
+            </tr>)}
+          </Fragment>))}</tbody>
       </Table>
     </Panel>
   );

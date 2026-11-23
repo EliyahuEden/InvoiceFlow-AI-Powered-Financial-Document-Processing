@@ -30,7 +30,7 @@ export function TwoFactorPanel() {
     setBusy(true);
     setError(null);
     try { await fn(); } catch (e) {
-      setError(e instanceof ApiError && (e.status === 401 || e.status === 422) ? m.wrong : e instanceof ApiError ? e.message : t.common.error);
+      setError(e instanceof ApiError && (e.status === 403 || e.status === 422) ? m.wrong : e instanceof ApiError ? e.message : t.common.error);
     } finally { setBusy(false); }
   };
   const start = () => run(async () => { setSetup(await api.post<Setup>("/api/auth/2fa/setup")); setMode("setup"); });

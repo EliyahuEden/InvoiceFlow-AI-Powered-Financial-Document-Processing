@@ -118,8 +118,8 @@ def test_turning_it_off_needs_the_password_and_a_code(client):
     access = client.post("/api/auth/login/verify", headers=CSRF,
                          json={"mfa_token": token, "code": _next_code(secret)}).json()["access_token"]
     h = {"Authorization": f"Bearer {access}", **CSRF}
-    assert client.post("/api/auth/2fa/disable", headers=h, json={"password": "wrong", "recovery_code": codes[1]}).status_code == 401
-    assert client.post("/api/auth/2fa/disable", headers=h, json={"password": DEMO_PASSWORD, "code": "000000"}).status_code == 401
+    assert client.post("/api/auth/2fa/disable", headers=h, json={"password": "wrong", "recovery_code": codes[1]}).status_code == 403
+    assert client.post("/api/auth/2fa/disable", headers=h, json={"password": DEMO_PASSWORD, "code": "000000"}).status_code == 403
     # the sign-in just used the newest code window (no replay), so a recovery code turns it off here
     r = client.post("/api/auth/2fa/disable", headers=h, json={"password": DEMO_PASSWORD, "recovery_code": codes[1]})
     assert r.status_code == 200, r.text
