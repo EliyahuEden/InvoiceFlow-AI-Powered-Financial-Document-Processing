@@ -41,6 +41,33 @@ coding agent (or person) can pick up from here.
   (`noUncheckedIndexedAccess` on) and lint clean, Playwright 19 browser tests (workflow, review, UI sweep, accounts)
   plus an axe WCAG 2.2 scan with 0 violations. Reconciliation benchmark 468/468 exact, 0 false alarms.
 
+## The goal: a portfolio project (decided 2026-11-23)
+The project is mainly a portfolio piece for **full-stack** and **AI engineering** roles. Do not widen it into a general
+business system. The order of work is: finish the evaluation story, make the project easy to see in five minutes,
+then add depth along the money flow (pay suppliers). Full-stack evidence is already strong; the AI side needs finished,
+published numbers.
+
+### Portfolio track (do this first)
+A. **Finish the evaluations with a live model** (needs the owner's OK and a cost estimate first; expected a few
+   dollars). Full policy-answer run on prompt `rag-answer-v3` and the Copilot run with model-written answers (details
+   in P3 item 12). Publish the numbers in the README with the date, model and prompt version.
+B. **Model comparison** on the same evaluations: Groq (`gpt-oss-120b`), Claude, and a small local model through
+   `OPENAI_BASE_URL` (Ollama). One table: accuracy, abstention, citation validity, latency, cost per invoice and per
+   answer. Reuse `eval/` and the call log in `services/llm/telemetry.py`; add a runner flag for the provider, do not
+   fork the evaluation code. Needs the owner's OK before any paid run.
+C. **Messier input:** 20–30 realistic synthetic scans (skewed, photographed, stamped, low contrast) generated in
+   Docker like the demo PDFs, with an extraction-accuracy table per field. Never use `example invocies/`.
+D. **Make it visible in five minutes:**
+   - a live demo (P0 item 1) with the demo accounts and offline or budget-capped AI;
+   - a 2–3 minute video: upload a Hebrew invoice → finding → cited explanation → decision → audit trail;
+   - README top rewritten: one-paragraph pitch, one architecture diagram, the evaluation table, three screenshots,
+     the demo link; details below;
+   - two CV versions in `docs/CV_BULLETS.md`: full stack (system design, multi-tenancy, security, tests,
+     operations) and AI engineering (evaluations, RAG with verified citations, LangGraph agent with human approval,
+     cost controls, prompt-injection defence, model comparison).
+E. **Then depth:** P1 items 6–7 (supplier bank details with fraud controls, Masav payment file) are the best feature
+   addition for the portfolio: financial-domain depth that most projects do not have.
+
 ## To do, in priority order
 
 ### P0, the owner's: going live
