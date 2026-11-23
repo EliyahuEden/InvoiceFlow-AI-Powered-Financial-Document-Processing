@@ -14,7 +14,7 @@ from sqlalchemy.exc import DataError
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.api.routes import auth, copilot, documents, insights, invoices, knowledge, masterdata, queue, review, system
+from app.api.routes import auth, copilot, documents, exports, imports, insights, invoices, knowledge, masterdata, queue, review, system
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.services.documents.validation import UploadRejected
@@ -129,7 +129,7 @@ def create_app() -> FastAPI:
         return JSONResponse({"detail": "Validation error",
                              "errors": [{"loc": e["loc"], "msg": e["msg"]} for e in exc.errors()]}, status_code=422)
 
-    for r in (auth, masterdata, invoices, documents, review, queue, knowledge, insights, copilot, system):
+    for r in (auth, masterdata, imports, exports, invoices, documents, review, queue, knowledge, insights, copilot, system):
         app.include_router(r.router)
     return app
 

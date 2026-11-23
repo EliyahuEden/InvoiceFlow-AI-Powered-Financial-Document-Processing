@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     rate_limit_ai_per_minute: int = 20
     rate_limit_signup_per_hour: int = 10
     rate_limit_password_reset_per_hour: int = 5
+    rate_limit_mfa_per_5min: int = 6  # wrong-code tries per user; a 6-digit code cannot be guessed at this rate
     # Proxies whose X-Forwarded-For is believed (the web app's proxy, a load balancer). Comma-separated CIDRs.
     trusted_proxies: str = "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
     # How many trusted proxies append to X-Forwarded-For: 1 = the web app's proxy; 2 = a load balancer in front of it.

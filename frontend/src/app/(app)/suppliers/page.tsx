@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { StatusPill } from "@/components/domain";
+import { ImportDialog } from "@/components/import-dialog";
 import { Pager, RowsSkeleton, SearchBox, type Page } from "@/components/list";
 import { useSession } from "@/components/session";
 import { PageHeader } from "@/components/shell";
@@ -49,8 +50,9 @@ export default function SuppliersPage() {
   const onQ = useCallback((v: string) => { setQ(v); setPage(1); }, []);
   return (
     <div className="space-y-4">
-      <PageHeader title={t.suppliers.title} actions={can("masterdata:write") && (
-        <Button variant="primary" aria-expanded={adding} onClick={() => setAdding((a) => !a)}><Plus className="h-4 w-4" />{t.suppliers.new}</Button>)} />
+      <PageHeader title={t.suppliers.title} actions={can("masterdata:write") && (<>
+        <ImportDialog kinds={["suppliers"]} onDone={() => mutate()} />
+        <Button variant="primary" aria-expanded={adding} onClick={() => setAdding((a) => !a)}><Plus className="h-4 w-4" />{t.suppliers.new}</Button></>)} />
       {error && <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />}
       <Panel>
         <div className="border-b border-line p-4"><SearchBox value={q} onChange={onQ} placeholder={`${t.common.search}: ${t.common.supplier}, ${t.suppliers.taxId}`} /></div>

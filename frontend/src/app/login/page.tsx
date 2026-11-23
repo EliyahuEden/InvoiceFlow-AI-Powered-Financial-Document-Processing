@@ -25,21 +25,81 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // second step, when the account has two-factor sign-in
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
+  const tf = t.twoFactor;
 
+  const done = () => {
+    const next = params.get("next");
+    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api.post("/api/auth/login", { email, password });
-      const next = params.get("next");
-      router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+      const r = await api.post<{ mfa_required?: boolean; mfa_token?: string }>("/api/auth/login", { email, password });
+      if (r.mfa_required && r.mfa_token) {
+        setChallenge(r.mfa_token);
+        setPassword("");
+      } else {
+        done();
+      }
     } catch (err) {
       setError(err instanceof ApiError && err.status === 429 ? t.login.rateLimited : t.login.failed);
     } finally {
       setBusy(false);
     }
   };
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post("/api/auth/login/verify", { mfa_token: challenge, ...(useRecovery ? { recovery_code: code } : { code }) });
+      done();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401 && /expired/i.test(err.message)) {
+        setChallenge(null);
+        setCode("");
+        setError(tf.expired);
+      } else {
+        setError(err instanceof ApiError && err.status === 429 ? t.login.rateLimited : tf.wrong);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (challenge) {
+    return (
+      <AuthShell title={tf.stepTitle}>
+        <Panel className="p-5 sm:p-7">
+          <form onSubmit={verify} className="space-y-5" noValidate>
+            <p className="text-sm text-ink-2">{tf.stepSub}</p>
+            <Field label={useRecovery ? tf.recovery : tf.code} htmlFor="code">
+              <Input id="code" dir="ltr" autoFocus autoComplete="one-time-code" inputMode={useRecovery ? "text" : "numeric"}
+                maxLength={useRecovery ? 20 : 6} className="font-mono text-lg tracking-widest" value={code}
+                onChange={(e) => setCode(e.target.value)} />
+            </Field>
+            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+            <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}
+              disabled={useRecovery ? code.trim().length < 8 : code.length !== 6}>{tf.verify}</Button>
+            <div className="flex flex-wrap justify-between gap-2 text-sm">
+              <button type="button" className="text-ink-2 underline-offset-4 hover:text-ink hover:underline"
+                onClick={() => { setUseRecovery((v) => !v); setCode(""); setError(null); }}>
+                {useRecovery ? tf.useCode : tf.useRecovery}
+              </button>
+              <button type="button" className="text-ink-2 underline-offset-4 hover:text-ink hover:underline"
+                onClick={() => { setChallenge(null); setCode(""); setError(null); }}>{tf.back}</button>
+            </div>
+          </form>
+        </Panel>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell title={t.login.title}>

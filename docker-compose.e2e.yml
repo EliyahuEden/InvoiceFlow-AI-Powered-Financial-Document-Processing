@@ -1,0 +1,26 @@
+# A throwaway copy of the stack for browser tests, next to your normal one: its own database, inbox and ports.
+#
+#   docker compose -p invoiceflow-e2e --env-file infra/e2e/e2e.env -f docker-compose.yml -f docker-compose.e2e.yml up -d --build --wait
+#   docker compose -p invoiceflow-e2e --env-file infra/e2e/e2e.env -f docker-compose.yml -f docker-compose.e2e.yml exec -T api python -m app.cli seed --reset
+#   cd frontend && E2E_BASE_URL=http://localhost:3001 E2E_MAILPIT_URL=http://localhost:8026 npx playwright test --workers=1
+#   docker compose -p invoiceflow-e2e -f docker-compose.yml -f docker-compose.e2e.yml down -v     # remove it again
+#
+# Web 3001, API 8012, Mailpit 8026. Emails go to that Mailpit only; AI runs offline (infra/e2e/e2e.env).
+services:
+  postgres:
+    ports: !override ["5434:5432"]
+  redis:
+    ports: !override ["6381:6379"]
+  s3:
+    ports: !override ["8334:8333"]
+  mailpit:
+    ports: !override ["8026:8025"]
+  api:
+    ports: !override ["8012:8000"]
+  web:
+    ports: !override ["3001:3000"]
+
+volumes:
+  models:  # the embedding model is the same for both stacks: reuse the download
+    name: invoiceflow_models
+    external: true

@@ -75,6 +75,8 @@ jobs:
       RERANKER_BACKEND: none   # keep CI downloads small; the benchmark documents the reranker separately
       LLM_PROVIDER: offline    # never call a paid model from CI
       RATE_LIMIT_LOGIN_PER_MINUTE: "300"   # parallel Playwright workers log in as the same demo users
+      RATE_LIMIT_SIGNUP_PER_HOUR: "1000"   # the account tests sign up several businesses
+      E2E_MAILPIT_URL: http://localhost:8025   # the account tests read reset and invitation emails here
     steps:
       - uses: actions/checkout@v4
       - name: Start the stack

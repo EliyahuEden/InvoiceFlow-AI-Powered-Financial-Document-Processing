@@ -28,7 +28,9 @@ for offsite backups, and an SMTP provider (see Email below).
 4. **Secrets.** `cp .env.example .env`, then fill in at least:
    - `SITE_ADDRESS`, `APP_BASE_URL=https://<domain>`, `CORS_ORIGINS=["https://<domain>"]`
    - `JWT_SECRET`, `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`: generate each with `openssl rand -hex 24`
-     (letters and digits only, since they become part of a connection URL)
+     (letters and digits only, since they become part of a connection URL). Keep `JWT_SECRET` stable: two-factor
+     secrets are encrypted with a key derived from it, so changing it makes every authenticator app stop working
+     (users then sign in with a recovery code and set the app up again).
    - `S3_ENDPOINT_URL` (empty for AWS), `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_SSE=AES256`
    - `BACKUP_S3_URI=s3://<backups-bucket>/invoiceflow`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`,
      `BACKUP_S3_ENDPOINT` (for R2 or B2), `BACKUP_S3_REGION`

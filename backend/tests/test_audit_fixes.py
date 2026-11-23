@@ -278,3 +278,24 @@ def test_a_dollar_invoice_is_routed_by_its_shekel_value(client, as_user, world):
     route = client.get(f"/api/audit?entity_id={iid}&action=approval.route", headers=fin).json()["items"]
     assert route and route[0]["meta"]["currency"] == "USD" and route[0]["meta"]["steps"] == 2
     assert route[0]["meta"]["total_base"] == "25419.29" and route[0]["meta"]["rate"] == "3.33"
+
+
+@pytest.mark.integration
+def test_procurement_decides_cases_but_never_approves_payment(client, as_user):
+    """Owner's decision 2026-11-23: procurement managers decide and override cases, with the same justification rule
+    as finance. Payment approval stays with finance."""
+    from tests.conftest import upload_invoice
+
+    exc_id, proposed, fin = _blocking_case(client, as_user)
+    proc = as_user("procurement@kinneret.example")
+    url = f"/api/exceptions/{exc_id}/decision"
+    assert client.post(url, headers=proc, json={"decision": "approve", "action_override": "accept_variance"}).status_code == 422
+    r = client.post(url, headers=proc, json={"decision": "approve", "action_override": "accept_variance",
+                                             "note": "Same supplier, confirmed by phone"})
+    assert r.status_code == 200, r.text
+    rows = client.get(f"/api/audit?entity_id={exc_id}&page_size=50", headers=fin).json()["items"]
+    assert any((r.get("meta") or {}).get("override") is True for r in rows)
+    me = client.get("/api/auth/me", headers=proc).json()
+    assert "exception:decide" in me["permissions"] and "approval:decide" not in me["permissions"]
+    other = upload_invoice(client, fin, "01_correct_tavor_he.pdf")                # uploaded by finance, reconciled
+    assert client.post(f"/api/invoices/{other['invoice_id']}/approvals", headers=proc, json={"decision": "approve"}).status_code == 403

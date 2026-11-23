@@ -53,6 +53,19 @@ export const api = {
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
+/** Saves a file the API returns (a template or an export) under `filename`. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  let res = await send(path, {});
+  if (res.status === 401 && (await refreshSession())) res = await send(path, {});
+  if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`);
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function useApi<T>(path: string | null, config?: SWRConfiguration<T>) {
   return useSWR<T>(path, (p: string) => request<T>(p), { revalidateOnFocus: false, ...config });
 }

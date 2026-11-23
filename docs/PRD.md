@@ -16,7 +16,7 @@ Cut manual effort per invoice. Make every number and every decision **traceable*
 | Role | Can do |
 |---|---|
 | Administrator | Everything, including organization settings, tolerances, members and the second approval step |
-| Procurement manager | Upload invoices; correct extractions; maintain suppliers, POs, GRs and the knowledge base; run the agent; comment |
+| Procurement manager | Upload invoices; correct extractions; maintain suppliers, POs, GRs and the knowledge base; run the agent; comment; decide and override exceptions (never approve payment) |
 | Finance reviewer | Upload; correct; decide exceptions; first-step payment approval; read the audit trail |
 | Read-only | View invoices, records, the knowledge base and the dashboards |
 

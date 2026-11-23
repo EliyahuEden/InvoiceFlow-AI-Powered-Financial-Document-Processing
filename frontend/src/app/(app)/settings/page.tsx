@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSession } from "@/components/session";
 import { SessionsPanel } from "@/components/sessions-panel";
 import { PasswordPanel, TeamPanel } from "@/components/team-panel";
+import { TwoFactorPanel } from "@/components/two-factor-panel";
 import { PageHeader } from "@/components/shell";
 import { Button, ErrorState, Field, Input, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
@@ -93,6 +94,7 @@ export default function SettingsPage() {
       <SessionsPanel />
       <TeamPanel />
       <PasswordPanel />
+      <TwoFactorPanel />
       <Panel>
         <PanelHeader title={t.settings.permissions} />
         <Table>

@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { StatusPill } from "@/components/domain";
+import { ImportDialog } from "@/components/import-dialog";
 import { Pager, RowsSkeleton, SearchBox, Segmented, type Page } from "@/components/list";
+import { useSession } from "@/components/session";
 import { PageHeader } from "@/components/shell";
 import { EmptyState, ErrorState, Panel, Table, Td, Th } from "@/components/ui";
 import { qs, useApi } from "@/lib/api";
@@ -19,6 +21,7 @@ type PO = { id: string; po_number: string; supplier_name: string; supplier_name_
 export default function POsPage() {
   const { t, locale } = useI18n();
   const router = useRouter();
+  const { can } = useSession();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -26,7 +29,8 @@ export default function POsPage() {
   const onQ = useCallback((v: string) => { setQ(v); setPage(1); }, []);
   return (
     <div className="space-y-4">
-      <PageHeader title={t.pos.title} />
+      <PageHeader title={t.pos.title} actions={can("masterdata:write") && (
+        <ImportDialog kinds={["purchase-orders", "goods-receipts"]} onDone={() => mutate()} />)} />
       {error && <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />}
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">

@@ -156,10 +156,14 @@ def test_a_decided_item_cannot_be_decided_again(client, queue_world):
 
 
 def test_read_only_user_has_no_actionable_next_item(client, queue_world, as_user):
-    for email in ("viewer@kinneret.example", PROC):
-        headers = as_user(email)
-        assert _queue(client, headers)
-        assert client.get("/api/review/next", headers=headers).json() == {"item": None, "position": 0, "total": 0}
+    headers = as_user("viewer@kinneret.example")
+    assert _queue(client, headers)
+    assert client.get("/api/review/next", headers=headers).json() == {"item": None, "position": 0, "total": 0}
+
+
+def test_procurement_gets_the_next_case_to_decide(client, queue_world, as_user):
+    nxt = client.get("/api/review/next", headers=as_user(PROC)).json()
+    assert nxt["item"] is not None and nxt["total"] >= 1
 
 
 @pytest.mark.parametrize("decision", ["request_info", "escalate"])

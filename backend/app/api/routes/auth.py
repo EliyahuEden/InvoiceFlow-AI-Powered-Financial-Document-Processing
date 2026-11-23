@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 import jwt
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from app.core.db import new_session, set_session_org
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import AuthSession, Membership, Organization, Role, User
-from app.services import audit, auth_sessions, auth_tokens
+from app.services import audit, auth_sessions, auth_tokens, mfa
 from app.services import email as mail
 from app.services.llm.provider import mode_label
 from app.services.ratelimit import check_rate_limit
@@ -83,6 +83,33 @@ def _me_payload(user: User, org: Organization, role: str, orgs: list[dict]) -> d
     }
 
 
+def _open_session(s, user: User, organization_slug: str | None, request: Request, response: Response,  # noqa: ANN001
+                  meta: dict | None = None) -> dict:
+    """Create a session for a user whose identity is proven (password, and the code when two-factor is on)."""
+    ip = _ip(request)
+    memberships = s.scalars(select(Membership).where(Membership.user_id == user.id)).all()
+    if not memberships:
+        raise HTTPException(403, "User has no organization")
+    m = memberships[0]
+    if organization_slug:
+        for mm in memberships:
+            if s.get(Organization, mm.organization_id).slug == organization_slug:
+                m = mm
+    org = s.get(Organization, m.organization_id)
+    issued = auth_sessions.create(s, user_id=user.id, org_id=org.id, ip=ip, user_agent=request.headers.get("user-agent"))
+    token = create_access_token(user.id, org.id, m.role.value, issued.session.id)
+    orgs = [{"id": str(mm.organization_id), "name": s.get(Organization, mm.organization_id).name,
+             "role": mm.role.value} for mm in memberships]
+    set_session_org(s, org.id)
+    audit.record(s, org_id=org.id, action="auth.login", entity_type="user", entity_id=user.id,
+                 actor_id=user.id, actor_label=user.email,
+                 meta={"ip": ip, "session_id": str(issued.session.id), **(meta or {})})
+    s.commit()
+    _set_cookies(response, token, issued.refresh_token)
+    return {"access_token": token, "token_type": "bearer", "expires_in": get_settings().access_token_minutes * 60,
+            **_me_payload(user, org, m.role.value, orgs)}
+
+
 @router.post("/login")
 def login(body: LoginIn, request: Request, response: Response) -> dict:
     ip = _ip(request)
@@ -93,27 +120,58 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
         user = s.scalars(select(User).where(User.email == body.email.lower())).first()
         if not user or not user.is_active or not verify_password(body.password, user.password_hash):
             raise HTTPException(401, "Invalid email or password")
-        memberships = s.scalars(select(Membership).where(Membership.user_id == user.id)).all()
-        if not memberships:
-            raise HTTPException(403, "User has no organization")
-        m = memberships[0]
-        if body.organization_slug:
-            for mm in memberships:
-                if s.get(Organization, mm.organization_id).slug == body.organization_slug:
-                    m = mm
-        org = s.get(Organization, m.organization_id)
-        issued = auth_sessions.create(s, user_id=user.id, org_id=org.id, ip=ip,
-                                      user_agent=request.headers.get("user-agent"))
-        token = create_access_token(user.id, org.id, m.role.value, issued.session.id)
-        orgs = [{"id": str(mm.organization_id), "name": s.get(Organization, mm.organization_id).name,
-                 "role": mm.role.value} for mm in memberships]
-        set_session_org(s, org.id)
-        audit.record(s, org_id=org.id, action="auth.login", entity_type="user", entity_id=user.id,
-                     actor_id=user.id, actor_label=user.email, meta={"ip": ip, "session_id": str(issued.session.id)})
-        s.commit()
-        _set_cookies(response, token, issued.refresh_token)
-        return {"access_token": token, "token_type": "bearer", "expires_in": get_settings().access_token_minutes * 60,
-                **_me_payload(user, org, m.role.value, orgs)}
+        if user.totp_enabled_at is not None:
+            # the password was right, but it is only half: no session until the code (POST /login/verify)
+            return {"mfa_required": True, "mfa_token": mfa.challenge_token(user.id, body.organization_slug),
+                    "expires_in": mfa.CHALLENGE_MINUTES * 60}
+        return _open_session(s, user, body.organization_slug, request, response)
+    finally:
+        s.close()
+
+
+class VerifyIn(BaseModel):
+    mfa_token: str = Field(..., min_length=10, max_length=2000)
+    code: str | None = Field(None, max_length=12)
+    recovery_code: str | None = Field(None, max_length=20)
+
+
+def _check_second_factor(user: User, code: str | None, recovery_code: str | None) -> str | None:
+    """Consumes a valid code (records its step) or recovery code (removes it). Returns how, or None."""
+    if code:
+        secret = mfa.decrypt(user.totp_secret_enc or "")
+        step = mfa.verify(secret, code, user.totp_last_step) if secret else None
+        if step is not None:
+            user.totp_last_step = step
+            return "totp"
+    if recovery_code:
+        h = mfa.hash_code(recovery_code)
+        if h in (user.recovery_codes or []):
+            user.recovery_codes = [c for c in user.recovery_codes if c != h]
+            return "recovery_code"
+    return None
+
+
+@router.post("/login/verify")
+def login_verify(body: VerifyIn, request: Request, response: Response) -> dict:
+    """Second step of sign-in: the challenge from /login plus an authenticator code or a recovery code."""
+    _require_csrf(request)
+    claims = mfa.read_challenge(body.mfa_token)
+    if claims is None:
+        raise HTTPException(401, "The sign-in step expired. Enter your password again.")
+    cfg = get_settings()
+    check_rate_limit(f"mfa:{claims['sub']}", cfg.rate_limit_mfa_per_5min, window_seconds=300)
+    check_rate_limit(f"mfa-ip:{_ip(request)}", cfg.rate_limit_login_per_minute * 2)
+    s = new_session()
+    try:
+        user = s.scalars(select(User).where(User.id == uuid.UUID(claims["sub"])).with_for_update()).first()
+        if not user or not user.is_active or user.totp_enabled_at is None:
+            raise HTTPException(401, "The sign-in step expired. Enter your password again.")
+        how = _check_second_factor(user, body.code, body.recovery_code)
+        if how is None:
+            s.rollback()
+            raise HTTPException(401, "The code is not correct.")
+        return _open_session(s, user, claims.get("org_slug"), request, response,
+                             meta={"second_factor": how, "recovery_codes_left": len(user.recovery_codes or [])})
     finally:
         s.close()
 
@@ -417,3 +475,111 @@ def switch_org(body: SwitchIn, response: Response, p: Principal = Depends(get_pr
         s.close()
     _set_cookies(response, token)
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ two-factor sign-in
+class CodeIn(BaseModel):
+    code: str = Field(..., min_length=6, max_length=12)
+
+
+class DisableIn(BaseModel):
+    password: str = Field(..., min_length=1, max_length=200)
+    code: str | None = Field(None, max_length=12)
+    recovery_code: str | None = Field(None, max_length=20)
+
+
+def _audit_user(s, p: Principal, action: str, meta: dict | None = None) -> None:  # noqa: ANN001
+    set_session_org(s, p.org_id)
+    audit.record(s, org_id=p.org_id, action=action, entity_type="user", entity_id=p.user.id,
+                 actor_id=p.user.id, actor_label=p.user.email, meta=meta)
+
+
+@router.get("/2fa")
+def two_factor_status(p: Principal = Depends(get_principal)) -> dict:
+    return {"enabled": p.user.totp_enabled_at is not None,
+            "enabled_at": p.user.totp_enabled_at.isoformat() if p.user.totp_enabled_at else None,
+            "recovery_codes_left": len(p.user.recovery_codes or []) if p.user.totp_enabled_at else 0}
+
+
+@router.post("/2fa/setup")
+def two_factor_setup(request: Request, p: Principal = Depends(get_principal)) -> dict:
+    """A new secret to scan. It does nothing until confirmed with a code (/2fa/enable)."""
+    _require_csrf(request)
+    if p.user.totp_enabled_at is not None:
+        raise HTTPException(409, "Two-factor sign-in is already on. Turn it off first to set up a new app.")
+    secret = mfa.new_secret()
+    s = new_session()
+    try:
+        user = s.get(User, p.user.id)
+        user.totp_secret_enc, user.totp_last_step = mfa.encrypt(secret), None
+        s.commit()
+    finally:
+        s.close()
+    uri = mfa.otpauth_uri(secret, p.user.email)
+    return {"secret": secret, "otpauth_uri": uri, "qr": mfa.qr_data_uri(uri)}
+
+
+@router.post("/2fa/enable")
+def two_factor_enable(body: CodeIn, request: Request, p: Principal = Depends(get_principal)) -> dict:
+    _require_csrf(request)
+    check_rate_limit(f"mfa-setup:{p.user.id}", get_settings().rate_limit_login_per_minute)
+    s = new_session()
+    try:
+        user = s.scalars(select(User).where(User.id == p.user.id).with_for_update()).one()
+        if user.totp_enabled_at is not None:
+            raise HTTPException(409, "Two-factor sign-in is already on.")
+        secret = mfa.decrypt(user.totp_secret_enc or "")
+        step = mfa.verify(secret, body.code, None) if secret else None
+        if step is None:
+            raise HTTPException(422, "The code is not correct. Check the time on your phone and try again.")
+        codes = mfa.new_recovery_codes()
+        user.totp_last_step, user.totp_enabled_at = step, datetime.now(UTC)
+        user.recovery_codes = [mfa.hash_code(c) for c in codes]
+        _audit_user(s, p, "auth.2fa_enabled")
+        s.commit()
+        return {"enabled": True, "recovery_codes": codes}
+    finally:
+        s.close()
+
+
+@router.post("/2fa/disable")
+def two_factor_disable(body: DisableIn, request: Request, p: Principal = Depends(get_principal)) -> dict:
+    _require_csrf(request)
+    check_rate_limit(f"mfa-disable:{p.user.id}", get_settings().rate_limit_mfa_per_5min, window_seconds=300)
+    s = new_session()
+    try:
+        user = s.scalars(select(User).where(User.id == p.user.id).with_for_update()).one()
+        if user.totp_enabled_at is None:
+            return {"enabled": False}
+        if not verify_password(body.password, user.password_hash):
+            raise HTTPException(401, "The password is not correct.")
+        if _check_second_factor(user, body.code, body.recovery_code) is None:
+            raise HTTPException(401, "The code is not correct.")
+        user.totp_secret_enc = user.totp_enabled_at = user.totp_last_step = None
+        user.recovery_codes = []
+        _audit_user(s, p, "auth.2fa_disabled")
+        s.commit()
+        return {"enabled": False}
+    finally:
+        s.close()
+
+
+@router.post("/2fa/recovery-codes")
+def two_factor_new_recovery_codes(body: CodeIn, request: Request, p: Principal = Depends(get_principal)) -> dict:
+    """Replaces all recovery codes; the old ones stop working."""
+    _require_csrf(request)
+    check_rate_limit(f"mfa-setup:{p.user.id}", get_settings().rate_limit_login_per_minute)
+    s = new_session()
+    try:
+        user = s.scalars(select(User).where(User.id == p.user.id).with_for_update()).one()
+        if user.totp_enabled_at is None:
+            raise HTTPException(409, "Two-factor sign-in is off.")
+        if _check_second_factor(user, body.code, None) is None:
+            raise HTTPException(401, "The code is not correct.")
+        codes = mfa.new_recovery_codes()
+        user.recovery_codes = [mfa.hash_code(c) for c in codes]
+        _audit_user(s, p, "auth.2fa_recovery_codes_replaced")
+        s.commit()
+        return {"recovery_codes": codes}
+    finally:
+        s.close()

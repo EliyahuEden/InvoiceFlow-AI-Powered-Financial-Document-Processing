@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useState } from "react";
 import { StatusPill } from "@/components/domain";
+import { ExportMenu } from "@/components/export-menu";
 import { Pager, RowsSkeleton, SearchBox, Segmented, type Page } from "@/components/list";
 import { useSession } from "@/components/session";
 import { PageHeader } from "@/components/shell";
@@ -71,9 +72,12 @@ function InvoiceInbox() {
     <div className="space-y-5">
       <PageHeader
         title={t.inbox.title} sub={t.inbox.subtitle}
-        actions={can("invoice:upload") && (
-          <Button asChild variant="primary"><Link href="/invoices/upload"><Plus className="h-4 w-4" />{t.inbox.upload}</Link></Button>
-        )}
+        actions={<>
+          <ExportMenu filters={{ status, q, sort }} />
+          {can("invoice:upload") && (
+            <Button asChild variant="primary"><Link href="/invoices/upload"><Plus className="h-4 w-4" />{t.inbox.upload}</Link></Button>
+          )}
+        </>}
       />
       <dl className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {metrics.map(({ label, value, icon: Icon, tone }) => (

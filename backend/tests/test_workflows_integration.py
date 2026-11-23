@@ -63,8 +63,9 @@ def test_discrepancy_agent_and_human_decision_flow(client, as_user):
     assert run["status"] == "awaiting_approval"
     assert {st["tool"] for st in run["steps"]} >= {"get_invoice", "run_reconciliation", "search_supplier_agreements",
                                                    "retrieve_policy", "create_exception_draft"}
-    # procurement can request info but cannot decide
-    assert client.post(f"/api/exceptions/{exc['id']}/decision", headers=proc, json={"decision": "approve"}).status_code == 403
+    # a read-only user can neither decide nor request information
+    viewer = as_user("viewer@kinneret.example")
+    assert client.post(f"/api/exceptions/{exc['id']}/decision", headers=viewer, json={"decision": "approve"}).status_code == 403
     assert client.post(f"/api/exceptions/{exc['id']}/decision", headers=fin, json={"decision": "reject"}).status_code == 422  # reason needed
     r = client.post(f"/api/exceptions/{exc['id']}/decision", headers=fin, json={"decision": "approve", "note": "credit note requested"})
     assert r.status_code == 200 and r.json()["invoice_status"] == "on_hold"

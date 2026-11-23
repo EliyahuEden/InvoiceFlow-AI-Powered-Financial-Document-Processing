@@ -34,9 +34,11 @@ _READ = {Perm.INVOICE_READ, Perm.MASTERDATA_READ, Perm.KNOWLEDGE_READ, Perm.OBSE
 
 ROLE_PERMISSIONS: dict[Role, set[Perm]] = {
     Role.ADMIN: _ALL,
+    # Procurement decides cases and may override with a justification (owner's decision, 2026-11-23), but never
+    # approves payment: that stays with finance, and the uploader of an invoice can never approve its payment.
     Role.PROCUREMENT_MANAGER: _READ
     | {
-        Perm.INVOICE_UPLOAD, Perm.INVOICE_EDIT, Perm.RECONCILE_RUN, Perm.EXCEPTION_COMMENT,
+        Perm.INVOICE_UPLOAD, Perm.INVOICE_EDIT, Perm.RECONCILE_RUN, Perm.EXCEPTION_COMMENT, Perm.EXCEPTION_DECIDE,
         Perm.MASTERDATA_WRITE, Perm.KNOWLEDGE_WRITE, Perm.AGENT_RUN, Perm.AUDIT_READ,
     },
     Role.FINANCE_REVIEWER: _READ

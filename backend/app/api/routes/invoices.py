@@ -51,15 +51,12 @@ def invoice_row(i: Invoice, supplier: Supplier | None, doc: Document | None, ope
     }
 
 
-@router.get("")
-def list_invoices(q: str | None = None, status: str | None = None, supplier_id: uuid.UUID | None = None,
-                  sort: str = "-created_at", pg=Depends(page_params),
-                  p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = Depends(get_db)) -> dict:
-    page, size = pg
+def invoice_query(org_id: uuid.UUID, q: str | None, status: str | None, supplier_id: uuid.UUID | None, sort: str):  # noqa: ANN201
+    """The invoice list's filters and order, shared by the inbox and its export."""
     stmt = (select(Invoice, Supplier, Document)
             .outerjoin(Supplier, Supplier.id == Invoice.supplier_id)
             .outerjoin(Document, Document.id == Invoice.document_id)
-            .where(Invoice.organization_id == p.org_id))
+            .where(Invoice.organization_id == org_id))
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(Invoice.invoice_number.ilike(like), Invoice.supplier_name_raw.ilike(like),
@@ -71,13 +68,25 @@ def list_invoices(q: str | None = None, status: str | None = None, supplier_id: 
         stmt = stmt.where(Invoice.supplier_id == supplier_id)
     col = {"created_at": Invoice.created_at, "total": Invoice.total, "invoice_date": Invoice.invoice_date,
            "invoice_number": Invoice.invoice_number}.get(sort.lstrip("-"), Invoice.created_at)
-    stmt = stmt.order_by(col.desc().nulls_last() if sort.startswith("-") else col.asc().nulls_last())
+    return stmt.order_by(col.desc().nulls_last() if sort.startswith("-") else col.asc().nulls_last())
+
+
+def open_exception_counts(db: Session, org_id: uuid.UUID) -> dict:
+    return dict(db.execute(select(ExceptionCase.invoice_id, func.count())
+                           .where(ExceptionCase.organization_id == org_id,
+                                  ExceptionCase.status.in_(["draft", "open", "pending_info"]))
+                           .group_by(ExceptionCase.invoice_id)).all())
+
+
+@router.get("")
+def list_invoices(q: str | None = None, status: str | None = None, supplier_id: uuid.UUID | None = None,
+                  sort: str = "-created_at", pg=Depends(page_params),
+                  p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = Depends(get_db)) -> dict:
+    page, size = pg
+    stmt = invoice_query(p.org_id, q, status, supplier_id, sort)
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = db.execute(stmt.offset((page - 1) * size).limit(size)).all()
-    exc_counts = dict(db.execute(select(ExceptionCase.invoice_id, func.count())
-                                 .where(ExceptionCase.organization_id == p.org_id,
-                                        ExceptionCase.status.in_(["draft", "open", "pending_info"]))
-                                 .group_by(ExceptionCase.invoice_id)).all())
+    exc_counts = open_exception_counts(db, p.org_id)
     status_counts = dict(db.execute(select(Invoice.status, func.count()).where(Invoice.organization_id == p.org_id)
                                     .group_by(Invoice.status)).all())
     out = paginated([invoice_row(i, s, d, exc_counts.get(i.id, 0)) for i, s, d in rows], total, page, size)

@@ -25,7 +25,7 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 | GET | `/api/dashboard` | invoice:read | KPIs, status mix, discrepancy types, activity |
 | GET | `/api/review/summary` | invoice:read | Risk-first counters, priority split, deadlines and top five; base-currency totals plus `totals_by_currency` |
 | GET | `/api/review/queue?level&type&supplier_id&due&status&q&page` | invoice:read | Backend-ranked review queue; `due=overdue\|soon\|later`, localized reason codes and parameters |
-| GET | `/api/review/next?after={exception_id}` | invoice:read | Highest-priority actionable case excluding `after`, or null; read-only/procurement users receive no actionable item |
+| GET | `/api/review/next?after={exception_id}` | invoice:read | Highest-priority actionable case excluding `after`, or null; read-only users receive no actionable item |
 | GET | `/api/invoices?q&status&supplier_id&sort&page` | invoice:read | Inbox |
 | POST | `/api/invoices/upload` (multipart) | invoice:upload | 202 + job id; 409 if the file is a duplicate |
 | GET | `/api/invoices/{id}` | invoice:read | Detail: fields + provenance, lines, PO with received quantities, latest run, discrepancies, exception, approvals, agent runs, job |

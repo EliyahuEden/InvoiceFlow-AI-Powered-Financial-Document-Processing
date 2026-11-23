@@ -5,7 +5,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -63,6 +63,11 @@ class User(UUIDPk, Timestamps, Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     locale: Mapped[str] = mapped_column(String(5), default="he")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # two-factor sign-in (services/mfa.py): encrypted secret, set up but not on until totp_enabled_at
+    totp_secret_enc: Mapped[str | None] = mapped_column(Text)
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    totp_last_step: Mapped[int | None] = mapped_column(BigInteger)
+    recovery_codes: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
 
     memberships: Mapped[list[Membership]] = relationship(back_populates="user")
 
