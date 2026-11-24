@@ -31,6 +31,8 @@ test("capture the review workflow in both themes and directions", async ({ page,
         } else if (name === "dashboard") await expect(page.locator("main ol").first()).toBeVisible(); // compact queue list
         else await expect(page.getByRole("table").first()).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
+        // rows fade in one after another; wait for every running animation to finish before capturing
+        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
         await page.screenshot({ path: `../docs/screenshots/review-${name}-${locale}-${theme}.png`, fullPage: name !== "workspace" });
         if (locale === "he") {
           await page.setViewportSize({ width: 375, height: 900 });

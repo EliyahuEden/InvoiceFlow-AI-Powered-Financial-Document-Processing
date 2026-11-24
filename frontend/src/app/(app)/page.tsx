@@ -14,15 +14,34 @@ import { Button, cx, ErrorState, Panel, PanelHeader, Skeleton } from "@/componen
 import { useApi } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
 import type { ReviewSummary } from "@/lib/types";
 
-const Areas = dynamic(() => import("@/components/charts").then((m) => m.Areas), {
-  ssr: false, loading: () => <Skeleton className="h-[190px] w-full" />,
+const Bars = dynamic(() => import("@/components/charts").then((m) => m.Bars), {
+  ssr: false, loading: () => <Skeleton className="h-[170px] w-full" />,
 });
+
+/** A ranked list with thin proportional bars: the share of each row at a glance, the exact count beside it. */
+function RankedList({ rows, unit }: { rows: { key: string; label: React.ReactNode; count: number }[]; unit: string }) {
+  const top = Math.max(1, ...rows.map((r) => r.count));
+  return <ol className="space-y-3 px-5 py-4">
+    {rows.map((r) => <li key={r.key}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate text-base font-semibold text-ink">{r.label}</span>
+        <span className="shrink-0 text-sm text-ink-3"><bdi className="text-base font-extrabold text-ink num">{r.count}</bdi> {unit}</span>
+      </div>
+      <div className="mt-1.5 h-1.5 rounded-full bg-sunken" aria-hidden>
+        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(4, (r.count / top) * 100)}%` }} />
+      </div>
+    </li>)}
+  </ol>;
+}
 
 type Insights = {
   kpis: { open_exceptions: number };
   daily: { date: string; received: number; exceptions: number }[];
+  discrepancy_types: { type: string; count: number }[];
+  exceptions_by_supplier: { supplier: string; count: number }[];
 };
 
 type DayPart = "morning" | "afternoon" | "evening";
@@ -80,7 +99,9 @@ export default function OverviewPage() {
     const row = byDay.get(key);
     return { date: key, label: dayFmt.format(day), received: row?.received ?? 0, exceptions: row?.exceptions ?? 0 };
   });
-  const anyTrend = (insights?.daily ?? []).length > 0;
+  const anyTrend = trend.some((d) => d.received + d.exceptions > 0);
+  const totals = trend.reduce((s, d) => ({ received: s.received + d.received, exceptions: s.exceptions + d.exceptions }), { received: 0, exceptions: 0 });
+  const busiest = trend.reduce<(typeof trend)[number] | undefined>((best, d) => (!best || d.received > best.received ? d : best), undefined);
   const urgent = data ? [
     { label: t.review.critical, value: data.by_level.critical, href: "/exceptions?level=critical", tone: "bg-danger-soft text-danger" },
     { label: t.review.high, value: data.by_level.high, href: "/exceptions?level=high", tone: "bg-warn-soft text-warn" },
@@ -95,9 +116,12 @@ export default function OverviewPage() {
         </h1>
         <p className="mt-1 text-xl text-ink-3">{t.review.attentionToday}</p>
       </div>
-      <div className="flex items-end gap-6">
+      <div className="flex items-end gap-10">
         {can("invoice:read") && <ExportMenu report="insights" />}
-        <InvoiceStack label={t.review.invoiceEmblem} className="-mb-6 me-16 hidden h-[150px] w-[132px] xl:block" />
+        <div aria-hidden className="relative -mb-4 me-10 hidden xl:block">
+          <div className="absolute -inset-10 rounded-full bg-[radial-gradient(closest-side,rgb(var(--atmosphere-a)/.9),transparent)]" />
+          <InvoiceStack label={t.review.invoiceEmblem} className="relative h-[168px] w-[148px]" />
+        </div>
       </div>
     </header>
 
@@ -129,10 +153,18 @@ export default function OverviewPage() {
       <div className="min-w-0 border-line lg:col-span-2 xl:col-span-1 xl:border-s xl:ps-6">
         <p className="flex items-center gap-2 text-md font-bold text-ink"><TrendingUp className="h-5 w-5 text-accent" aria-hidden />{t.review.trendTitle}</p>
         <div className="mt-2">
-          {!insights ? <Skeleton className="h-[190px] w-full" /> : !anyTrend
-            ? <p className="grid h-[190px] place-items-center text-sm text-ink-3">{t.review.noTrend}</p>
-            : <Areas data={trend} xKey="label" height={190}
-                series={[{ key: "received", label: t.review.receivedSeries }, { key: "exceptions", label: t.review.exceptionsSeries }]} />}
+          {!insights ? <Skeleton className="h-[200px] w-full" /> : !anyTrend
+            ? <p className="grid h-[200px] place-items-center text-sm text-ink-3">{t.review.noTrend}</p>
+            : <>
+              <p className="mb-1 flex flex-wrap items-baseline gap-x-3 text-sm text-ink-3">
+                <span><bdi className="text-xl font-extrabold text-ink num">{totals.received}</bdi> {t.review.receivedSeries}</span>
+                <span><bdi className="text-xl font-extrabold text-ink num">{totals.exceptions}</bdi> {t.review.exceptionsSeries}</span>
+                <span>{t.review.inPeriod}</span>
+                {busiest && busiest.received > 0 && <span className="ms-auto">{t.review.busiestDay}: <bdi className="font-semibold text-ink-2">{busiest.label}</bdi></span>}
+              </p>
+              <Bars data={trend} xKey="label" height={170} categoryGap="12%"
+                series={[{ key: "received", label: t.review.receivedSeries }, { key: "exceptions", label: t.review.exceptionsSeries }]} />
+            </>}
         </div>
       </div>
     </section>
@@ -163,8 +195,8 @@ export default function OverviewPage() {
                 <li key={e.currency ?? "unknown"} className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="font-bold text-ink"><bdi>{e.currency ?? t.common.unknown}</bdi></span>
                   <span className="text-end">
-                    <bdi className="ltr block font-extrabold text-danger num">{money(e.amount_at_risk, e.currency)}</bdi>
-                    <bdi className="ltr block text-sm text-ink-3 num">{money(e.value_under_review, e.currency)}</bdi>
+                    <span className="block"><bdi className="ltr font-extrabold text-danger num">{money(e.amount_at_risk, e.currency)}</bdi> <span className="text-xs text-ink-3">{t.review.atRiskLabel}</span></span>
+                    <span className="block text-sm text-ink-3"><bdi className="ltr num">{money(e.value_under_review, e.currency)}</bdi> <span className="text-xs">{t.review.underReviewLabel}</span></span>
                   </span>
                 </li>))}
             </ul>
@@ -172,5 +204,23 @@ export default function OverviewPage() {
         )}
       </aside>
     </div>
+
+    {/* insights: the real drivers behind the queue, from the same dashboard data */}
+    {insights && (insights.discrepancy_types.length > 0 || insights.exceptions_by_supplier.length > 0) && (
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panel>
+          <PanelHeader title={t.review.driversTitle} sub={t.review.driversSub} />
+          {insights.discrepancy_types.length
+            ? <RankedList unit={t.review.findingsCount} rows={insights.discrepancy_types.slice(0, 6).map((d) => ({ key: d.type, label: label(t.finding, d.type), count: d.count }))} />
+            : <p className="px-5 py-6 text-sm text-ink-3">{t.review.noInsights}</p>}
+        </Panel>
+        <Panel>
+          <PanelHeader title={t.review.suppliersTitle} sub={t.review.suppliersSub} />
+          {insights.exceptions_by_supplier.length
+            ? <RankedList unit={t.review.exceptionsCount} rows={insights.exceptions_by_supplier.map((s) => ({ key: s.supplier, label: <bdi dir="auto">{s.supplier}</bdi>, count: s.count }))} />
+            : <p className="px-5 py-6 text-sm text-ink-3">{t.review.noInsights}</p>}
+        </Panel>
+      </div>
+    )}
   </div>;
 }
