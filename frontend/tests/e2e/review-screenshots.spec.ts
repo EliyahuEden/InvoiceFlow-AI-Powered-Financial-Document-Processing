@@ -28,7 +28,8 @@ test("capture the review workflow in both themes and directions", async ({ page,
           const image = page.locator("main img").first();
           await expect(image).toBeVisible();
           await expect(page.getByTestId("discrepancy-table")).toBeVisible();
-        } else await expect(page.getByRole("table").first()).toBeVisible();
+        } else if (name === "dashboard") await expect(page.locator("main ol").first()).toBeVisible(); // compact queue list
+        else await expect(page.getByRole("table").first()).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         await page.screenshot({ path: `../docs/screenshots/review-${name}-${locale}-${theme}.png`, fullPage: name !== "workspace" });
         if (locale === "he") {

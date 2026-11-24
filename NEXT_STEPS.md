@@ -25,6 +25,11 @@ coding agent (or person) can pick up from here.
   [docs/AURORA_PLAN.md](docs/AURORA_PLAN.md). Review screenshots: `cd frontend && BASE=http://localhost:3003 node
   scripts/capture-review.mjs ../.impeccable/review`. Still open: the queue-row → workspace shared-element transition
   and an Aurora pass on the insights charts page.
+- **API crash fixed (2026-11-24):** PDFium is not thread-safe, and concurrent page-image requests corrupted the heap
+  (`munmap_chunk(): invalid pointer`, the API process aborted). All PDFium use now goes through
+  `backend/app/services/documents/pdfium_safe.py` (one process-wide lock); `backend/tests/test_pdfium_safe.py` stresses it
+  and fails if code opens PDFium directly. Reproduced and verified in the Linux container (640 concurrent renders).
+  Screenshots and the walkthrough video were refreshed for Aurora the same day.
 - **Added 2026-11-23:**
   - **Bulk import** of suppliers, purchase orders and goods receipts (CSV/Excel, check first, all-or-nothing):
     `services/bulk_import.py`, `api/routes/imports.py`, `components/import-dialog.tsx`.
@@ -106,8 +111,9 @@ C. **Deskewing verified.** In the [24-scan benchmark](eval/results/scan_stress_d
    image. The original 73-document benchmark still scored 92.0% with rules only. Never use `example invocies/`.
 D. **Make it visible in five minutes:**
    - a live demo (P0 item 1) with the demo accounts and offline or budget-capped AI;
-   - the [recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) shows a clean Hebrew invoice, a quantity discrepancy,
-     cited evidence, a reviewer decision and the verified audit chain. The [interview script](docs/DEMO_SCRIPT.md) is also available.
+   - the [recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) (1:03, Aurora design) shows sign-in, the dashboard, a live
+     Hebrew upload, the three-way match, the AI investigation, the investigation workspace, a reviewer decision and the
+     verified audit chain. Re-record with `frontend/scripts/record-walkthrough.mjs` on a disposable stack. The [interview script](docs/DEMO_SCRIPT.md) is also available.
    - the [README](README.md) has the pitch, diagram, benchmark table and screenshots; add the hosted demo link after deployment;
    - [CV bullets](docs/CV_BULLETS.md) are split into full-stack and AI engineering versions.
 E. **Payment controls:** Supplier banking, dual control and payment tracking are available locally. Masav remains

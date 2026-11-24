@@ -42,15 +42,9 @@ def _render(storage_key: str, mime: str, page_no: int, width: int) -> bytes:
 
     data = get_storage().get(storage_key)
     if mime == "application/pdf":
-        import pypdfium2 as pdfium
+        from app.services.documents.pdfium_safe import render_page
 
-        pdf = pdfium.PdfDocument(data)
-        try:
-            page = pdf[page_no - 1]
-            scale = width / page.get_width()
-            img = page.render(scale=scale).to_pil()
-        finally:
-            pdf.close()
+        img = render_page(data, page_no - 1, width=width)
     else:
         img = Image.open(io.BytesIO(data)).convert("RGB")
         img.thumbnail((width, width * 2))

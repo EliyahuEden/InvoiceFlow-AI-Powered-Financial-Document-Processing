@@ -6,6 +6,10 @@ These are real Playwright captures of InvoiceFlow with synthetic demo invoices. 
 
 `11-import.png` through `14-team.png` come from the same screenshot spec, in the `capture import, export and account settings` test. These English captures show supplier import, invoice and accounting export, two-factor settings, and team management against the isolated offline stack on 2026-11-23.
 
+All `01-` to `14-` and `review-*` captures were refreshed on 2026-11-24 for the Aurora redesign, against the isolated offline e2e stack.
+
+The walkthrough video `docs/demo/invoiceflow-walkthrough.webm` is recorded by `frontend/scripts/record-walkthrough.mjs` (it uploads a sample and records a decision, so use a disposable stack): `BASE=http://localhost:3001 node scripts/record-walkthrough.mjs`.
+
 Regenerate from the frontend directory against a disposable, seeded stack:
 
 ```powershell

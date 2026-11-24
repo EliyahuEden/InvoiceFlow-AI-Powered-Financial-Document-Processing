@@ -25,6 +25,8 @@ test("capture screenshots", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await login(page);
+  await page.mouse.move(1, 1); // off the chart, so no hover tooltip is captured
+  await page.locator(".recharts-surface").first().waitFor();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}/01-overview.png` });
 

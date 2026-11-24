@@ -67,15 +67,15 @@ def validate_upload(data: bytes, filename: str) -> ValidatedFile:
     if mime == "application/pdf":
         import pypdfium2 as pdfium
 
+        from app.services.documents.pdfium_safe import page_count as pdf_page_count
+
         try:
-            pdf = pdfium.PdfDocument(data)
+            page_count = pdf_page_count(data)
         except pdfium.PdfiumError as exc:
             msg = str(exc).lower()
             if "password" in msg:
                 raise UploadRejected("Encrypted / password-protected PDFs are not supported.") from exc
             raise UploadRejected("The PDF is damaged or not a valid PDF.") from exc
-        page_count = len(pdf)
-        pdf.close()
         if page_count == 0:
             raise UploadRejected("The PDF has no pages.")
         if page_count > s.max_pdf_pages:

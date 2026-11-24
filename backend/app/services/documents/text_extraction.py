@@ -257,14 +257,9 @@ def ocr_image(img: Image.Image, page_no: int, page_w: float | None = None, page_
 
 
 def render_pdf_page(data: bytes, page_index: int, dpi: int = OCR_DPI) -> Image.Image:
-    import pypdfium2 as pdfium
+    from app.services.documents.pdfium_safe import render_page
 
-    pdf = pdfium.PdfDocument(data)
-    try:
-        page = pdf[page_index]
-        return page.render(scale=dpi / 72).to_pil()
-    finally:
-        pdf.close()
+    return render_page(data, page_index, scale=dpi / 72)
 
 
 def extract_pages(data: bytes, mime_type: str, progress=None) -> list[PageText]:  # noqa: ANN001

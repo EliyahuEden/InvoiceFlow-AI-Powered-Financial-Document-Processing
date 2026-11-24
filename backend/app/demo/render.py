@@ -270,13 +270,9 @@ def render_invoice_pdf(inv: InvoiceSpec) -> bytes:
 
 # ------------------------------------------------------------------ degradations
 def _render_pages(pdf_bytes: bytes, dpi: int) -> list[Image.Image]:
-    import pypdfium2 as pdfium
+    from app.services.documents.pdfium_safe import render_all
 
-    pdf = pdfium.PdfDocument(pdf_bytes)
-    try:
-        return [pdf[i].render(scale=dpi / 72).to_pil().convert("L") for i in range(len(pdf))]
-    finally:
-        pdf.close()
+    return [img.convert("L") for img in render_all(pdf_bytes, scale=dpi / 72)]
 
 
 def _degrade(img: Image.Image, rng: random.Random, angle: float, noise: int, blur: float) -> Image.Image:
