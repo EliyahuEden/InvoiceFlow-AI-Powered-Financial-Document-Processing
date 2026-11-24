@@ -12,7 +12,10 @@ import { useI18n } from "@/lib/i18n";
 const item = "flex cursor-pointer select-none items-center rounded-md px-2.5 py-2 text-sm text-ink outline-none data-[highlighted]:bg-sunken";
 
 /** Exports the invoice list as filtered on screen, and (for finance) approved invoices for accounting. */
-export function ExportMenu({ filters }: { filters: Record<string, string | undefined> }) {
+export function ExportMenu({ filters = {}, report = "invoices" }: {
+  filters?: Record<string, string | undefined>;
+  report?: "invoices" | "insights";
+}) {
   const { t, locale } = useI18n();
   const { can } = useSession();
   const m = t.exports;
@@ -29,7 +32,7 @@ export function ExportMenu({ filters }: { filters: Record<string, string | undef
   };
   const day = new Date().toISOString().slice(0, 10);
   const list = (fmt: "csv" | "xlsx") =>
-    save(`/api/export/invoices.${fmt}${qs({ ...filters, lang: locale })}`, `invoices-${day}.${fmt}`);
+    save(`/api/export/${report}.${fmt}${qs({ ...filters, lang: locale })}`, `${report}-${day}.${fmt}`);
   const accounting = (fmt: "csv" | "xlsx") =>
     save(`/api/export/accounting.${fmt}${qs({ lang: locale })}`, `accounting-${day}.${fmt}`);
 
@@ -41,10 +44,10 @@ export function ExportMenu({ filters }: { filters: Record<string, string | undef
       <Menu.Portal>
         <Menu.Content align="end" sideOffset={6}
           className="z-50 min-w-[240px] rounded-lg border border-line bg-surface p-1 shadow-pop data-[state=open]:animate-[fade_120ms_ease-out]">
-          <Menu.Label className="px-2.5 pb-1 pt-1.5 text-xs text-ink-3">{m.list}</Menu.Label>
+          <Menu.Label className="px-2.5 pb-1 pt-1.5 text-xs text-ink-3">{report === "insights" ? m.insights : m.list}</Menu.Label>
           <Menu.Item className={item} onSelect={() => list("xlsx")}>{m.excel}</Menu.Item>
           <Menu.Item className={item} onSelect={() => list("csv")}>{m.csv}</Menu.Item>
-          {can("approval:decide") && (
+          {report === "invoices" && can("approval:decide") && (
             <>
               <Menu.Separator className="my-1 h-px bg-line" />
               <Menu.Label className="px-2.5 pb-1 pt-1.5 text-xs text-ink-3">{m.accounting}</Menu.Label>

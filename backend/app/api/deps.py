@@ -12,7 +12,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.db import new_session
+from app.core.db import lock_workspace, new_session
 from app.core.security import decode_access_token
 from app.models import Membership, Organization, Role, User
 from app.services import auth_sessions
@@ -21,6 +21,15 @@ from app.services.rbac import Perm, has_perm
 COOKIE_NAME = "invoiceflow_session"
 REFRESH_COOKIE = "invoiceflow_refresh"
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+ENROLLMENT_ROUTES = {
+    ("GET", "/api/auth/me"), ("GET", "/api/auth/2fa"),
+    ("POST", "/api/auth/2fa/setup"), ("POST", "/api/auth/2fa/enable"),
+    ("POST", "/api/auth/logout"),
+}
+
+
+def requires_mfa_enrollment(user: User, org: Organization) -> bool:
+    return user.totp_enabled_at is None and org.settings.get("security", {}).get("require_2fa") is True
 
 
 @dataclass
@@ -54,10 +63,10 @@ def get_principal(request: Request) -> Principal:
         claims = decode_access_token(token)
     except jwt.PyJWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired session") from exc
-    return principal_from_claims(claims)
+    return principal_from_claims(claims, allow_enrollment=(request.method, request.scope.get("path")) in ENROLLMENT_ROUTES)
 
 
-def principal_from_claims(claims: dict) -> Principal:
+def principal_from_claims(claims: dict, *, allow_enrollment: bool = False) -> Principal:
     s = new_session()
     try:
         # The server-side session must still be active: logout, "sign out everywhere"
@@ -71,6 +80,10 @@ def principal_from_claims(claims: dict) -> Principal:
         if not user or not user.is_active or not m:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Membership no longer valid")
         org = s.get(Organization, m.organization_id)
+        if org is None:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Membership no longer valid")
+        if not allow_enrollment and requires_mfa_enrollment(user, org):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Two-factor enrollment is required")
         # Role is read from the database on every request (not trusted from the token),
         # so revoking or downgrading a membership takes effect immediately.
         return Principal(user=user, org=org, role=m.role, session_id=sess.id)
@@ -82,6 +95,9 @@ def get_db(principal: Principal = Depends(get_principal)) -> Iterator[Session]:
     """Tenant-bound session: RLS restricts every query to the caller's organization."""
     session = new_session(principal.org_id)
     try:
+        lock_workspace(session, principal.org_id)
+        if session.get(Organization, principal.org_id) is None:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Membership no longer valid")
         yield session
         session.commit()
     except Exception:

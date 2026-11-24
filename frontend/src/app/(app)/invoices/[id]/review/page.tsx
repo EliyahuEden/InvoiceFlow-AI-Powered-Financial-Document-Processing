@@ -29,7 +29,8 @@ export default function ReviewPage() {
   const [reason, setReason] = useState("");
   const [focus, setFocus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const editable = can("invoice:edit") && incoming && !["approved", "rejected", "processing"].includes(incoming.status);
+  const editable = can("invoice:edit") && incoming && !incoming.archived_at
+    && !["approved", "rejected", "processing", "voided", "credit_note"].includes(incoming.status);
 
   const loadDraft = useCallback((source: InvoiceDetail) => {
     const h: Record<string, string> = {};

@@ -9,19 +9,19 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.deps import Principal, get_db, get_principal, principal_from_claims, require
-from app.core.db import new_session, set_session_org
-from app.core.security import hash_password
+from app.api.deps import COOKIE_NAME, REFRESH_COOKIE, Principal, get_db, get_principal, principal_from_claims, require
+from app.core.db import lock_workspace, new_session, session_scope, set_session_org
+from app.core.security import hash_password, verify_password
 from app.models import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, AICall, Job, Membership, Organization, Role, User
 from app.core.config import get_settings
 from app.services.public_errors import public_error
-from app.services import audit, auth_tokens, sse_tickets
+from app.services import audit, auth_tokens, sse_tickets, workspace_archive
 from app.services import email as mail
 from app.services.events import channel, get_redis
 from app.services.llm.provider import mode_label
@@ -36,6 +36,50 @@ def get_org(p: Principal = Depends(require(Perm.INVOICE_READ))) -> dict:
     return {"id": str(p.org.id), "name": p.org.name, "slug": p.org.slug, "settings": p.org.settings,
             "ai_mode": mode_label(),
             "roles": {r.value: sorted(x.value for x in perms) for r, perms in ROLE_PERMISSIONS.items()}}
+
+
+@router.get("/api/org/archive.zip")
+def export_workspace(background: BackgroundTasks, p: Principal = Depends(require(Perm.ORG_MANAGE)),
+                     db=Depends(get_db)) -> FileResponse:
+    check_rate_limit(f"workspace-archive:{p.org_id}", 3, window_seconds=3600)
+    path = workspace_archive.build(p.org)
+    try:
+        audit.record(db, org_id=p.org_id, action="org.archive_exported", entity_type="organization",
+                     entity_id=p.org_id, actor_id=p.user.id, actor_label=p.user.email)
+        db.commit()
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+    background.add_task(path.unlink, missing_ok=True)
+    return FileResponse(path, media_type="application/zip", filename=f"workspace-{p.org.slug}.zip",
+                        headers={"Cache-Control": "no-store"}, background=background)
+
+
+class EraseWorkspaceIn(BaseModel):
+    slug: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=1, max_length=200)
+
+
+@router.post("/api/org/erase", status_code=202)
+def erase_workspace(body: EraseWorkspaceIn, p: Principal = Depends(require(Perm.ORG_MANAGE))) -> JSONResponse:
+    check_rate_limit(f"workspace-erase:{p.user.id}", 5, window_seconds=900)
+    if body.slug != p.org.slug:
+        raise HTTPException(422, "Enter the current workspace identifier")
+    with session_scope(p.org_id) as db:
+        lock_workspace(db, p.org_id, exclusive=True)
+        org = db.get(Organization, p.org_id)
+        if org is None:
+            raise HTTPException(404, "Workspace no longer exists")
+        user = db.scalar(select(User).where(User.id == p.user.id).with_for_update())
+        role = db.scalar(select(Membership.role).where(Membership.user_id == p.user.id,
+                                                       Membership.organization_id == p.org_id).with_for_update())
+        if user is None or not user.is_active or role != Role.ADMIN or not verify_password(body.password, user.password_hash):
+            raise HTTPException(403, "Workspace deletion requires administrator access and the current password")
+        cleanup = workspace_archive.erase(db, org)
+    response = JSONResponse({"cleanup_job_id": str(cleanup.id)}, status_code=202)
+    response.delete_cookie(COOKIE_NAME, path="/")
+    response.delete_cookie(REFRESH_COOKIE, path="/")
+    return response
 
 
 class SettingsIn(BaseModel):
@@ -57,6 +101,13 @@ def update_settings(body: SettingsIn, p: Principal = Depends(require(Perm.ORG_MA
         values = getattr(body, section)
         if values:
             for k, v in values.items():
+                if (section, k) in {("security", "require_2fa"), ("approval", "procurement_cannot_decide_own_upload")}:
+                    if not isinstance(v, bool):
+                        raise HTTPException(422, f"{section}.{k} must be a boolean")
+                    if k == "require_2fa" and v and p.user.totp_enabled_at is None:
+                        raise HTTPException(409, "Turn on two-factor sign-in before requiring it for the organization")
+                    new[section][k] = v
+                    continue
                 lo_hi = SETTING_BOUNDS.get(f"{section}.{k}")
                 if lo_hi and not (isinstance(v, int) and lo_hi[0] <= v <= lo_hi[1]):
                     raise HTTPException(422, f"{section}.{k} must be a whole number from {lo_hi[0]} to {lo_hi[1]}")

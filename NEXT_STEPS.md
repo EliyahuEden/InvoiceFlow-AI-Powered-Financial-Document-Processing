@@ -1,6 +1,6 @@
 # Where to continue
 
-Last updated 2026-11-23. History lives in `git log`; this file is the current state and the open work. Written so any
+Last updated 2026-11-24. History lives in `git log`; this file is the current state and the open work. Written so any
 coding agent (or person) can pick up from here.
 
 ## Rules for whoever works on this repo
@@ -30,8 +30,6 @@ coding agent (or person) can pick up from here.
     justification; payment approval stays with finance (`services/rbac.py`).
   - **Browser tests for accounts:** `frontend/tests/e2e/accounts.spec.ts` (sign-up, reset, invitation, two-factor,
     admin reset), on the throwaway stack `docker-compose.e2e.yml`.
-- **Uncommitted at the time of writing:** the two-factor admin reset (system.py, email.py, team-panel.tsx, its tests)
-  and the 401 → 403 change below. Check `git status` before starting.
 - **AI:** Groq (`openai/gpt-oss-120b`) by default, offline fallback without a key; per-business daily token budget
   and per-user rate limits on model-backed endpoints.
 - **Operations:** Caddy front door with automatic HTTPS (`docker-compose.prod.yml`), production refuses unsafe or
@@ -40,37 +38,62 @@ coding agent (or person) can pick up from here.
 - **Verification (2026-11-23):** backend 676 tests (about 15 minutes), frontend 87 unit tests, typecheck
   (`noUncheckedIndexedAccess` on) and lint clean, Playwright 19 browser tests (workflow, review, UI sweep, accounts)
   plus an axe WCAG 2.2 scan with 0 violations. Reconciliation benchmark 468/468 exact, 0 false alarms.
+- **Pilot verification (2026-11-24):** 689 backend tests passed in 14 minutes with local inference stopped.
+  Both OCR tests skipped on Windows passed separately in Docker with Hebrew and English Tesseract.
+  The first run missed input-fuzz and 2,000-invoice latency limits under concurrent inference.
+  The clean rerun passed both after stopping inference and fixing the clock in the fixed-window rate-limit test.
+  Also passed 87 frontend unit tests, a clean Node 22 `npm ci` and production build, typecheck, lint, and nine
+  isolated Playwright tests for accounts, workspace deletion, two-factor, import and export.
 
-## The goal: a portfolio project (decided 2026-11-23)
-The project is mainly a portfolio piece for **full-stack** and **AI engineering** roles. Do not widen it into a general
-business system. The order of work is: finish the evaluation story, make the project easy to see in five minutes,
-then add depth along the money flow (pay suppliers). Full-stack evidence is already strong; the AI side needs finished,
-published numbers.
+## Reliability and portfolio evidence
+
+Finish the evaluations, investigate measured failures, and make the project easy to see in five minutes. The owner
+approved resuming local P1 and P2 work. Hosted deployment and external payment and tax integrations await prerequisites.
+
+- **Audit fixes in place.** Invoice corrections reject stale revisions (TECH-01). Worker lease fencing, terminal
+  failure, and upload rollback have regression coverage (REL-01/02/03). Concurrent reconciliation keeps one current
+  result (FIN-09). Policy retrieval checks the effective version (AI-03). Intake enforces a body limit before multipart
+  parsing, and the two-organization permission matrix covers all four roles (SEC-03/05). Review drafts, unmeasured OCR
+  confidence, and cross-reviewer queue updates have frontend regression tests (UX-01/02/03).
+- **Business rules.** Procurement managers may decide exceptions and accept a blocking variance with a recorded note
+  (FIN-06). Payment decisions retain finance permissions. Cross-currency priority uses the currently published Bank of
+  Israel rate and displays the rate date alongside the original amount. Synthetic supplier IDs use valid check digits.
 
 ### Portfolio track (do this first)
-A. **Finish the evaluations with a live model** (needs the owner's OK and a cost estimate first; expected a few
-   dollars). Full policy-answer run on prompt `rag-answer-v3` and the Copilot run with model-written answers (details
-   in P3 item 12). Publish the numbers in the README with the date, model and prompt version.
+A. **Live evaluations on GPT-OSS 120B with Groq Free.** [Policy RAG `v4`](eval/results/rag_v4_120b_latest.json) passed 32/35
+   after enforcing numerical support in quoted evidence. It still abstained on two answerable questions and missed one
+   Hebrew benchmark phrase despite giving an equivalent prohibition. The latest complete [AP Copilot run](eval/results/copilot_v2_120b_latest.json)
+   passed 27/32 on `v2`. The later [`v3` run](eval/results/copilot_v3_120b_20261124_latest.json) passed 20 of 21
+   evaluated prompts before the Groq Free daily token limit. The sole scored miss used the expected tool and said
+   that nothing was escalated in wording the exact-match scorer did not accept.
 B. **Model comparison** on the same evaluations: Groq (`gpt-oss-120b`), Claude, and a small local model through
    `OPENAI_BASE_URL` (Ollama). One table: accuracy, abstention, citation validity, latency, cost per invoice and per
-   answer. Reuse `eval/` and the call log in `services/llm/telemetry.py`; add a runner flag for the provider, do not
-   fork the evaluation code. Needs the owner's OK before any paid run.
-C. **Messier input:** 20–30 realistic synthetic scans (skewed, photographed, stamped, low contrast) generated in
-   Docker like the demo PDFs, with an extraction-accuracy table per field. Never use `example invocies/`.
+   answer. The answer and extraction evaluators accept `--provider groq|anthropic|ollama`, `--model` and distinct
+   `--out` names. They report latency and configured price estimates when available. The answer suites stop on daily
+   quota and record partial coverage. The Claude comparison still needs an authorized key and model.
+
+   | Provider | Copilot | Policy answers | Rules-first extraction |
+   | --- | --- | --- | --- |
+   | Groq Free, GPT-OSS 120B | 27/32 on v2; 20/21 evaluated on v3, 14.1 s median in the partial run. [v2](eval/results/copilot_v2_120b_latest.json) · [v3](eval/results/copilot_v3_120b_20261124_latest.json) | 32/35 passed, 10/10 expected refusals, 92.6% citation accuracy. [Results](eval/results/rag_v4_120b_latest.json) | 92.5% field accuracy, 12/73 sent to the model, 51 ms median per document. [Results](eval/results/extraction_latest.json) |
+   | Ollama, Qwen2.5 1.5B | 23/32 overall. Six of 13 model responses passed; 19 responses used the offline path. 10.5 s median overall. [Results](eval/results/copilot_qwen25_local_20261124_latest.json) | 13/35 passed, 9/10 expected refusals and 21 abstentions on answerable questions. All six issued citations matched. 17.0 s median. [Results](eval/results/rag_qwen25_local_20261124_latest.json) | 92.3% field accuracy, 12/73 sent to the model, 68 ms median per document. [Results](eval/results/extraction_qwen25_local_20261124_latest.json) |
+
+   Both providers were run without paid API calls. Paid unit pricing and the cost of local compute remain unmeasured.
+C. **Deskewing verified.** In the [24-scan benchmark](eval/results/scan_stress_deskew_latest.json), field accuracy on tilted
+   pages rose from 45.5% to 77.3%. Invoice numbers stayed at 5/6 correct. Photos, stamped pages, and low-contrast pages each
+   scored 80.3%. Two separate tilted invoice fixtures verify total extraction and source highlight placement on the original
+   image. The original 73-document benchmark still scored 92.0% with rules only. Never use `example invocies/`.
 D. **Make it visible in five minutes:**
    - a live demo (P0 item 1) with the demo accounts and offline or budget-capped AI;
-   - a 2–3 minute video: upload a Hebrew invoice → finding → cited explanation → decision → audit trail;
-   - README top rewritten: one-paragraph pitch, one architecture diagram, the evaluation table, three screenshots,
-     the demo link; details below;
-   - two CV versions in `docs/CV_BULLETS.md`: full stack (system design, multi-tenancy, security, tests,
-     operations) and AI engineering (evaluations, RAG with verified citations, LangGraph agent with human approval,
-     cost controls, prompt-injection defence, model comparison).
-E. **Then depth:** P1 items 6–7 (supplier bank details with fraud controls, Masav payment file) are the best feature
-   addition for the portfolio: financial-domain depth that most projects do not have.
+   - the [recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) shows a clean Hebrew invoice, a quantity discrepancy,
+     cited evidence, a reviewer decision and the verified audit chain. The [interview script](docs/DEMO_SCRIPT.md) is also available.
+   - the [README](README.md) has the pitch, diagram, benchmark table and screenshots; add the hosted demo link after deployment;
+   - [CV bullets](docs/CV_BULLETS.md) are split into full-stack and AI engineering versions.
+E. **Payment controls:** Supplier banking, dual control and payment tracking are available locally. Masav remains
+   open until the bank confirms the file layout and sending details.
 
 ## To do, in priority order
 
-### P0, the owner's: going live
+### P0: going live, awaiting an authorized hosting target
 1. **Buy a domain and a server** (4 vCPU, 8–16 GB RAM, Israeli region for data residency), then follow the
    10-step runbook in `docs/DEPLOYMENT.md`. Keep `JWT_SECRET` stable once live: two-factor secrets are encrypted
    with a key derived from it.
@@ -81,43 +104,48 @@ E. **Then depth:** P1 items 6–7 (supplier bank details with fraud controls, Ma
 4. **Brevo domain verification** (SPF, DKIM, DMARC) once there is a domain.
 
 ### P1: next for pilot users (code)
-5. **Require two-factor for everyone in a business** (about half a day).
-   - Organization setting `security.require_2fa` (admin only), next to the session settings in `/api/org/settings`
-     and the Settings page; bounds/defaults live with `SETTING_BOUNDS` / `DEFAULT_ORG_SETTINGS`.
-   - When on, a member without two-factor who signs in to that business gets a session that can only reach
-     `/api/auth/me`, `/api/auth/2fa/*` and logout until they turn it on; the frontend sends them to Settings with an
-     explanation. Enforce in the backend (`get_principal` / `require`), not only in the UI.
-   - The admin turning it on must have two-factor on themselves. Audit the change. Tests in the style of
-     `backend/tests/test_two_factor.py`, plus one browser test in `accounts.spec.ts`.
-6. **Supplier bank details with change controls** (1–2 days; protects against the classic "our bank account changed"
-   fraud, and Masav needs it).
-   - Bank, branch, account number (and IBAN for foreign suppliers) on the supplier; Israeli bank/branch codes
-     validated; never shown in full in lists (last 4 digits).
-   - Any change is audited with before/after, needs a second person to confirm (not the one who entered it), and puts
-     a hold on paying that supplier for a configurable number of days. Changes by bulk import go through the same rule.
-   - Email the business's admins when bank details change.
-7. **Masav payment file** from approved invoices (about 1 day once the inputs exist). Needs: item 6, the business's
-   Masav institution code and sending account (organization settings), and the exact file layout confirmed with the
-   owner's bank. Do not guess the layout; ask the owner for the bank's spec.
-8. **Smaller open items:** a Playwright test for the import dialog and the export menu; insights reports to
-   CSV/Excel; status names in Hebrew in the Hebrew export; option to stop a procurement manager deciding a case on an
-   invoice they uploaded themselves.
+5. **Organization-wide two-factor completed locally.** An enrolled admin can require it in Settings. Members
+   without an authenticator can enroll and sign out. Workspace APIs and live events require enrollment.
+   The settings change is audited. See `backend/tests/test_two_factor.py` and `frontend/tests/e2e/accounts.spec.ts`.
+6. **Supplier bank controls completed locally.** Bank and branch validation uses the Bank of Israel directory.
+   International accounts use IBAN checksum validation. Account identifiers are encrypted and masked.
+   A different reviewer must confirm changes. Pending changes and the configurable hold after confirmation
+   stop payment actions and accounting export for that supplier. The default hold is three days. Bulk import
+   uses the same controls. Administrators receive a notice through the configured mail backend.
+7. **Masav payment file awaiting bank inputs.** Obtain the bank-approved specification and a sample bank
+   acceptance file, plus the business's Masav institution code and sending account. Confirm encoding, field
+   lengths, trailer totals, and the bank's test submission process before implementing the exporter.
+8. **Insights exports and procurement separation completed locally.** Insights export to CSV and Excel.
+   An audited setting can prevent a procurement manager deciding a case they uploaded. The
+   [import/export browser spec](frontend/tests/e2e/import-export.spec.ts) covers supplier preview and commit
+   and an invoice CSV that preserves the inbox search. Hebrew exports localize invoice statuses.
 
 ### P2: complete the money workflow
-9. **After approval:** "scheduled" and "paid" statuses, due-date reminders.
-10. **Lifecycles:** edit, close or cancel purchase orders; void or archive invoices; credit notes; retention policy;
-    a business can export or delete all its data.
-11. **Allocation numbers checked online** with the Tax Authority (needs each business's API registration).
+9. **Payment tracking completed locally.** Approved invoices can be marked scheduled and then paid externally.
+   The dashboard shows payments due within seven days or overdue. A paid invoice leaves the open-payables and
+   accounting export lists. InvoiceFlow records payment dates and references.
+10. **Lifecycles and workspace data completed locally.** Edit, close or cancel purchase orders. Void, archive or
+    restore invoices. Track and link credit notes without changing payment balances. Admins can download a workspace
+    archive or confirm deletion with the workspace identifier and current password. Original file and agent checkpoint
+    cleanup retries in the worker. The archive excludes credentials and keeps stored supplier bank fields masked.
+    Automatic deletion is off and backups retain their own schedule.
+11. **Online allocation checks await Tax Authority access.** Obtain a registered integration, authorized sandbox
+    and per-business authorization. Confirm sandbox coverage for valid, invalid and unavailable responses before
+    enabling live verification. Reconciliation already applies its existing local allocation-number rules.
 
 ### P3: portfolio and quality
-12. **Benchmarks when the Groq quota is free (ask the owner first):** full policy-answer run on prompt
-    `rag-answer-v3` (the README's 33/35 is from `v2`), and the Copilot run with every answer written by the model
-    (`eval/run_copilot_eval.py`, needs a fresh `*_copilot_eval` database). Then update the README.
-13. **Offline-answer numbers** in the README predate the latest answer logic (held-out correctness now 0.76, was
-    published 0.72): re-run `eval/run_rag_eval.py` offline and update.
-14. **Screenshots** (`docs/screenshots/`): refresh, including import, export, two-factor and team.
-15. **CV bullets** (`docs/CV_BULLETS.md`): add Copilot, FX, multi-business, allocation numbers, import/export,
-    two-factor.
+12. **Full Copilot v3 run awaiting free quota.** The latest [partial v3 run](eval/results/copilot_v3_120b_20261124_latest.json)
+    reached 21/32 prompts and passed 20, with 14.1 s median response time. The last complete
+    [Copilot v2 run](eval/results/copilot_v2_120b_latest.json) passed 26/31 model-written answers and its built-in
+    capabilities response. [Policy RAG v4](eval/results/rag_v4_120b_latest.json) answered 22/25 answerable
+    questions correctly and refused all 10 unanswerable questions. The November 24 RAG repeat was killed before
+    writing scores, so the November 23 run remains the complete live evidence.
+13. **Offline-answer rerun completed.** [Held-out extractive answers](eval/results/rag_extractive_latest.json) reached
+    76% correctness and 76.7% citation accuracy. A November 24 rerun reproduced both scores with
+    `eval/run_rag_eval.py --extractive-answers --batch-size 4 --inference-threads 2`.
+14. **Screenshots completed.** [Import, export, two-factor and team](docs/screenshots/README.md) captured on the isolated offline stack.
+15. **CV bullets completed.** [Full-stack and AI versions](docs/CV_BULLETS.md) cover Copilot, FX, multi-business,
+    allocation numbers, import/export and two-factor.
 16. **Claude API check** of the Anthropic provider (only if Claude will be used).
 
 ### Later

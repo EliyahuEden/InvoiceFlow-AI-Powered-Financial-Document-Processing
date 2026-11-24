@@ -36,7 +36,7 @@ def screen_hits(hits: list[Hit]) -> tuple[list[Hit], list[dict]]:
             safe.append(h)
     return safe, excluded
 
-PROMPT_VERSION = "rag-answer-v3"
+PROMPT_VERSION = "rag-answer-v4"
 # Calibrated on the original 50 calibration questions (eval/calibrate_abstention.py). A stricter
 # value (-0.326) learned with added near-miss questions refused every unanswerable held-out question
 # but also half of the answerable ones (held-out correctness 0.76 -> 0.52), so it was not adopted:
@@ -66,6 +66,7 @@ Use ONLY the numbered evidence passages provided. Do not use outside knowledge.
 - Every factual statement must be supported by at least one citation with a verbatim quote copied
   exactly from the cited passage.
 - Include each amount, duration or percentage you report in a cited quote.
+- Include the relevant conditions and exceptions from the evidence. Quote enough of the clause to support them.
 - If the passages do not contain the answer, set abstain=true and explain what is missing.
 - If passages conflict (for example an older and a newer policy), say so explicitly, cite both, and
   prefer the one with the later effective date or the supplier-specific agreement, stating why.
@@ -121,8 +122,7 @@ def answer_with_llm(llm, question: str, hits: list[Hit]) -> tuple[dict, object]:
                          schema=RagAnswer.model_json_schema(), max_tokens=2000)
     ans = RagAnswer.model_validate(res.data)
     citations, dropped = verify_citations(ans, hits)
-    cited = {c["chunk_id"] for c in citations}
-    unsupported = unsupported_numbers(ans.answer, [h.chunk.text for h in hits if h.chunk.id in cited],
+    unsupported = unsupported_numbers(ans.answer, [citation["quote"] for citation in citations],
                                       max_derived=0, ignore_small=False)
     unverifiable = not ans.answer.strip() or bool(unsupported) or (not ans.abstain and not citations)
     abstain = ans.abstain or unverifiable

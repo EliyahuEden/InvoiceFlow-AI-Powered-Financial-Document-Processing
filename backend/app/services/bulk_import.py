@@ -17,17 +17,20 @@ from decimal import Decimal, InvalidOperation
 
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
+from fastapi import HTTPException
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import GoodsReceipt, GRLine, POLine, PurchaseOrder, Supplier
+from app.models import GoodsReceipt, GRLine, POLine, PurchaseOrder, Supplier, User
+from app.services import supplier_banking
 
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 5000
 
 TEMPLATES: dict[str, tuple[list[str], list[str]]] = {
-    "suppliers": (["name", "name_en", "tax_id", "email", "phone", "address", "default_currency", "payment_terms"],
+    "suppliers": (["name", "name_en", "tax_id", "email", "phone", "address", "default_currency", "payment_terms",
+                   "bank_code", "branch_code", "account_number", "iban"],
                   ['גליל משקאות בע"מ', "Galil Drinks Ltd", "516222333", "ap@example.co.il", "04-6000000", "כרמיאל",
-                   "ILS", "שוטף + 60"]),
+                   "ILS", "שוטף + 60", "", "", "", ""]),
     "purchase-orders": (["po_number", "supplier_tax_id", "order_date", "currency", "sku", "description", "quantity",
                          "unit_price", "unit", "supplier_name"],
                         ["PO-2026-2001", "516222333", "05/11/2026", "ILS", "GD-WATER-6", "מים מינרליים 6 יח'", "40",
@@ -171,6 +174,13 @@ def plan_suppliers(db: Session, org_id: uuid.UUID, table: list[tuple[int, dict[s
     seen: set[str] = set()
     for row, rec in table:
         values = {k: v for k, v in rec.items() if k in SupplierIn.model_fields and v != ""}
+        bank_values = {k: rec[k] for k in supplier_banking.BankDetails.model_fields if rec.get(k)}
+        bank_details = None
+        if bank_values:
+            try:
+                bank_details = supplier_banking.BankDetails(**bank_values).normalized()
+            except ValueError:
+                plan.error(row, "bank_code", "invalid_bank_details", "Enter a valid bank, branch and account number or a foreign IBAN.")
         values.setdefault("name", "")
         if "default_currency" in values:
             values["default_currency"] = values["default_currency"].upper()
@@ -186,19 +196,30 @@ def plan_suppliers(db: Session, org_id: uuid.UUID, table: list[tuple[int, dict[s
         match = by_tax.get(model.tax_id) if model.tax_id else by_name.get(model.name.strip().casefold())
         given = {k for k in values if k in model.model_fields_set}
         plan.items.append({"action": "update" if match else "create", "key": model.name, "row": row,
-                           "_model": model, "_match": match, "_given": given})
+                           "_model": model, "_match": match, "_given": given, "_bank_details": bank_details})
     return plan
 
 
-def apply_suppliers(db: Session, org_id: uuid.UUID, plan: Plan) -> None:
+def apply_suppliers(db: Session, org_id: uuid.UUID, plan: Plan, user: User) -> list[str]:
+    bank_ids = [item["_match"].id for item in plan.items if item["_match"] and item["_bank_details"]]
+    if bank_ids:
+        db.scalars(select(Supplier).where(Supplier.id.in_(bank_ids), Supplier.organization_id == org_id)
+                   .order_by(Supplier.id).with_for_update().execution_options(populate_existing=True)).all()
+    changed = []
     for item in plan.items:
         model, match = item["_model"], item["_match"]
         if match is None:
-            db.add(Supplier(organization_id=org_id, **model.model_dump()))
+            match = Supplier(organization_id=org_id, **model.model_dump())
+            db.add(match)
         else:
             for k in item["_given"]:
                 setattr(match, k, getattr(model, k))
+        if item["_bank_details"]:
+            db.flush()
+            if supplier_banking.propose(db, match, user, item["_bank_details"]):
+                changed.append(match.name)
     db.flush()
+    return changed
 
 
 # ------------------------------------------------------------------ purchase orders
@@ -303,6 +324,9 @@ def plan_goods_receipts(db: Session, org_id: uuid.UUID, table: list[tuple[int, d
         if po is None:
             plan.error(first_row, "po_number", "unknown_po", "No purchase order with this number in this business.")
             continue
+        if po.status in ("closed", "cancelled"):
+            plan.error(first_row, "po_number", "closed_po", "The purchase order is closed or cancelled.")
+            continue
         received = parse_date(first.get("received_date", ""))
         if received is None:
             plan.error(first_row, "received_date", "invalid_date", "received_date must be a date like 07/11/2026.")
@@ -329,16 +353,25 @@ def plan_goods_receipts(db: Session, org_id: uuid.UUID, table: list[tuple[int, d
 
 
 def apply_goods_receipts(db: Session, org_id: uuid.UUID, plan: Plan) -> None:
+    ids = [item["_po"].id for item in plan.items if item["action"] == "create"]
+    current = {po.id: po for po in db.scalars(select(PurchaseOrder).where(PurchaseOrder.id.in_(ids),
+                                                                          PurchaseOrder.organization_id == org_id)
+                                               .order_by(PurchaseOrder.id).with_for_update()
+                                               .options(selectinload(PurchaseOrder.lines))
+                                               .execution_options(populate_existing=True))} if ids else {}
     for item in plan.items:
         if item["action"] != "create":
             continue
-        gr = GoodsReceipt(organization_id=org_id, purchase_order_id=item["_po"].id, gr_number=item["key"],
+        po = current.get(item["_po"].id)
+        if not po or po.status in ("closed", "cancelled") or not {line_id for line_id, _ in item["_lines"]} <= {line.id for line in po.lines}:
+            raise HTTPException(409, "A purchase order changed during import. Check the spreadsheet again")
+        gr = GoodsReceipt(organization_id=org_id, purchase_order_id=po.id, gr_number=item["key"],
                           received_date=item["_date"], received_by=item["_by"])
         db.add(gr)
         db.flush()
         for po_line_id, qty in item["_lines"]:
             db.add(GRLine(organization_id=org_id, goods_receipt_id=gr.id, po_line_id=po_line_id, quantity_received=qty))
-        item["_po"].status = "partially_received"  # as when a receipt is entered by hand
+        po.status = "partially_received"  # as when a receipt is entered by hand
     db.flush()
 
 

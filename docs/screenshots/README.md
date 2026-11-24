@@ -4,6 +4,8 @@ These are real Playwright captures of InvoiceFlow with synthetic demo invoices. 
 
 `01-` through `10-` come from `frontend/tests/e2e/screenshots.spec.ts`. `review-*` comes from `frontend/tests/e2e/review-screenshots.spec.ts`: dashboard, queue and investigation workspace, Hebrew/English, light/dark, 1440×1000 desktop and 375×900 mobile (Hebrew). Captures were refreshed on 2026-11-20 against the local production frontend and an isolated offline demo backend.
 
+`11-import.png` through `14-team.png` come from the same screenshot spec, in the `capture import, export and account settings` test. These English captures show supplier import, invoice and accounting export, two-factor settings, and team management against the isolated offline stack on 2026-11-23.
+
 Regenerate from the frontend directory against a disposable, seeded stack:
 
 ```powershell

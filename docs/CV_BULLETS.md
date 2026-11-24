@@ -1,28 +1,23 @@
 # Suggested CV bullets (backed by verifiable artifacts in this repo)
 
-Each bullet points to the code, test or benchmark output that supports it. Numbers come from `eval/results/*.json` and the test runs; keep them as they are.
+Choose the bullets that fit the role. Benchmark numbers refer to the linked synthetic datasets.
 
 **InvoiceFlow: AI-assisted invoice reconciliation platform (Python, FastAPI, PostgreSQL/pgvector, LangGraph, Next.js)**
 
-- Built a multi-tenant B2B SaaS that extracts Hebrew and English invoices (native PDF, scans, photos), verifies every field against the source document, and reconciles invoices against purchase orders and goods receipts with a deterministic Decimal engine covering 22 discrepancy types.
-  *(backend/app/services/{documents,extraction,reconciliation})*
-- Solved Hebrew visual-order PDF text extraction with column segmentation, per-segment bidi direction inference and bracket un-mirroring. Made the rule-based baseline layout-tolerant (arithmetic column inference, totals consistency): field accuracy 0.715 → 0.917 on 73 documents, and 0.278 → 0.830 on a held-out layout set frozen before the change.
-  *(eval/results/extraction_latest.json)*
-- Designed and benchmarked a Hebrew-first hybrid RAG pipeline (BM25 + multilingual embeddings + RRF + cross-encoder reranking) on a hand-written 50-question bilingual set. Reached Recall@5 0.94 / nDCG@5 0.87 (0.98 / 0.95 on a separate 35-question held-out set), calibrated answer abstention on one set and reported it on the other, and showed that dense retrieval alone underperformed BM25 on Hebrew (MRR 0.64 vs 0.86).
-  *(eval/run_rag_eval.py)*
-- Implemented a LangGraph investigation agent with typed, RBAC-checked tools, PostgreSQL checkpointing with crash recovery, and a human-approval interrupt. It produces cited, evidence-verified explanations and has no ability to approve or pay.
-  *(backend/app/services/agent, tests/test_agent_tools.py)*
-- Implemented revocable server-side sessions (15-minute access tokens, rotating refresh tokens with reuse detection, single-use SSE tickets).
-  *(backend/app/services/auth_sessions.py, tests/test_auth_sessions.py)*
-- Enforced tenant isolation in two layers (application filters + PostgreSQL row-level security with a non-owner role), segregated two-step payment approvals, and an append-only, hash-chained audit trail with tamper-detection tests.
-  *(alembic/versions/0002_security_rls.py, tests/test_security_integration.py)*
-- Hardened the system against prompt injection in invoices and contracts: detection blocks auto-approval, and injected passages are excluded from RAG answers. This came from a benchmark finding (injection parroting dropped from 1/1 to 0/1).
-- Built an evaluation and observability layer: separate extraction, retrieval and reconciliation benchmarks (468 controlled cases, 0 false alarms; end-to-end PDF-to-findings 13/13), plus per-call telemetry for latency, tokens and cost.
-- Delivered a production-style stack:
-  - a Postgres-backed job queue with retries and idempotency, and SSE progress;
-  - pytest (unit + PostgreSQL integration), Vitest, and Playwright E2E;
-  - Docker Compose, GitHub Actions CI;
-  - a Hebrew RTL and English Next.js UI.
+## Full-stack engineering
+
+- Built a Hebrew/English AP workspace with self-service business signup, team invitations and role management. Enforced business isolation with PostgreSQL row-level security and application permission checks. [Signup tests](../backend/tests/test_signup.py) · [RLS migration](../backend/alembic/versions/0002_security_rls.py)
+- Implemented revocable sessions with refresh-token reuse detection, authenticator-based two-factor sign-in, single-use recovery codes, and an audited administrator reset. [Session tests](../backend/tests/test_auth_sessions.py) · [Two-factor tests](../backend/tests/test_two_factor.py) · [Admin reset tests](../backend/tests/test_two_factor_admin_reset.py)
+- Built deterministic two- and three-way invoice reconciliation with Decimal arithmetic, date-based Israeli allocation-number checks, two-step payment approval, and a tamper-evident audit trail. Ranked cross-currency exposure in shekels using current exchange rates while preserving the source amounts. [Matching engine](../backend/app/services/reconciliation/engine.py) · [FX tests](../backend/tests/test_fx.py) · [Reconciliation results](../eval/results/reconciliation_latest.json)
+- Shipped transactional CSV/Excel imports with a preview and per-row validation, and filtered invoice and accounting exports with formula-safe cells. [Import tests](../backend/tests/test_bulk_import.py) · [Export tests](../backend/tests/test_export.py)
+- Packaged a Next.js and FastAPI stack with a PostgreSQL job queue, bounded retries, live updates, Docker Compose, GitHub Actions, and a documented backup and restore drill. [Architecture](ARCHITECTURE.md) · [CI](../.github/workflows/ci.yml) · [Runbook](DEPLOYMENT.md)
+
+## AI engineering
+
+- Built a Hebrew-first extraction pipeline for native PDFs, scans, and phone photos, combining bilingual OCR, bidirectional text recovery, and rules-first model escalation. Measured 92.0% field accuracy with rules and 92.5% with Groq GPT-OSS 120B on 73 synthetic documents, invoking the model on 12. [Extraction results](../eval/results/extraction_latest.json)
+- Designed bilingual policy retrieval with BM25, multilingual E5 embeddings, rank fusion, and cross-encoder reranking. Measured 1.00 Recall@5 and 0.950 MRR on the 25 answerable questions in a 35-question held-out set, with separately scored citations and abstention. [RAG results](../eval/results/rag_e5_latest.json)
+- Built a read-only AP Copilot and a LangGraph investigation agent with role-checked tools, verified citations, and a human-approval interrupt. Copilot passed 27 of 32 prompts against expected tools, filters, and facts, including 26 of 31 model-written responses. Added per-business token limits and per-call telemetry. [Copilot results](../eval/results/copilot_v2_120b_latest.json) · [Agent design](AGENT_DESIGN.md) · [Budget controls](../backend/app/services/ai_budget.py)
+- Added prompt-injection screening for document and policy text and checks that reject invented citations and unsupported amounts. [Policy answer checks](../backend/tests/test_rag_unit.py) · [Copilot tests](../backend/tests/test_copilot.py)
 
 **Short version (one line):**
-Built InvoiceFlow, a Hebrew/English AI invoice-reconciliation SaaS (FastAPI, PostgreSQL RLS, pgvector, LangGraph, Next.js) with verified extraction, a deterministic matching engine, a benchmarked hybrid RAG pipeline (R@5 0.94), and human-in-the-loop approvals with a tamper-evident audit trail.
+Built InvoiceFlow, a Hebrew/English invoice reconciliation platform (FastAPI, PostgreSQL, pgvector, LangGraph, Next.js) with measured extraction and policy retrieval, a read-only AP Copilot, and human approvals recorded in a tamper-evident audit trail.

@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.money import D
-from app.models import AgentRun, Approval, ExceptionCase, ExceptionComment, Invoice, InvoiceLine, Organization, User
+from app.models import AgentRun, Approval, Document, ExceptionCase, ExceptionComment, Invoice, InvoiceLine, Organization, User
 from app.services import audit, events, jobs
 from app.services.rbac import Perm, has_perm
 from app.services.reconciliation.service import ensure_approval_steps, reconcile_invoice
@@ -48,7 +48,7 @@ def _snapshot(inv: Invoice) -> dict:
 
 def correct_invoice(session: Session, inv: Invoice, user: User, header: dict, lines: list[dict] | None,
                     supplier_id: uuid.UUID | None, reason: str | None) -> Invoice:
-    if inv.status in ("approved", "rejected"):
+    if inv.status in ("approved", "rejected", "voided", "credit_note") or inv.archived_at:
         raise HTTPException(409, "Invoice is already finalized and can no longer be edited.")
     before = _snapshot(inv)
     before_lines = [{"line_no": ln.line_no, "description": ln.description, "sku": ln.sku, "quantity": ln.quantity,
@@ -136,6 +136,12 @@ def decide_exception(session: Session, exc: ExceptionCase, user: User, role: str
         raise HTTPException(403, "Your role cannot request information.")
     inv = session.scalars(select(Invoice).where(Invoice.id == exc.invoice_id, Invoice.organization_id == exc.organization_id)
                           .with_for_update().execution_options(populate_existing=True)).one()
+    if role == "procurement_manager" and decision in ("approve", "reject", "escalate"):
+        org = session.get(Organization, exc.organization_id)
+        if org.settings.get("approval", {}).get("procurement_cannot_decide_own_upload") is True:
+            uploader = session.scalar(select(Document.uploaded_by).where(Document.id == inv.document_id))
+            if uploader == user.id:
+                raise HTTPException(403, "Another reviewer must decide this case because you uploaded the invoice.")
     # Refresh under a row lock so a reviewer with a stale page cannot overwrite another decision.
     exc = session.scalars(select(ExceptionCase).where(ExceptionCase.id == exc.id,
                                                      ExceptionCase.organization_id == exc.organization_id)
@@ -220,8 +226,6 @@ def decide_approval(session: Session, inv: Invoice, user: User, role: str, decis
     if not has_perm(role, needed):
         raise HTTPException(403, f"Step {pending.step} requires the {pending.required_role} role.")
     # Segregation of duties: uploader cannot approve; one person cannot approve two steps.
-    from app.models import Document
-
     uploader = session.scalar(select(Document.uploaded_by).where(Document.id == inv.document_id))
     if uploader == user.id:
         raise HTTPException(403, "Segregation of duties: the uploader of an invoice cannot approve its payment.")

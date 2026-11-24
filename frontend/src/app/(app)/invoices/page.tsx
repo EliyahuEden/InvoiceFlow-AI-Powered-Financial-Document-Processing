@@ -22,7 +22,7 @@ export type InvoiceRow = {
   filename: string | null; text_method: string | null; open_exceptions: number; warnings: number; security_flag: boolean;
 };
 
-const FILTERS = ["", "exception", "needs_review", "reconciled", "on_hold", "approved", "processing,failed"];
+const FILTERS = ["", "exception", "needs_review", "reconciled", "on_hold", "approved", "processing,failed", "voided", "credit_note"];
 
 export default function InboxPage() {
   return <Suspense fallback={<Skeleton className="h-80 w-full" />}><InvoiceInbox /></Suspense>;
@@ -35,6 +35,7 @@ function InvoiceInbox() {
   const pathname = usePathname();
   const params = useSearchParams();
   const rawStatus = params.get("status") ?? "";
+  const archived = params.get("archived") === "true";
   const status = FILTERS.includes(rawStatus) || ["processing", "failed"].includes(rawStatus) ? rawStatus : "";
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -47,7 +48,7 @@ function InvoiceInbox() {
     setPage(1);
   };
   const { data, error, mutate, isLoading } = useApi<Page<InvoiceRow> & { status_counts: Record<string, number> }>(
-    `/api/invoices${qs({ status, q, page, page_size: 20, sort })}`,
+    `/api/invoices${qs({ status, q, page, page_size: 20, sort, archived: archived ? "true" : undefined })}`,
     { refreshInterval: (d) => (d?.items.some((i) => i.status === "processing") ? 3000 : 0) },
   );
   const onQ = useCallback((v: string) => { setQ(v); setPage(1); }, []);
@@ -73,7 +74,14 @@ function InvoiceInbox() {
       <PageHeader
         title={t.inbox.title} sub={t.inbox.subtitle}
         actions={<>
-          <ExportMenu filters={{ status, q, sort }} />
+          <ExportMenu filters={{ status, q, sort, archived: archived ? "true" : undefined }} />
+          <Button onClick={() => {
+            const updated = new URLSearchParams(params.toString());
+            updated.delete("status");
+            if (archived) updated.delete("archived"); else updated.set("archived", "true");
+            router.replace(updated.size ? `${pathname}?${updated}` : pathname, { scroll: false });
+            setPage(1);
+          }}>{archived ? t.invoiceLifecycle.activeList : t.invoiceLifecycle.archiveList}</Button>
           {can("invoice:upload") && (
             <Button asChild variant="primary"><Link href="/invoices/upload"><Plus className="h-4 w-4" />{t.inbox.upload}</Link></Button>
           )}

@@ -1,0 +1,862 @@
+{
+  "generated_at": "2026-11-23T16:03:44+00:00",
+  "git_rev": null,
+  "python": "3.12.16",
+  "documents": 24,
+  "source_invoices": [
+    "01_correct_tavor_he",
+    "02_qty_mismatch_hermon_he",
+    "03_price_mismatch_bluewave_en",
+    "05_missing_po_arava_mixed",
+    "06_ambiguous_desc_carmel_he",
+    "10_missing_receipt_bluewave_en"
+  ],
+  "fields": [
+    "supplier_name",
+    "supplier_tax_id",
+    "invoice_number",
+    "invoice_date",
+    "currency",
+    "po_reference",
+    "payment_terms",
+    "subtotal",
+    "tax_rate",
+    "tax_amount",
+    "total"
+  ],
+  "method": "rules only; Tesseract heb+eng",
+  "variants": {
+    "skewed": {
+      "documents_evaluated": 6,
+      "overall_field_accuracy": 0.455,
+      "per_field": {
+        "supplier_name": {
+          "accuracy": 0.167,
+          "precision": 0.167,
+          "recall": 0.167,
+          "f1": 0.167
+        },
+        "supplier_tax_id": {
+          "accuracy": 0.333,
+          "precision": 0.333,
+          "recall": 0.333,
+          "f1": 0.333
+        },
+        "invoice_number": {
+          "accuracy": 0.833,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        },
+        "invoice_date": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "currency": {
+          "accuracy": 0.333,
+          "precision": 1.0,
+          "recall": 0.333,
+          "f1": 0.5
+        },
+        "po_reference": {
+          "accuracy": 0.667,
+          "precision": 0.75,
+          "recall": 0.6,
+          "f1": 0.667
+        },
+        "payment_terms": {
+          "accuracy": 0.833,
+          "precision": 0.75,
+          "recall": 0.75,
+          "f1": 0.75
+        },
+        "subtotal": {
+          "accuracy": 0.333,
+          "precision": 1.0,
+          "recall": 0.333,
+          "f1": 0.5
+        },
+        "tax_rate": {
+          "accuracy": 0.0,
+          "precision": null,
+          "recall": 0.0,
+          "f1": null
+        },
+        "tax_amount": {
+          "accuracy": 0.333,
+          "precision": 1.0,
+          "recall": 0.333,
+          "f1": 0.5
+        },
+        "total": {
+          "accuracy": 0.333,
+          "precision": 1.0,
+          "recall": 0.333,
+          "f1": 0.5
+        }
+      },
+      "line_items": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "truth_lines": 12
+      },
+      "error_examples": [
+        {
+          "file": "01_correct_tavor_he-skewed.png",
+          "field": "supplier_tax_id",
+          "expected": "514000124",
+          "predicted": "714164452",
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-skewed.png",
+          "field": "invoice_number",
+          "expected": "TV-24518",
+          "predicted": "24518-",
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-skewed.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-skewed.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "supplier_name",
+          "expected": "חרמון קלייה בע\"מ",
+          "predicted": "בע\"מ",
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "supplier_tax_id",
+          "expected": "515000230",
+          "predicted": "304124584",
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "subtotal",
+          "expected": "9240.00",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "tax_amount",
+          "expected": "1663.20",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-skewed.png",
+          "field": "total",
+          "expected": "10903.20",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "03_price_mismatch_bluewave_en-skewed.png",
+          "field": "supplier_name",
+          "expected": "BlueWave IT Solutions Ltd",
+          "predicted": "Solutions Ltd",
+          "render": "skewed",
+          "template": "en_modern"
+        },
+        {
+          "file": "03_price_mismatch_bluewave_en-skewed.png",
+          "field": "subtotal",
+          "expected": "33450.00",
+          "predicted": null,
+          "render": "skewed",
+          "template": "en_modern"
+        },
+        {
+          "file": "03_price_mismatch_bluewave_en-skewed.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "skewed",
+          "template": "en_modern"
+        },
+        {
+          "file": "03_price_mismatch_bluewave_en-skewed.png",
+          "field": "tax_amount",
+          "expected": "6021.00",
+          "predicted": null,
+          "render": "skewed",
+          "template": "en_modern"
+        },
+        {
+          "file": "03_price_mismatch_bluewave_en-skewed.png",
+          "field": "total",
+          "expected": "39471.00",
+          "predicted": null,
+          "render": "skewed",
+          "template": "en_modern"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-skewed.png",
+          "field": "supplier_name",
+          "expected": "ערבה אריזות בע\"מ",
+          "predicted": "אריזות בע\"מ",
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-skewed.png",
+          "field": "subtotal",
+          "expected": "1140.00",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-skewed.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-skewed.png",
+          "field": "tax_amount",
+          "expected": "205.20",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-skewed.png",
+          "field": "total",
+          "expected": "1345.20",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_classic"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-skewed.png",
+          "field": "supplier_name",
+          "expected": "כרמל שירותי ניקיון בע\"מ",
+          "predicted": "ניקיון בע\"מ",
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-skewed.png",
+          "field": "supplier_tax_id",
+          "expected": "513000455",
+          "predicted": "048000451",
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-skewed.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "skewed",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-skewed.png",
+          "field": "po_reference",
+          "expected": "PO-2026-1006",
+          "predicted": "0-2026-1006",
+          "render": "skewed",
+          "template": "he_boxed"
+        }
+      ]
+    },
+    "photo": {
+      "documents_evaluated": 6,
+      "overall_field_accuracy": 0.803,
+      "per_field": {
+        "supplier_name": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "supplier_tax_id": {
+          "accuracy": 0.5,
+          "precision": 0.6,
+          "recall": 0.5,
+          "f1": 0.545
+        },
+        "invoice_number": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "invoice_date": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "currency": {
+          "accuracy": 0.5,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667
+        },
+        "po_reference": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "payment_terms": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "subtotal": {
+          "accuracy": 0.667,
+          "precision": 1.0,
+          "recall": 0.667,
+          "f1": 0.8
+        },
+        "tax_rate": {
+          "accuracy": 0.667,
+          "precision": 1.0,
+          "recall": 0.667,
+          "f1": 0.8
+        },
+        "tax_amount": {
+          "accuracy": 0.667,
+          "precision": 0.667,
+          "recall": 0.667,
+          "f1": 0.667
+        },
+        "total": {
+          "accuracy": 0.833,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        }
+      },
+      "line_items": {
+        "precision": 0.5,
+        "recall": 0.25,
+        "f1": 0.333,
+        "truth_lines": 12
+      },
+      "error_examples": [
+        {
+          "file": "01_correct_tavor_he-photo.png",
+          "field": "supplier_tax_id",
+          "expected": "514000124",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-photo.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-photo.png",
+          "field": "subtotal",
+          "expected": "6469.00",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-photo.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-photo.png",
+          "field": "tax_amount",
+          "expected": "1164.42",
+          "predicted": "6469.00",
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-photo.png",
+          "field": "supplier_tax_id",
+          "expected": "515000230",
+          "predicted": "304124584",
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-photo.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-photo.png",
+          "field": "subtotal",
+          "expected": "1140.00",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-photo.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-photo.png",
+          "field": "tax_amount",
+          "expected": "205.20",
+          "predicted": "1140.00",
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-photo.png",
+          "field": "total",
+          "expected": "1345.20",
+          "predicted": "0",
+          "render": "photo",
+          "template": "he_classic"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-photo.png",
+          "field": "supplier_tax_id",
+          "expected": "513000455",
+          "predicted": "429061149",
+          "render": "photo",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-photo.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "photo",
+          "template": "he_boxed"
+        }
+      ]
+    },
+    "stamped": {
+      "documents_evaluated": 6,
+      "overall_field_accuracy": 0.803,
+      "per_field": {
+        "supplier_name": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "supplier_tax_id": {
+          "accuracy": 0.667,
+          "precision": 1.0,
+          "recall": 0.667,
+          "f1": 0.8
+        },
+        "invoice_number": {
+          "accuracy": 0.667,
+          "precision": 0.667,
+          "recall": 0.667,
+          "f1": 0.667
+        },
+        "invoice_date": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "currency": {
+          "accuracy": 0.5,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667
+        },
+        "po_reference": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "payment_terms": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "subtotal": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "tax_rate": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "tax_amount": {
+          "accuracy": 0.833,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        },
+        "total": {
+          "accuracy": 0.833,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        }
+      },
+      "line_items": {
+        "precision": 0.917,
+        "recall": 0.917,
+        "f1": 0.917,
+        "truth_lines": 12
+      },
+      "error_examples": [
+        {
+          "file": "01_correct_tavor_he-stamped.png",
+          "field": "supplier_tax_id",
+          "expected": "514000124",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-stamped.png",
+          "field": "invoice_number",
+          "expected": "TV-24518",
+          "predicted": "24518-",
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-stamped.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-stamped.png",
+          "field": "supplier_name",
+          "expected": "חרמון קלייה בע\"מ",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-stamped.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_boxed"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-stamped.png",
+          "field": "subtotal",
+          "expected": "1140.00",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-stamped.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-stamped.png",
+          "field": "tax_amount",
+          "expected": "205.20",
+          "predicted": "1140.00",
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-stamped.png",
+          "field": "total",
+          "expected": "1345.20",
+          "predicted": "0",
+          "render": "stamped",
+          "template": "he_classic"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-stamped.png",
+          "field": "supplier_tax_id",
+          "expected": "513000455",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-stamped.png",
+          "field": "invoice_number",
+          "expected": "CC-3307",
+          "predicted": "66-3307",
+          "render": "stamped",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-stamped.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "stamped",
+          "template": "he_boxed"
+        },
+        {
+          "file": "10_missing_receipt_bluewave_en-stamped.png",
+          "field": "invoice_date",
+          "expected": "2026-09-20",
+          "predicted": null,
+          "render": "stamped",
+          "template": "en_classic"
+        }
+      ]
+    },
+    "low_contrast": {
+      "documents_evaluated": 6,
+      "overall_field_accuracy": 0.803,
+      "per_field": {
+        "supplier_name": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "supplier_tax_id": {
+          "accuracy": 0.667,
+          "precision": 1.0,
+          "recall": 0.667,
+          "f1": 0.8
+        },
+        "invoice_number": {
+          "accuracy": 0.333,
+          "precision": 0.333,
+          "recall": 0.333,
+          "f1": 0.333
+        },
+        "invoice_date": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "currency": {
+          "accuracy": 0.5,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667
+        },
+        "po_reference": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "payment_terms": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "subtotal": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "tax_rate": {
+          "accuracy": 0.833,
+          "precision": 1.0,
+          "recall": 0.833,
+          "f1": 0.909
+        },
+        "tax_amount": {
+          "accuracy": 0.833,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        },
+        "total": {
+          "accuracy": 0.833,
+          "precision": 0.833,
+          "recall": 0.833,
+          "f1": 0.833
+        }
+      },
+      "line_items": {
+        "precision": 0.833,
+        "recall": 0.833,
+        "f1": 0.833,
+        "truth_lines": 12
+      },
+      "error_examples": [
+        {
+          "file": "01_correct_tavor_he-low_contrast.png",
+          "field": "supplier_tax_id",
+          "expected": "514000124",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-low_contrast.png",
+          "field": "invoice_number",
+          "expected": "TV-24518",
+          "predicted": "24518-",
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "01_correct_tavor_he-low_contrast.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-low_contrast.png",
+          "field": "supplier_tax_id",
+          "expected": "515000230",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-low_contrast.png",
+          "field": "invoice_number",
+          "expected": "HC-8841",
+          "predicted": "146-8841",
+          "render": "low_contrast",
+          "template": "he_boxed"
+        },
+        {
+          "file": "02_qty_mismatch_hermon_he-low_contrast.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_boxed"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-low_contrast.png",
+          "field": "subtotal",
+          "expected": "1140.00",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-low_contrast.png",
+          "field": "tax_rate",
+          "expected": "18",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-low_contrast.png",
+          "field": "tax_amount",
+          "expected": "205.20",
+          "predicted": "1140.00",
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "05_missing_po_arava_mixed-low_contrast.png",
+          "field": "total",
+          "expected": "1345.20",
+          "predicted": "0",
+          "render": "low_contrast",
+          "template": "he_classic"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-low_contrast.png",
+          "field": "invoice_number",
+          "expected": "CC-3307",
+          "predicted": "66-3307",
+          "render": "low_contrast",
+          "template": "he_boxed"
+        },
+        {
+          "file": "06_ambiguous_desc_carmel_he-low_contrast.png",
+          "field": "currency",
+          "expected": "ILS",
+          "predicted": null,
+          "render": "low_contrast",
+          "template": "he_boxed"
+        },
+        {
+          "file": "10_missing_receipt_bluewave_en-low_contrast.png",
+          "field": "invoice_number",
+          "expected": "BW-2026-0419",
+          "predicted": "1",
+          "render": "low_contrast",
+          "template": "en_classic"
+        }
+      ]
+    }
+  }
+}

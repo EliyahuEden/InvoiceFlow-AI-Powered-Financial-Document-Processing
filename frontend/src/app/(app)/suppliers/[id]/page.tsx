@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { StatusPill } from "@/components/domain";
 import { PageHeader } from "@/components/shell";
+import { SupplierBankPanel } from "@/components/supplier-bank-panel";
 import { KV, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { date, money } from "@/lib/format";
@@ -34,6 +35,7 @@ export default function SupplierDetail() {
           <KV label={t.suppliers.aliases}><span dir="auto">{s.aliases.join(", ") || "—"}</span></KV>
         </dl>
       </Panel>
+      <SupplierBankPanel supplierId={id} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Panel>
           <PanelHeader title={t.pos.title} />

@@ -101,7 +101,7 @@ def build_context(session: Session, org: Organization, inv: Invoice) -> E.Contex
 
     # Quantities billed on earlier, non-duplicate, non-rejected invoices (from their latest run).
     previously: dict[uuid.UUID, Decimal] = defaultdict(Decimal)
-    earlier = [i for i, _ in priors if i.created_at < inv.created_at and i.status not in ("rejected", "failed")]
+    earlier = [i for i, _ in priors if i.created_at < inv.created_at and i.status not in ("rejected", "failed", "voided", "credit_note")]
     for other in earlier:
         run = session.scalars(select(ReconciliationRun).where(ReconciliationRun.invoice_id == other.id)
                               .order_by(ReconciliationRun.created_at.desc()).limit(1)).first()
@@ -137,7 +137,7 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
     session.flush()
     session.refresh(inv, with_for_update=True)
     session.expire(inv, ["lines"])
-    org = session.get(Organization, inv.organization_id)
+    org = session.get(Organization, inv.organization_id, with_for_update={"read": True})
     sha = session.scalar(select(Document.sha256).where(Document.id == inv.document_id)) if inv.document_id else None
     confirmed = bool(inv.field_sources.get("_supplier_confirmed")) if inv.field_sources else False
     ctx = build_context(session, org, inv)

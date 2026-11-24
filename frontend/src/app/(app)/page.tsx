@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CalendarClock, CalendarDays, CheckCheck, ChevronRight, CircleAlert, Clock3, Layers, Wallet } from "lucide-react";
 import { ReviewQueue } from "@/components/review-queue";
+import { ExportMenu } from "@/components/export-menu";
+import { PaymentReminders } from "@/components/invoice-payment";
 import { ReviewNextButton } from "@/components/review-next";
 import { useSession } from "@/components/session";
 import { Button, cx, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
@@ -37,7 +39,10 @@ export default function OverviewPage() {
   return <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(19rem,1fr)]">
     <div className="min-w-0 space-y-5">
       <section className="command-hero min-w-0 p-5 sm:p-7">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t.review.dashboardTitle}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t.review.dashboardTitle}</h1>
+          {can("invoice:read") && <ExportMenu report="insights" />}
+        </div>
         <p className="mt-1.5 text-base text-ink-2">{t.review.subtitle}</p>
         <div className="my-6 flex flex-wrap items-end justify-between gap-4">
           <Link href="/exceptions" className="group inline-flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -79,6 +84,7 @@ export default function OverviewPage() {
       </Panel>
     </div>
     <aside className="command-aside min-w-0">
+      <PaymentReminders />
       <Panel className="command-panel overflow-hidden">
         <PanelHeader title={t.review.queue} sub={t.review.highestFirst} />
         {data ? <ReviewQueue compact items={data.top} /> : <div className="p-4"><Skeleton className="h-64 w-full" /></div>}

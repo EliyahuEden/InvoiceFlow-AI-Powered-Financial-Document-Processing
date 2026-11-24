@@ -18,8 +18,9 @@ import json
 import time
 from collections import defaultdict
 from decimal import Decimal
+from pathlib import Path
 
-from common import ROOT, p50, prf, write_result
+from common import ROOT, add_model_options, configure_model, p50, prf, write_result
 
 from app.services.documents.text_extraction import OCRUnavailable, extract_pages, tesseract_available
 from app.services.extraction import rule_based
@@ -72,7 +73,7 @@ def match_lines(pred: list, truth: list) -> tuple[int, int]:
     return correct, len(pred)
 
 
-def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
+def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0, *, dataset_dir: Path = DS) -> dict:
     llm = None
     if system in ("llm", "rules_first"):
         from app.services.llm.provider import get_llm
@@ -89,8 +90,9 @@ def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
     router = {"documents": 0, "sent_to_llm": 0, "with_errors": 0, "errors_sent": 0, "clean_sent": 0}
     gap_counts: dict[str, int] = defaultdict(int)
     llm_calls = llm_errors = tokens_in = tokens_out = 0
+    model_costs = []
     for r in rows:
-        data = (DS / r["file"]).read_bytes()
+        data = (dataset_dir / r["file"]).read_bytes()
         mime = "image/png" if r["file"].endswith(".png") else "application/pdf"
         t0 = time.perf_counter()
         try:
@@ -98,6 +100,7 @@ def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
         except OCRUnavailable:
             skipped.append(r["file"])
             continue
+        called = False
         if system == "rule_based":
             ex = rule_based.extract([(p.page_no, p.text) for p in pages], exclude_tax_ids={CUSTOMER_TAX_ID})
         elif system == "rules_first":
@@ -108,24 +111,25 @@ def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
             if out.llm_result is not None:
                 tokens_in += out.llm_result.input_tokens or 0
                 tokens_out += out.llm_result.output_tokens or 0
-            if called and pace:
-                time.sleep(pace)
+                model_costs.append(out.llm_result.cost_usd)
         else:
             from app.services.extraction.llm_extractor import extract_with_llm
             from app.services.extraction.schema import InvoiceExtraction
 
             llm_calls += 1
+            called = True
             try:
                 ex, res, _ = extract_with_llm(llm, pages)
                 tokens_in += res.input_tokens or 0
                 tokens_out += res.output_tokens or 0
+                model_costs.append(res.cost_usd)
             except Exception as exc:  # noqa: BLE001 - a failed call scores as an empty extraction
                 print("llm error on", r["file"], str(exc)[:160])
                 ex, llm_errors = InvoiceExtraction(), llm_errors + 1
-            if pace:
-                time.sleep(pace)
         n = normalize(ex, pages, system)
         latencies.append((time.perf_counter() - t0) * 1000)
+        if called and pace:
+            time.sleep(pace)
         pred, truth = pred_fields(n), r["truth"]
         doc_ok = []
         for f in FIELDS:
@@ -188,6 +192,8 @@ def run(system: str, rows: list, skip_ocr: bool, pace: float = 0.0) -> dict:
                     "median_abs_error_of_wrong_totals": str(sorted(total_errors)[len(total_errors) // 2]) if total_errors else None},
         "latency_ms_p50": p50(latencies), "error_examples": examples,
         **({"llm_calls": llm_calls, "llm_errors": llm_errors,
+            "estimated_cost_usd_per_invoice": round(sum(model_costs) / evaluated, 6)
+            if evaluated and len(model_costs) == llm_calls and all(cost is not None for cost in model_costs) else None,
             "tokens": {"input": tokens_in, "output": tokens_out,
                        "per_call": round((tokens_in + tokens_out) / llm_calls) if llm_calls else None}}
            if system in ("llm", "rules_first") else {}),
@@ -241,7 +247,12 @@ def main() -> None:
     ap.add_argument("--llm-systems", default="llm,rules_first",
                     help="with --llm: which model systems to score (llm = every invoice, rules_first = open fields only)")
     ap.add_argument("--limit", type=int, default=0, help="smoke test on the first N documents; results are not saved")
+    ap.add_argument("--out", default="extraction", help="result name under eval/results")
+    add_model_options(ap)
     args = ap.parse_args()
+    if (args.provider or args.model) and not args.llm:
+        ap.error("--provider and --model require --llm")
+    configure_model(ap, args)
     rows = [json.loads(x) for x in (DS / "labels.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
     if args.limit:
         rows = rows[:args.limit]
@@ -253,7 +264,7 @@ def main() -> None:
     systems = {"rule_based": run("rule_based", rows_eval, args.skip_ocr)}
     skipped_llm = {"skipped": "not requested (requires --llm and a configured provider)"}
     chosen = {x.strip() for x in args.llm_systems.split(",")}
-    previous = _previous_results()
+    previous = _previous_results() if args.out == "extraction" and not (args.limit or args.provider or args.model) else {}
     for name in ("llm", "rules_first"):
         if args.llm and name in chosen:
             systems[name] = run(name, rows_eval, args.skip_ocr, args.pace)
@@ -274,7 +285,7 @@ def main() -> None:
     if args.limit:
         print("smoke run (--limit): results not saved")
         return
-    write_result("extraction", {
+    write_result(args.out, {
         "dataset": {"documents": len(rows), "evaluated": len(rows_eval), "ocr": ocr_note,
                     "by_render": {k: sum(1 for r in rows if r["render"] == k) for k in ("native", "scanned", "photo")},
                     "by_language": {k: sum(1 for r in rows if r["language"] == k) for k in ("he", "en", "mixed")},

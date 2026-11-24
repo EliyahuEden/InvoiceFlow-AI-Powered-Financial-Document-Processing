@@ -4,16 +4,17 @@ from __future__ import annotations
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import Principal, dec, get_db, money, page_params, paginated, price, require
-from app.models import GoodsReceipt, GRLine, Invoice, POLine, PurchaseOrder, ReconciliationRun, Supplier
-from app.services import audit
+from app.models import GoodsReceipt, GRLine, Invoice, Organization, POLine, PurchaseOrder, ReconciliationRun, Supplier
+from app.services import audit, email, supplier_banking
 from app.services.rbac import Perm
 
 router = APIRouter(prefix="/api", tags=["master data"])
@@ -107,6 +108,54 @@ def update_supplier(supplier_id: uuid.UUID, body: SupplierIn, p: Principal = Dep
     return supplier_out(s)
 
 
+def _bank_supplier(db: Session, p: Principal, supplier_id: uuid.UUID, *, lock: bool = False) -> Supplier:
+    stmt = select(Supplier).where(Supplier.id == supplier_id, Supplier.organization_id == p.org_id)
+    supplier = db.scalar(stmt.with_for_update() if lock else stmt)
+    if supplier is None:
+        raise HTTPException(404, "Supplier not found")
+    return supplier
+
+
+@router.get("/suppliers/{supplier_id}/bank-account")
+def get_bank_account(supplier_id: uuid.UUID, p: Principal = Depends(require(Perm.MASTERDATA_READ)),
+                     db: Session = Depends(get_db)) -> dict:
+    return supplier_banking.public_state(_bank_supplier(db, p, supplier_id))
+
+
+@router.post("/suppliers/{supplier_id}/bank-account", status_code=201)
+def propose_bank_account(supplier_id: uuid.UUID, body: supplier_banking.BankDetails, background: BackgroundTasks,
+                         p: Principal = Depends(require(Perm.MASTERDATA_WRITE)), db: Session = Depends(get_db)) -> dict:
+    supplier = _bank_supplier(db, p, supplier_id, lock=True)
+    try:
+        details = body.normalized()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    changed = supplier_banking.propose(db, supplier, p.user, details)
+    notices = supplier_banking.admin_notices(db, p.org, [supplier.name] if changed else [])
+    state = supplier_banking.public_state(supplier)
+    db.commit()
+    for message in notices:
+        background.add_task(email.send, message)
+    return state
+
+
+class BankReviewIn(BaseModel):
+    decision: Literal["confirm", "reject"]
+
+
+@router.post("/suppliers/{supplier_id}/bank-account/{change_id}/review")
+def review_bank_account(supplier_id: uuid.UUID, change_id: uuid.UUID, body: BankReviewIn, background: BackgroundTasks,
+                        p: Principal = Depends(require(Perm.APPROVAL_DECIDE)), db: Session = Depends(get_db)) -> dict:
+    supplier = _bank_supplier(db, p, supplier_id, lock=True)
+    supplier_banking.review(db, supplier, p.org, p.user, change_id, body.decision == "confirm")
+    notices = supplier_banking.admin_notices(db, p.org, [supplier.name])
+    state = supplier_banking.public_state(supplier)
+    db.commit()
+    for message in notices:
+        background.add_task(email.send, message)
+    return state
+
+
 # ------------------------------------------------------------------ purchase orders
 class POLineIn(BaseModel):
     sku: str | None = Field(None, max_length=80)
@@ -168,7 +217,7 @@ def get_po(po_id: uuid.UUID, p: Principal = Depends(require(Perm.MASTERDATA_READ
     invs = db.scalars(select(Invoice).where(Invoice.purchase_order_id == po.id)
                       .options(selectinload(Invoice.lines))).all()
     billed: dict[uuid.UUID, Decimal] = {}
-    eligible = {inv.id: inv for inv in invs if inv.status not in ("rejected", "failed")}
+    eligible = {inv.id: inv for inv in invs if inv.status not in ("rejected", "failed", "voided", "credit_note")}
     po_lines = {line.id for line in po.lines}
     if eligible:
         runs = db.scalars(select(ReconciliationRun).where(ReconciliationRun.invoice_id.in_(eligible))
@@ -189,6 +238,7 @@ def get_po(po_id: uuid.UUID, p: Principal = Depends(require(Perm.MASTERDATA_READ
     return {**po_summary(po), "supplier_name": po.supplier.name, "supplier_name_en": po.supplier.name_en,
             "notes": po.notes,
             "lines": [{"id": str(ln.id), "line_no": ln.line_no, "sku": ln.sku, "description": ln.description,
+                       "unit": ln.unit,
                        "quantity": dec(ln.quantity), "unit_price": price(ln.unit_price),
                        "line_total": money(ln.quantity * ln.unit_price),
                        "received": dec(received.get(ln.id, Decimal(0))),
@@ -222,6 +272,78 @@ def create_po(body: POIn, p: Principal = Depends(require(Perm.MASTERDATA_WRITE))
     return po_summary(po)
 
 
+class POUpdateIn(BaseModel):
+    order_date: date | None = None
+    notes: str | None = Field(None, max_length=5000)
+    lines: list[POLineIn] | None = Field(None, min_length=1, max_length=500)
+
+
+class POTransitionIn(BaseModel):
+    action: Literal["close", "cancel"]
+    reason: str = Field(..., min_length=1, max_length=1000)
+
+
+def _po_for_write(db: Session, p: Principal, po_id: uuid.UUID) -> PurchaseOrder:
+    po = db.scalar(select(PurchaseOrder).where(PurchaseOrder.id == po_id, PurchaseOrder.organization_id == p.org_id)
+                   .with_for_update().options(selectinload(PurchaseOrder.lines)))
+    if po is None:
+        raise HTTPException(404, "Purchase order not found")
+    if po.status in ("closed", "cancelled"):
+        raise HTTPException(409, "The purchase order is closed or cancelled")
+    return po
+
+
+def _po_has_history(db: Session, po: PurchaseOrder) -> bool:
+    receipt = select(GoodsReceipt.id).where(GoodsReceipt.purchase_order_id == po.id).exists()
+    invoice = select(Invoice.id).where(Invoice.purchase_order_id == po.id).exists()
+    return bool(db.scalar(select(or_(receipt, invoice))))
+
+
+def _po_audit_state(po: PurchaseOrder) -> dict:
+    return {**po_summary(po), "notes": po.notes, "lines": [
+        {"sku": line.sku, "description": line.description, "quantity": str(line.quantity),
+         "unit_price": str(line.unit_price), "unit": line.unit} for line in po.lines
+    ]}
+
+
+@router.patch("/purchase-orders/{po_id}")
+def update_po(po_id: uuid.UUID, body: POUpdateIn, p: Principal = Depends(require(Perm.MASTERDATA_WRITE)),
+              db: Session = Depends(get_db)) -> dict:
+    # Reconciliation shares this lock while choosing and linking an order.
+    db.get(Organization, p.org_id, with_for_update=True)
+    po = _po_for_write(db, p, po_id)
+    if (body.lines is not None or body.order_date is not None) and _po_has_history(db, po):
+        raise HTTPException(409, "A linked receipt or invoice prevents changes to order lines or dates")
+    before = _po_audit_state(po)
+    if "notes" in body.model_fields_set:
+        po.notes = body.notes
+    if body.order_date is not None:
+        po.order_date = body.order_date
+    if body.lines is not None:
+        po.lines = [POLine(organization_id=p.org_id, line_no=i, **line.model_dump()) for i, line in enumerate(body.lines, 1)]
+    db.flush()
+    audit.record(db, org_id=p.org_id, action="purchase_order.updated", entity_type="purchase_order", entity_id=po.id,
+                 actor_id=p.user.id, actor_label=p.user.email, before=before, after=_po_audit_state(po))
+    return po_summary(po)
+
+
+@router.post("/purchase-orders/{po_id}/transition")
+def transition_po(po_id: uuid.UUID, body: POTransitionIn, p: Principal = Depends(require(Perm.MASTERDATA_WRITE)),
+                  db: Session = Depends(get_db)) -> dict:
+    if not body.reason.strip():
+        raise HTTPException(422, "Provide a reason for this change")
+    db.get(Organization, p.org_id, with_for_update=True)
+    po = _po_for_write(db, p, po_id)
+    if body.action == "cancel" and _po_has_history(db, po):
+        raise HTTPException(409, "An order with receipts or invoices can only be closed")
+    before = {"status": po.status}
+    po.status = "closed" if body.action == "close" else "cancelled"
+    audit.record(db, org_id=p.org_id, action=f"purchase_order.{po.status}", entity_type="purchase_order", entity_id=po.id,
+                 actor_id=p.user.id, actor_label=p.user.email, before=before, after={"status": po.status},
+                 meta={"reason": body.reason.strip()})
+    return po_summary(po)
+
+
 class GRLineIn(BaseModel):
     po_line_id: uuid.UUID
     quantity_received: Decimal = Field(..., ge=0)
@@ -238,10 +360,7 @@ class GRIn(BaseModel):
 @router.post("/purchase-orders/{po_id}/goods-receipts", status_code=201)
 def create_gr(po_id: uuid.UUID, body: GRIn, p: Principal = Depends(require(Perm.MASTERDATA_WRITE)),
               db: Session = Depends(get_db)) -> dict:
-    po = db.scalars(select(PurchaseOrder).where(PurchaseOrder.id == po_id, PurchaseOrder.organization_id == p.org_id)
-                    .options(selectinload(PurchaseOrder.lines))).first()
-    if not po:
-        raise HTTPException(404, "Purchase order not found")
+    po = _po_for_write(db, p, po_id)
     valid = {ln.id for ln in po.lines}
     if any(ln.po_line_id not in valid for ln in body.lines):
         raise HTTPException(422, "Receipt lines must belong to this purchase order")

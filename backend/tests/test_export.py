@@ -37,9 +37,18 @@ def test_invoice_export_follows_the_list_filters(client, as_user, invoices):
     assert audit and audit[0]["meta"]["rows"] == len(filtered)
 
 
-def test_hebrew_headers_on_request(client, as_user):
-    r = client.get("/api/export/invoices.csv?lang=he", headers=as_user("finance@kinneret.example"))
-    assert "מספר חשבונית" in r.content.decode("utf-8-sig").splitlines()[0]
+def test_hebrew_headers_and_statuses_on_request(client, as_user, invoices):
+    from openpyxl import load_workbook
+
+    h = as_user("finance@kinneret.example")
+    csv_rows = rows(client.get("/api/export/invoices.csv?lang=he", headers=h))
+    expected = {"TV-24518": "מוכן לאישור", "HC-8841": "חריגה"}
+    assert {row["מספר חשבונית"]: row["סטטוס"] for row in csv_rows} == expected
+
+    result = client.get("/api/export/invoices.xlsx?lang=he", headers=h)
+    assert result.status_code == 200
+    header, *data = load_workbook(io.BytesIO(result.content)).active.values
+    assert {row[header.index("מספר חשבונית")]: row[header.index("סטטוס")] for row in data} == expected
 
 
 def test_excel_export_has_real_numbers_and_dates(client, as_user, invoices):
@@ -52,6 +61,20 @@ def test_excel_export_has_real_numbers_and_dates(client, as_user, invoices):
     row = [c.value for c in ws[2]]
     total = row[header.index("total")]
     assert isinstance(total, (int, float))
+
+
+def test_insights_exports_match_dashboard_in_csv_and_excel(client, as_user, invoices):
+    from openpyxl import load_workbook
+
+    h = as_user("viewer@kinneret.example")
+    count = client.get("/api/dashboard", headers=h).json()["kpis"]["invoices_total"]
+    csv_rows = rows(client.get("/api/export/insights.csv", headers=h))
+    assert any(row["metric"] == "invoices_total" and int(row["value"]) == count for row in csv_rows)
+    result = client.get("/api/export/insights.xlsx", headers=h)
+    assert result.status_code == 200
+    data = load_workbook(io.BytesIO(result.content), read_only=True).active.values
+    header, *values = data
+    assert any(row[header.index("metric")] == "invoices_total" and row[header.index("value")] == count for row in values)
 
 
 def test_accounting_export_has_only_approved_invoices(client, as_user):

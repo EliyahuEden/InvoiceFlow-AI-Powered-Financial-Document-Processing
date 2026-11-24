@@ -16,7 +16,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date as _date
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
@@ -89,7 +89,11 @@ class EmptyIn(BaseModel):
 class InvoiceSearchIn(BaseModel):
     text: str | None = Field(None, max_length=120, description="invoice number, supplier name or PO number, partial")
     sort: str = Field("newest", pattern="^(newest|oldest|largest)$")
-    status: str | None = Field(None, max_length=30, description="needs_review | exception | reconciled | approved | rejected")
+    status: Literal[
+        "processing", "needs_review", "exception", "reconciled", "on_hold", "approved", "rejected", "failed", "voided", "credit_note",
+    ] | None = Field(
+        None, description="Use reconciled for invoices ready for approval and approved for invoices approved for payment.",
+    )
     min_total: str | None = Field(None, max_length=20)
     max_total: str | None = Field(None, max_length=20)
     date_from: str | None = Field(None, max_length=10, description="YYYY-MM-DD")
@@ -440,7 +444,7 @@ def list_suppliers(ctx: ToolContext, inp: SupplierListIn) -> dict:
     return {"count": len(rows), "suppliers": rows}
 
 
-def _by_supplier(ctx: ToolContext, statuses: tuple[str, ...], date_from=None, date_to=None):  # noqa: ANN001, ANN202
+def _by_supplier(ctx: ToolContext, statuses: tuple[str, ...], date_from=None, date_to=None, *, unpaid_only=False):  # noqa: ANN001, ANN202
     from sqlalchemy import func
 
     q = (select(Supplier.id, Supplier.name, Supplier.name_en, Invoice.currency, Invoice.status,
@@ -448,6 +452,8 @@ def _by_supplier(ctx: ToolContext, statuses: tuple[str, ...], date_from=None, da
          .join(Supplier, Supplier.id == Invoice.supplier_id)
          .where(Invoice.organization_id == ctx.org_id, Invoice.status.in_(statuses))
          .group_by(Supplier.id, Supplier.name, Supplier.name_en, Invoice.currency, Invoice.status))
+    if unpaid_only:
+        q = q.where(Invoice.payment_paid_on.is_(None))
     try:
         if date_from:
             q = q.where(Invoice.invoice_date >= _date.fromisoformat(date_from))
@@ -481,15 +487,15 @@ def open_payables(ctx: ToolContext, inp: EmptyIn) -> dict:
     stage = {"approved": "approved_for_payment", "reconciled": "awaiting_approval", "needs_review": "in_review",
              "exception": "in_review", "on_hold": "in_review"}
     agg: dict = {}
-    for sid, name, name_en, cur, status, n, total in _by_supplier(ctx, tuple(stage)):
+    for sid, name, name_en, cur, status, n, total in _by_supplier(ctx, tuple(stage), unpaid_only=True):
         row = agg.setdefault(str(sid), {"supplier_id": str(sid), "name": name, "name_en": name_en, "by_stage": {}})
         cell = row["by_stage"].setdefault(stage[status], {})
         cell[cur or "unknown"] = cell.get(cur or "unknown", Decimal(0)) + Decimal(total)
     rows = sorted(agg.values(), key=lambda r: ("approved_for_payment" not in r["by_stage"], r["name"]))
     return {"suppliers": [{**r, "by_stage": {s: {c: f"{v:.2f}" for c, v in cells.items()} for s, cells in r["by_stage"].items()}}
                           for r in rows],
-            "note": "InvoiceFlow does not record payments: 'approved_for_payment' is approved and due to be paid outside "
-                    "the system; the other stages are not yet approved. Currencies are never added together."}
+            "note": "Recorded payments are excluded. 'approved_for_payment' means approved and due to be paid outside "
+                    "the system. The other stages are awaiting approval or review. Currencies are never added together."}
 
 
 def findings_by_type(ctx: ToolContext, inp: FindingsIn) -> dict:

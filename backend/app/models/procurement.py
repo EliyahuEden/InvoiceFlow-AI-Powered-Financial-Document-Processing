@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,6 +24,9 @@ class Supplier(UUIDPk, Timestamps, TenantScoped, Base):
     default_currency: Mapped[str] = mapped_column(String(3), default="ILS")
     payment_terms: Mapped[str | None] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(20), default="active")  # active | blocked | inactive
+    bank_account: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    pending_bank_account: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    bank_hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class PurchaseOrder(UUIDPk, Timestamps, TenantScoped, Base):

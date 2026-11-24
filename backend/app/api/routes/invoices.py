@@ -24,7 +24,7 @@ from app.models import (
     Supplier,
 )
 from app.services.public_errors import public_error
-from app.services import workflow
+from app.services import invoice_lifecycle, payments, workflow
 from app.services.agent.runner import start_investigation
 from app.services.documents.validation import UploadRejected
 from app.services.processing import DuplicateUpload, create_invoice_upload
@@ -38,6 +38,7 @@ router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 def invoice_row(i: Invoice, supplier: Supplier | None, doc: Document | None, open_exc: int = 0) -> dict:
     return {
         "id": str(i.id), "status": i.status, "invoice_number": i.invoice_number,
+        "archived_at": i.archived_at.isoformat() if i.archived_at else None,
         "supplier_id": str(i.supplier_id) if i.supplier_id else None,
         "supplier_name": supplier.name if supplier else i.supplier_name_raw,
         "supplier_name_en": supplier.name_en if supplier else None,
@@ -51,12 +52,14 @@ def invoice_row(i: Invoice, supplier: Supplier | None, doc: Document | None, ope
     }
 
 
-def invoice_query(org_id: uuid.UUID, q: str | None, status: str | None, supplier_id: uuid.UUID | None, sort: str):  # noqa: ANN201
+def invoice_query(org_id: uuid.UUID, q: str | None, status: str | None, supplier_id: uuid.UUID | None, sort: str,
+                  archived: bool = False):  # noqa: ANN201
     """The invoice list's filters and order, shared by the inbox and its export."""
     stmt = (select(Invoice, Supplier, Document)
             .outerjoin(Supplier, Supplier.id == Invoice.supplier_id)
             .outerjoin(Document, Document.id == Invoice.document_id)
-            .where(Invoice.organization_id == org_id))
+            .where(Invoice.organization_id == org_id,
+                   Invoice.archived_at.is_not(None) if archived else Invoice.archived_at.is_(None)))
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(Invoice.invoice_number.ilike(like), Invoice.supplier_name_raw.ilike(like),
@@ -80,14 +83,15 @@ def open_exception_counts(db: Session, org_id: uuid.UUID) -> dict:
 
 @router.get("")
 def list_invoices(q: str | None = None, status: str | None = None, supplier_id: uuid.UUID | None = None,
-                  sort: str = "-created_at", pg=Depends(page_params),
+                  sort: str = "-created_at", archived: bool = False, pg=Depends(page_params),
                   p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = Depends(get_db)) -> dict:
     page, size = pg
-    stmt = invoice_query(p.org_id, q, status, supplier_id, sort)
+    stmt = invoice_query(p.org_id, q, status, supplier_id, sort, archived)
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = db.execute(stmt.offset((page - 1) * size).limit(size)).all()
     exc_counts = open_exception_counts(db, p.org_id)
-    status_counts = dict(db.execute(select(Invoice.status, func.count()).where(Invoice.organization_id == p.org_id)
+    status_counts = dict(db.execute(select(Invoice.status, func.count()).where(Invoice.organization_id == p.org_id,
+                                    Invoice.archived_at.is_not(None) if archived else Invoice.archived_at.is_(None))
                                     .group_by(Invoice.status)).all())
     out = paginated([invoice_row(i, s, d, exc_counts.get(i.id, 0)) for i, s, d in rows], total, page, size)
     out["status_counts"] = status_counts
@@ -147,8 +151,13 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
                                    .group_by(GRLine.po_line_id)).all())
     return {
         **invoice_row(inv, supplier, doc),
+        **invoice_lifecycle.state(inv),
+        "credit_notes": [{"id": str(note.id), "number": note.invoice_number, "total": money(note.total)}
+                         for note in db.scalars(select(Invoice).where(Invoice.organization_id == p.org_id,
+                             Invoice.credit_for_invoice_id == inv.id).order_by(Invoice.created_at))],
         "supplier_name_raw": inv.supplier_name_raw, "supplier_tax_id_raw": inv.supplier_tax_id_raw,
         "due_date": inv.due_date.isoformat() if inv.due_date else None, "payment_terms": inv.payment_terms,
+        "payment": payments.payment_state(inv),
         "allocation_number": inv.allocation_number,
         "subtotal": money(inv.subtotal), "discount_total": money(inv.discount_total), "tax_total": money(inv.tax_total),
         "tax_rate": dec(inv.tax_rate), "field_sources": inv.field_sources, "missing_fields": inv.missing_fields,
@@ -234,9 +243,11 @@ def rerun_reconciliation(invoice_id: uuid.UUID, mode: str = "three_way",
     if mode not in ("two_way", "three_way"):
         raise HTTPException(422, "mode must be two_way or three_way")
     inv = db.scalars(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == p.org_id)
-                     .options(selectinload(Invoice.lines))).first()
+                     .with_for_update().options(selectinload(Invoice.lines))).first()
     if not inv:
         raise HTTPException(404, "Invoice not found")
+    if inv.payment_scheduled_for or inv.payment_paid_on or inv.archived_at or inv.status in ("voided", "credit_note"):
+        raise HTTPException(409, "Reconciliation is locked for this invoice")
     run = reconcile_invoice(db, inv, triggered_by="user", actor_id=p.user.id, mode=mode)
     return {"run_id": str(run.id), "outcome": run.outcome, "status": inv.status}
 
@@ -247,6 +258,8 @@ def investigate(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.AGENT
     inv = db.scalars(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == p.org_id)).first()
     if not inv:
         raise HTTPException(404, "Invoice not found")
+    if inv.archived_at or inv.status in ("voided", "credit_note"):
+        raise HTTPException(409, "Investigation is closed for this invoice")
     active = db.scalars(select(AgentRun).where(AgentRun.invoice_id == inv.id,
                                                AgentRun.status.in_(["queued", "running"]))).first()
     if active:
@@ -258,6 +271,28 @@ def investigate(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.AGENT
 class ApprovalIn(BaseModel):
     decision: str = Field(..., pattern="^(approve|reject)$")
     comment: str | None = Field(None, max_length=2000)
+
+
+@router.post("/{invoice_id}/payment")
+def update_payment(invoice_id: uuid.UUID, body: payments.PaymentIn, p: Principal = Depends(require(Perm.APPROVAL_DECIDE)),
+                   db: Session = Depends(get_db)) -> dict:
+    inv = db.scalar(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == p.org_id).with_for_update())
+    if inv is None:
+        raise HTTPException(404, "Invoice not found")
+    return payments.update_payment(db, inv, p.user, body)
+
+
+@router.post("/{invoice_id}/lifecycle")
+def change_invoice_lifecycle(invoice_id: uuid.UUID, body: invoice_lifecycle.LifecycleIn,
+                             p: Principal = Depends(require(Perm.APPROVAL_DECIDE)), db: Session = Depends(get_db)) -> dict:
+    ids = {invoice_id}
+    if body.original_invoice_id and body.action == "link_credit":
+        ids.add(body.original_invoice_id)
+    locked = {inv.id: inv for inv in db.scalars(select(Invoice).where(Invoice.organization_id == p.org_id,
+               Invoice.id.in_(ids)).order_by(Invoice.id).with_for_update())}
+    if invoice_id not in locked:
+        raise HTTPException(404, "Invoice not found")
+    return invoice_lifecycle.apply(db, locked[invoice_id], p.user, body, locked.get(body.original_invoice_id))
 
 
 @router.post("/{invoice_id}/approvals")

@@ -41,6 +41,15 @@ def new_session(org_id: uuid.UUID | str | None = None) -> Session:
     return session
 
 
+def lock_workspace(session: Session, org_id: uuid.UUID, *, exclusive: bool = False) -> None:
+    """Let workspace deletion wait for requests and jobs already using its files."""
+    statement = (
+        "SELECT pg_advisory_xact_lock(hashtextextended(:workspace, 0))" if exclusive
+        else "SELECT pg_advisory_xact_lock_shared(hashtextextended(:workspace, 0))"
+    )
+    session.execute(text(statement), {"workspace": f"workspace:{org_id}"})
+
+
 @contextmanager
 def session_scope(org_id: uuid.UUID | str | None = None) -> Iterator[Session]:
     """Transactional scope: commit on success, rollback on error."""

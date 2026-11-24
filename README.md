@@ -11,7 +11,9 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 3. In **AI investigation**, open a citation to see the relevant clause in the source PDF. Open the exception, write a reviewer note and approve the proposed resolution.
 4. In **Audit trail**, find the decision and select **Verify chain**. Use **Ask Copilot** to ask which cases need attention or how much is at risk by currency.
 
-[Recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) · [Interview demo script](docs/DEMO_SCRIPT.md) · [AP Copilot capabilities](docs/COPILOT.md)
+[Recorded walkthrough (1:56)](docs/demo/invoiceflow-walkthrough.webm) · [Interview demo script](docs/DEMO_SCRIPT.md) · [AP Copilot capabilities](docs/COPILOT.md)
+
+[Spreadsheet import](docs/screenshots/11-import.png) · [Invoice export](docs/screenshots/12-export.png) · [Two-factor sign-in](docs/screenshots/13-two-factor.png) · [Team management](docs/screenshots/14-team.png)
 
 ![Invoice with extracted-field provenance](docs/screenshots/03-invoice-document.png)
 
@@ -41,7 +43,10 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
   - self-service organization sign-up, team management and workspace switching, with emailed invitations and password-reset links (single use, hashed at rest, sign-out everywhere);
   - Israel's invoice allocation number (מספר הקצאה): read from the invoice and checked against the threshold on the invoice date (NIS 5,000 before VAT from June 2026), with the deductible VAT at risk ranked in the review queue;
   - revocable server-side sessions: 15-minute access tokens, rotating refresh tokens with reuse detection, single-use SSE tickets;
-  - segregated two-step approvals;
+  - organization-wide two-factor enforcement and segregated two-step payment approvals;
+  - masked supplier banking details, second-person confirmation and a configurable payment hold after changes;
+  - scheduled and externally paid invoices, due-date reminders, and credit notes linked to their original invoices;
+  - workspace archive download and password-confirmed deletion, with automatic expiration off;
   - append-only, hash-chained audit log;
   - durable job queue with retries, idempotency and stale-lock recovery;
   - live progress over SSE; rate limits; upload hardening.
@@ -110,10 +115,11 @@ These come from the scripts in `/eval`; the JSON is in `eval/results/` and is re
 | Component | Headline (honest scope) |
 |---|---|
 | Extraction on 73 synthetic documents | **92.0%** field accuracy with rules. Rules-first with Groq GPT-OSS 120B reached **92.5%** and called the model on 12 of 73 documents. On 16 held-out layouts, accuracy was 84.7% with rules and 86.4% with rules-first. [Results](eval/results/extraction_latest.json) |
+| OCR stress test on 24 synthetic scans | Deskewing improved rules-only field accuracy on 2°–4.5° tilted pages from **45.5% to 77.3%**. Invoice numbers were correct on **5/6** tilted pages in both runs. Simulated phone photos, stamped pages, and low-contrast pages each scored **80.3%**. Each variant uses the same six source invoices. [Current results](eval/results/scan_stress_deskew_latest.json) · [Baseline](eval/results/scan_stress_latest.json) · [Reproduce](eval/run_scan_stress_eval.py) |
 | Policy retrieval on the held-out set | Multilingual-e5-large, clause chunks, hybrid search and reranking achieved **1.00 recall@5** and **0.950 MRR** on the 25 answerable questions in the 35-question held-out set. [Results](eval/results/rag_e5_latest.json) |
-| Offline extractive answers on the held-out set | **72%** answer correctness on the 25 answerable questions and **73.3%** citation accuracy. The system refused 6 of 10 unanswerable questions and 2 of 25 answerable ones. [Results](eval/results/rag_e5_latest.json) |
-| Live policy answers on 35 held-out questions | **33/35 passed** with Groq GPT-OSS 120B. The model answered 23 of 25 answerable questions correctly and refused all 10 unanswerable questions. A pass requires the labelled facts and sources for an answer, or a correct refusal. Measured on prompt `rag-answer-v2`. The current prompt (`v3`) also refuses any answer whose amounts, durations or percentages are not in a cited quote. Two `v3` runs were cut short by Groq's free-tier token limit: on the 19 questions that completed, `v3` passed 16 and `v2` passed 17 of the same 19. A full `v3` run is still to do. [Results](eval/results/rag_llm_latest.json) |
-| Live AP Copilot on 32 catalogue prompts | The initial Groq GPT-OSS 120B run passed **23/32 (71.9%)** against expected tools, filters and facts, on prompt `copilot-v1`. A rerun on the current prompt passed 24/32, but Groq's token limit meant only 5 of those answers were model-written; the other 27 came from the offline path. [Results](eval/results/copilot_llm_latest.json) · [rerun](eval/results/copilot_quality_latest.json) |
+| Offline extractive answers on the held-out set | **76%** answer correctness on the 25 answerable questions and **76.7%** citation accuracy, measured 2026-11-23. The system refused 6 of 10 unanswerable questions and 2 of 25 answerable ones. [Results](eval/results/rag_extractive_latest.json) |
+| Live policy answers on 35 held-out questions | **32/35 passed** with Groq GPT-OSS 120B and `rag-answer-v4` on 2026-11-23. The model answered 22 of 25 answerable questions correctly and refused all 10 unanswerable questions. Citation accuracy reached **92.6%**, up from 89.3% on `v3`. [Current results](eval/results/rag_v4_120b_latest.json) · [v3 results](eval/results/rag_v3_120b_latest.json) · [v2 results](eval/results/rag_llm_latest.json) |
+| AP Copilot on 32 catalogue prompts | Groq GPT-OSS 120B with `copilot-v2` passed **27/32 (84.4%)** on 2026-11-23, including 26 model-written answers and the built-in capabilities response. The `v3` rerun on 2026-11-24 passed **20 of 21 evaluated prompts** before reaching Groq's daily token limit. Its one scored miss used the expected tool and gave an equivalent answer outside the rubric's accepted phrases. [Complete v2 run](eval/results/copilot_v2_120b_latest.json) · [Partial v3 run](eval/results/copilot_v3_120b_20261124_latest.json) |
 | Reconciliation, 468 controlled cases | P = R = 1.00 on all 13 types, including the Israeli allocation-number rule (39 cases that must be flagged, 81 that must not); **0 false alarms** on 204 clean or near-miss invoices |
 | End to end (PDF → OCR/extraction → engine), 13 demo docs | 13/13 scenarios exact, P = R = 1.00 (was 12/13 because of a PO-label extraction bug, now fixed). |
 

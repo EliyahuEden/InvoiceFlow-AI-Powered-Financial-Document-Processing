@@ -48,6 +48,27 @@ def test_totp_matches_the_rfc_6238_test_vector():
     assert mfa.totp(secret, at=1111111109, digits=8) == "07081804"
 
 
+def test_organization_requires_enrollment_for_existing_and_new_sessions(client, as_user):
+    member = {**as_user(EMAIL), **CSRF}
+    admin = {**as_user("admin@kinneret.example"), **CSRF}
+    patch = {"security": {"require_2fa": True}}
+    assert client.patch("/api/org/settings", headers=member, json=patch).status_code == 403
+    assert client.patch("/api/org/settings", headers=admin, json=patch).status_code == 409
+    setup = client.post("/api/auth/2fa/setup", headers=admin).json()
+    assert client.post("/api/auth/2fa/enable", headers=admin, json={"code": mfa.totp(setup["secret"])}).status_code == 200
+    changed = client.patch("/api/org/settings", headers=admin, json=patch)
+    assert changed.status_code == 200 and changed.json()["settings"]["security"]["require_2fa"] is True
+    assert _login(client).json()["mfa_enrollment_required"] is True
+    assert client.get("/api/auth/me", headers=member).json()["permissions"] == []
+    assert client.get("/api/invoices", headers=member).status_code == 403
+    assert client.post("/api/events/ticket", headers=member).status_code == 403
+    assert client.get("/api/auth/2fa", headers=member).status_code == 200
+    setup = client.post("/api/auth/2fa/setup", headers=member).json()
+    assert client.post("/api/auth/2fa/enable", headers=member, json={"code": mfa.totp(setup["secret"])}).status_code == 200
+    assert client.get("/api/invoices", headers=member).status_code == 200
+    assert client.get("/api/auth/me", headers=member).json()["mfa_enrollment_required"] is False
+
+
 def test_a_wrong_code_does_not_turn_it_on(client):
     h = _bearer(client)
     client.post("/api/auth/2fa/setup", headers=h)

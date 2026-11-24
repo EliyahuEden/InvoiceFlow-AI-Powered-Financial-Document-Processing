@@ -7,7 +7,7 @@ import pytest
 
 from app.demo.render import render_invoice_pdf
 from app.demo.spec import INVOICES, SUPPLIERS_BY_KEY
-from app.services.documents.text_extraction import OCRUnavailable, extract_pages
+from app.services.documents.text_extraction import OCRUnavailable, extract_pages, render_pdf_page, tesseract_available
 from app.services.extraction import rule_based
 from app.services.extraction.injection import detect_injection
 from app.services.extraction.postprocess import normalize
@@ -123,6 +123,41 @@ def test_ocr_preprocessing_binarizes():
     img = Image.new("RGB", (800, 400), (200, 200, 200))
     out = preprocess_for_ocr(img)
     assert out.mode == "L" and out.width >= 1600 and set(out.getdata()) <= {0, 255}
+
+
+@pytest.mark.skipif(not tesseract_available(), reason="needs Tesseract with Hebrew and English")
+@pytest.mark.parametrize(("key", "angle"), [("11_currency_mismatch_arava_mixed", 3.5), ("13_photo_bluewave_en", -3.5)])
+def test_skewed_scan_preserves_amount_and_source_position(key, angle):
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw
+
+    invoice = next(inv for inv in INVOICES if inv.key == key)
+    source = render_pdf_page(render_invoice_pdf(invoice), 0, dpi=180)
+
+    def read(image):
+        buf = BytesIO()
+        image.save(buf, format="PNG")
+        pages = extract_pages(buf.getvalue(), "image/png")
+        return normalize(rule_based.extract([(p.page_no, p.text) for p in pages], {"520000019"}), pages, "rule_based")
+
+    straight = read(source)
+    skewed = source.rotate(angle, resample=Image.Resampling.BICUBIC, expand=True, fillcolor="white")
+    corrected = read(skewed)
+    assert corrected.total == invoice.total
+    assert corrected.invoice_number == invoice.number
+
+    # Rotate the known location independently and check the highlight on the uploaded image.
+    mask = Image.new("L", source.size)
+    x0, y0, x1, y1 = straight.sources["invoice_number"].bbox
+    ImageDraw.Draw(mask).rectangle((x0 * source.width, y0 * source.height,
+                                    x1 * source.width, y1 * source.height), fill=255)
+    expected = mask.rotate(angle, expand=True).getbbox()
+    bbox = corrected.sources["invoice_number"].bbox
+    assert bbox == pytest.approx([expected[0] / skewed.width, expected[1] / skewed.height,
+                                  expected[2] / skewed.width, expected[3] / skewed.height], abs=0.012)
+
+
 def test_demo_business_identifiers_have_valid_check_digits():
     from app.demo.spec import ORG, OTHER_ORG_SUPPLIERS, SUPPLIERS
 

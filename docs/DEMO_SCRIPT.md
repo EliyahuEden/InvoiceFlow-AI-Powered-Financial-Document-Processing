@@ -36,7 +36,7 @@
 > "Tenant isolation runs in the app and in Postgres row-level security. It actually caught a bug of mine. And every number on this page comes from a script you can re-run."
 
 **2:45 Close**
-> "Next step is benchmarking the LLM extractor against this baseline. The harness already supports it."
+> "The rules-first extractor reached 92.5% field accuracy on 73 synthetic invoices, with 12 model calls. The scan stress test shows that skewed pages cause the largest extraction failures, so I would work on those next."
 
 ## Likely follow-up questions
 - **Why not let the LLM do the matching?** Arithmetic and policy thresholds must be exact and auditable. The LLM explains; it doesn't decide.

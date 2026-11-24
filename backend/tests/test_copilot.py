@@ -85,6 +85,17 @@ def test_model_without_tool_results_uses_the_grounded_queue_answer(client, as_us
     assert not llm.structured_calls
 
 
+def test_model_cannot_use_an_unknown_invoice_status_as_an_empty_result(client, as_user, scripted, seeded):
+    scripted(ScriptedLLM(turns=[[('search_invoices', {'status': 'awaiting_finance'})],
+                               [('search_invoices', {'status': 'reconciled'})], []],
+                          answers=[{"answer": "Invoice TV-24518 is ready for approval."}]))
+    response = ask(client, as_user("finance@kinneret.example"), "Which matched invoices can be approved?").json()
+    assert response["verified"] and "TV-24518" in response["answer"]
+    assert [(step["status"], step["input"]["status"]) for step in response["steps"]] == [
+        ("rejected", "awaiting_finance"), ("ok", "reconciled"),
+    ]
+
+
 def test_grounded_approval_answer_can_repeat_the_hypothetical_amount(client, as_user, scripted):
     wording = "For an invoice of 30,000 ILS, a finance reviewer and an administrator must approve."
     scripted(ScriptedLLM(turns=[[("approval_rules", {})], []], answers=[{"answer": wording}]))

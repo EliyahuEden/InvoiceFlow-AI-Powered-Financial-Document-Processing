@@ -76,6 +76,19 @@ def test_discrepancy_agent_and_human_decision_flow(client, as_user):
     assert {"invoice.uploaded", "invoice.extracted", "invoice.reconciled", "exception.created"} <= set(actions)
 
 
+def test_organization_can_block_procurement_from_deciding_its_own_upload(client, as_user):
+    proc = as_user("procurement@kinneret.example")
+    admin = as_user("admin@kinneret.example")
+    inv = upload_invoice(client, proc, "02_qty_mismatch_hermon_he.pdf")
+    case_id = _detail(client, proc, inv["invoice_id"])["exception"]["id"]
+    body = {"approval": {"procurement_cannot_decide_own_upload": True}}
+    assert client.patch("/api/org/settings", headers=proc, json=body).status_code == 403
+    assert client.patch("/api/org/settings", headers=admin, json=body).status_code == 200
+    path = f"/api/exceptions/{case_id}/decision"
+    assert client.post(path, headers=proc, json={"decision": "approve"}).status_code == 403
+    assert client.post(path, headers=admin, json={"decision": "approve"}).status_code == 200
+
+
 def test_correction_triggers_new_reconciliation(client, as_user):
     proc, fin = as_user("procurement@kinneret.example"), as_user("finance@kinneret.example")
     inv = upload_invoice(client, proc, "02_qty_mismatch_hermon_he.pdf")

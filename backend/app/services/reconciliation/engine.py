@@ -316,7 +316,7 @@ def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Contex
     out: list[Finding] = []
     num = normalize_doc_number(inv.invoice_number)
     for p in ctx.prior_invoices:
-        if p.id == inv.id or p.status in ("rejected", "failed"):
+        if p.id == inv.id or p.status in ("rejected", "failed", "voided", "credit_note"):
             continue
         if inv.document_sha256 and p.document_sha256 == inv.document_sha256:
             out.append(Finding("DUPLICATE_INVOICE", "The identical file was already uploaded.",
@@ -333,7 +333,7 @@ def find_duplicates(inv: InvoiceData, supplier: SupplierData | None, ctx: Contex
                 params={"number": inv.invoice_number}))
             return out
     for p in ctx.prior_invoices:
-        if p.id == inv.id or p.status in ("rejected", "failed") or not supplier or p.supplier_id != supplier.id:
+        if p.id == inv.id or p.status in ("rejected", "failed", "voided", "credit_note") or not supplier or p.supplier_id != supplier.id:
             continue
         if (inv.total is not None and p.total == inv.total and inv.invoice_date and p.invoice_date
                 and abs((inv.invoice_date - p.invoice_date).days) <= ctx.tolerances.duplicate_window_days):

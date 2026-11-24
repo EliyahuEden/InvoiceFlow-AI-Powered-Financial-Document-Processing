@@ -34,14 +34,16 @@ DEFAULT_ORG_SETTINGS: dict = {
         "description_ambiguity_margin": "0.08",
     },
     # Approval policy: invoices above this total need a second approver.
-    "approval": {"dual_approval_threshold": "20000.00"},
+    "approval": {"dual_approval_threshold": "20000.00", "procurement_cannot_decide_own_upload": False,
+                 "bank_change_hold_days": 3},
     # Risk-first review: money at risk from which a case is critical (base currency).
     "priority": {"critical_amount": "5000"},
     # Session lifetime: idle timeout in hours and absolute maximum in days.
-    "security": {"session_idle_hours": 8, "session_max_days": 7},
+    "security": {"session_idle_hours": 8, "session_max_days": 7, "require_2fa": False},
 }
 
 SETTING_BOUNDS = {
+    "approval.bank_change_hold_days": (0, 30),
     "security.session_idle_hours": (1, 72),
     "security.session_max_days": (1, 30),
 }

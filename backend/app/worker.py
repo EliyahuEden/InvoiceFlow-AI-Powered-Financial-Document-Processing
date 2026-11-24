@@ -15,7 +15,7 @@ from threading import Event, Thread
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
-from app.core.db import new_session
+from app.core.db import lock_workspace, new_session
 from app.core.logging import configure_logging, get_logger
 from app.models import Job
 from app.services import jobs
@@ -38,12 +38,14 @@ def _handlers() -> dict:
     from app.services.agent.runner import handle_agent_investigate, handle_agent_resume
     from app.services.processing import handle_invoice_process
     from app.services.rag.service import handle_knowledge_ingest
+    from app.services.workspace_archive import handle_workspace_cleanup
 
     return {
         "invoice.process": handle_invoice_process,
         "knowledge.ingest": handle_knowledge_ingest,
         "agent.investigate": handle_agent_investigate,
         "agent.resume": handle_agent_resume,
+        "workspace.cleanup": handle_workspace_cleanup,
     }
 
 
@@ -72,6 +74,7 @@ def run_one(worker_id: str) -> bool:
     heartbeat = Thread(target=_heartbeat, args=(stop_heartbeat, job_id, worker_id, attempt), daemon=True)
     heartbeat.start()
     try:
+        lock_workspace(session, org_id)
         job = session.get(Job, job_id)
         if job is None or (job.status, job.locked_by, job.attempts) != ("running", worker_id, attempt):
             raise jobs.LeaseLost(str(job_id))

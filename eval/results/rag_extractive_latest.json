@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-11-23T16:29:29+00:00",
+  "git_rev": null,
+  "python": "3.12.16",
+  "dataset": "eval/datasets/rag/questions_heldout.jsonl",
+  "questions": 35,
+  "model": null,
+  "provider": "offline",
+  "prompt_version": null,
+  "embedding": "intfloat/multilingual-e5-large",
+  "retrieval": "hybrid_rerank",
+  "reranker": "jinaai/jina-reranker-v2-base-multilingual",
+  "retrieval_note": null,
+  "answer_correctness": 0.76,
+  "citation_accuracy": 0.767,
+  "abstention": {
+    "tp": 6,
+    "fp": 2,
+    "fn": 4,
+    "precision": 0.75,
+    "recall": 0.6,
+    "f1": 0.667,
+    "note": "positive class = question should be refused"
+  },
+  "injection_parroting": "0/0",
+  "groundedness": "1.0 by construction (verbatim extractive)",
+  "failure_examples": [
+    {
+      "id": "ho-he-07",
+      "question": "מה נדרש כדי שתבור תשנה מחיר?",
+      "answer": "The knowledge base does not contain enough evidence to answer this question.",
+      "abstained": true
+    },
+    {
+      "id": "ho-he-08",
+      "question": "האם המחירים של תבור צמודים למדד?",
+      "answer": "The knowledge base does not contain enough evidence to answer this question.",
+      "abstained": true
+    },
+    {
+      "id": "ho-en-05",
+      "question": "What happens to exceptions that are not resolved in time?",
+      "answer": "Exceptions must be resolved within 10 business days.",
+      "abstained": false
+    },
+    {
+      "id": "ho-mx-02",
+      "question": "באיזה מטבע צריכות להיות החשבוניות של Arava Packaging?",
+      "answer": "חשבוניות שיוגשו במטבע אחר יוחזרו לספק לתיקון ולא ישולמו.",
+      "abstained": false
+    },
+    {
+      "id": "ho-cl-02",
+      "question": "תוך כמה ימי עסקים מסלימים מחלוקת עם BlueWave?",
+      "answer": "Undisputed amounts paid late bear interest of 0.5% per month. האספקה תתבצע תוך 5 ימי עסקים ממועד ההזמנה, בצירוף תעודת משלוח חתומה.",
+      "abstained": false
+    },
+    {
+      "id": "ho-md-02",
+      "question": "כמה זמן מראש צריך להודיע על העלאת מחיר אצל תבור ואצל BlueWave?",
+      "answer": "שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.",
+      "abstained": false
+    }
+  ]
+}

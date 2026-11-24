@@ -6,6 +6,7 @@ import os
 import statistics
 import subprocess
 import sys
+from argparse import ArgumentParser, Namespace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,6 +23,37 @@ def git_rev() -> str | None:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, stderr=subprocess.DEVNULL).decode().strip()
     except Exception:  # noqa: BLE001
         return None
+
+
+def add_model_options(parser: ArgumentParser) -> None:
+    parser.add_argument("--provider", choices=("groq", "anthropic", "ollama"),
+                        help="override the configured provider for this run")
+    parser.add_argument("--model", help="override the configured model for this run")
+
+
+def configure_model(parser: ArgumentParser, args: Namespace) -> None:
+    from app.core.config import GROQ_BASE_URL, LOCAL_LLM_HOSTS, get_settings
+    from urllib.parse import urlparse
+
+    settings = get_settings()
+    if args.provider:
+        settings.llm_provider = "anthropic" if args.provider == "anthropic" else "openai"
+        settings.llm_model = None
+    if args.provider == "groq":
+        settings.openai_base_url = GROQ_BASE_URL
+    if args.provider == "ollama":
+        if not args.model:
+            parser.error("--provider ollama requires --model")
+        if (urlparse(settings.openai_base_url or "").hostname or "") not in LOCAL_LLM_HOSTS:
+            settings.openai_base_url = "http://127.0.0.1:11434/v1"
+        settings.openai_api_key = None
+    if args.model:
+        settings.llm_model = args.model
+
+
+def daily_quota_exhausted(message: str) -> bool:
+    message = message.lower()
+    return "per day" in message or "(tpd)" in message or "(rpd)" in message
 
 
 def write_result(name: str, payload: dict) -> Path:

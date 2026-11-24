@@ -8,6 +8,7 @@ normalized bounding box so extracted fields can be highlighted on the original p
 from __future__ import annotations
 
 import io
+import math
 import re
 import shutil
 from dataclasses import asdict, dataclass, field
@@ -174,6 +175,42 @@ def preprocess_for_ocr(img: Image.Image) -> Image.Image:
     return Image.fromarray(np.where(arr > best_t, 255, 0).astype(np.uint8))
 
 
+def _deskew_angle(image: Image.Image) -> float:
+    """Find a small rotation that concentrates ink into horizontal rows."""
+    preview = image.copy()
+    preview.thumbnail((520, 740), Image.Resampling.LANCZOS)
+    ink = np.asarray(preview) < 170
+    y, x = np.nonzero(ink)
+    if len(x) < 250 or ink.mean() > 0.35:
+        return 0.0
+    x = x - preview.width / 2
+
+    def row_alignment(angle: float) -> float:
+        # Offset the projected rows so bincount can include pixels near either edge.
+        rows = np.rint(y - x * math.tan(math.radians(angle)) + preview.width).astype(np.intp)
+        counts = np.bincount(rows).astype(np.float64)
+        return float(counts @ counts)
+
+    straight = row_alignment(0)
+    angle = float(max(np.arange(-6, 6.5, 0.5), key=row_alignment))
+    return angle if 2 <= abs(angle) < 6 and row_alignment(angle) >= straight * 1.10 else 0.0
+
+
+def _restore_ocr_boxes(words: list[Word], corrected: Image.Image, size: tuple[int, int], angle: float) -> None:
+    """Undo the OCR rotation so highlights still refer to the uploaded page."""
+    width, height = size
+    sine, cosine = math.sin(math.radians(angle)), math.cos(math.radians(angle))
+    for word in words:
+        x0, y0, x1, y1 = word.b
+        corners = []
+        for nx, ny in ((x0, y0), (x0, y1), (x1, y0), (x1, y1)):
+            x, y = (nx - 0.5) * corrected.width, (ny - 0.5) * corrected.height
+            corners.append((0.5 + (cosine * x - sine * y) / width,
+                            0.5 + (sine * x + cosine * y) / height))
+        xs, ys = zip(*corners)
+        word.b = [round(max(0.0, min(1.0, value)), 5) for value in (min(xs), min(ys), max(xs), max(ys))]
+
+
 def ocr_image(img: Image.Image, page_no: int, page_w: float | None = None, page_h: float | None = None) -> PageText:
     s = get_settings()
     if not tesseract_available():
@@ -183,6 +220,10 @@ def ocr_image(img: Image.Image, page_no: int, page_w: float | None = None, page_
     if s.tesseract_cmd:
         pytesseract.pytesseract.tesseract_cmd = s.tesseract_cmd
     prepared = preprocess_for_ocr(img)
+    angle = _deskew_angle(prepared)
+    if angle:
+        corrected = ImageOps.grayscale(img).rotate(angle, resample=Image.Resampling.BICUBIC, expand=True, fillcolor=255)
+        prepared = preprocess_for_ocr(corrected)
     try:
         data = pytesseract.image_to_data(
             prepared, lang=s.ocr_languages, config="--psm 6 --oem 1", output_type=pytesseract.Output.DICT
@@ -202,6 +243,8 @@ def ocr_image(img: Image.Image, page_no: int, page_w: float | None = None, page_
         })
         confs.append(conf)
     text, words = _assemble(items, float(prepared.width), float(prepared.height), visual_words=False)
+    if angle:
+        _restore_ocr_boxes(words, corrected, img.size, angle)
     return PageText(
         page_no=page_no,
         width=page_w or float(img.width),

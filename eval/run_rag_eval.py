@@ -2,6 +2,7 @@
 
     backend/.venv/Scripts/python eval/run_rag_eval.py            # full run (downloads models on first use)
     backend/.venv/Scripts/python eval/run_rag_eval.py --no-rerank
+    backend/.venv/Scripts/python eval/run_rag_eval.py --extractive-answers
 
 Dataset: eval/datasets/rag/questions.jsonl (hand-written, verified against the source
 documents; every evidence phrase is asserted to exist in its document before scoring).
@@ -18,7 +19,7 @@ import math
 import time
 from collections import defaultdict
 
-from common import DATA, ROOT, p50, prf, write_result
+from common import DATA, ROOT, add_model_options, configure_model, daily_quota_exhausted, p50, prf, write_result
 
 from app.services.documents.text_extraction import extract_pages
 from app.services.rag import answer as A
@@ -119,10 +120,20 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-rerank", action="store_true")
     ap.add_argument("--embedding-model", help="override the dense model (e.g. to compare a larger multilingual one)")
+    ap.add_argument("--batch-size", type=int, help="cap embedding and reranking batches for low-memory machines")
+    ap.add_argument("--inference-threads", type=int, help="cap local embedding and reranking threads")
     ap.add_argument("--out", default="rag", help="result name: eval/results/<out>_latest.json")
-    ap.add_argument("--llm-answers", action="store_true", help="score only live answers on the held-out set")
+    answer_mode = ap.add_mutually_exclusive_group()
+    answer_mode.add_argument("--llm-answers", action="store_true", help="score only live answers on the held-out set")
+    answer_mode.add_argument("--extractive-answers", action="store_true",
+                             help="score only offline answers on the held-out set")
     ap.add_argument("--pace", type=float, default=0, help="seconds between live model requests")
+    add_model_options(ap)
     args = ap.parse_args()
+    if any(value is not None and value < 1 for value in (args.batch_size, args.inference_threads)):
+        ap.error("--batch-size and --inference-threads must be positive")
+    if (args.provider or args.model) and not args.llm_answers:
+        ap.error("--provider and --model require --llm-answers")
     questions = load_questions("questions.jsonl")
     held_out = load_questions("questions_heldout.jsonl")
     docs, pages = load_corpus()
@@ -138,30 +149,44 @@ def main() -> None:
 
     s = get_settings()
     embedding_model = args.embedding_model or s.embedding_model
-    embedder = FastEmbedEmbedder(embedding_model, str(s.model_cache_dir))
+    embedder = FastEmbedEmbedder(embedding_model, str(s.model_cache_dir), batch_size=args.batch_size or 32,
+                                 threads=args.inference_threads)
     reranker, rerank_note = None, None
     if not args.no_rerank:
         try:
-            reranker = FastEmbedReranker(s.reranker_model, str(s.model_cache_dir))
+            reranker = FastEmbedReranker(s.reranker_model, str(s.model_cache_dir), batch_size=args.batch_size or 16,
+                                         threads=args.inference_threads)
         except Exception as exc:  # noqa: BLE001
             rerank_note = f"reranker unavailable: {exc}"
-    if args.llm_answers:
-        from app.services.llm.provider import get_llm
+    if args.llm_answers or args.extractive_answers:
+        llm = None
+        if args.llm_answers:
+            from app.services.llm.provider import get_llm
 
-        llm = get_llm()
-        if llm is None:
-            ap.error("--llm-answers requires a configured model provider")
+            configure_model(ap, args)
+            llm = get_llm()
+            if llm is None:
+                ap.error("--llm-answers requires a configured model provider")
         chunks = build_chunks(docs, pages, "clause")
         index = ChunkIndex(chunks, embedder)
         mode = "hybrid_rerank" if reranker else "hybrid"
         results = evaluate_answers(held_out, index, mode, reranker, chunks, llm=llm, pace=args.pace)
-        path = write_result("rag_llm" if args.out == "rag" else args.out, {
+        default_out = "rag_llm" if llm else "rag_extractive"
+        path = write_result(default_out if args.out == "rag" else args.out, {
             "dataset": "eval/datasets/rag/questions_heldout.jsonl", "questions": len(held_out),
-            "model": llm.model, "provider": llm.name, "prompt_version": A.PROMPT_VERSION,
+            "model": llm.model if llm else None, "provider": (args.provider or llm.name) if llm else "offline",
+            "prompt_version": A.PROMPT_VERSION if llm else None,
             "embedding": embedding_model, "retrieval": mode, "reranker": s.reranker_model if reranker else None,
+            "inference_batch_size_override": args.batch_size, "inference_threads": args.inference_threads,
             "retrieval_note": rerank_note, **results,
         })
-        print(f"{results['passed']}/{len(held_out)} passed; results: {path}")
+        if llm:
+            score = f"{results['passed']}/{results['evaluated_questions']} evaluated questions passed"
+            if results["stopped"]:
+                score += f" (stopped: {results['stopped']})"
+        else:
+            score = f"{results['answer_correctness']:.1%} extractive answer correctness"
+        print(f"{score}. Results saved to {path}")
         return
     answerable = [q for q in questions if q["answerable"]]
     configs, answer_results, held = [], {}, {"retrieval": [], "answers": {}}
@@ -229,8 +254,7 @@ def _with_rate_limit_retry(call, attempts: int = 5):  # noqa: ANN001, ANN202
         try:
             return call()
         except Exception as exc:  # noqa: BLE001
-            daily = "per day" in str(exc).lower() or "tokens per day" in str(exc).lower()
-            if "RateLimit" not in type(exc).__name__ or daily or attempt == attempts:
+            if "RateLimit" not in type(exc).__name__ or daily_quota_exhausted(str(exc)) or attempt == attempts:
                 raise
             time.sleep(20 * attempt)
 
@@ -242,22 +266,30 @@ def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chun
     answerable_n = 0
     examples = []
     per_question = []
+    stopped = None
     for q in questions:
+        started = time.perf_counter()
+        model_result = None
         hits = idx.search(q["question"], mode=mode, k=5, reranker=reranker if mode == "hybrid_rerank" else None)
         if llm is not None and hits:
             try:
-                ans = _with_rate_limit_retry(lambda: A.answer_with_llm(llm, q["question"], hits)[0])
+                ans, model_result = _with_rate_limit_retry(lambda: A.answer_with_llm(llm, q["question"], hits))
             except Exception as exc:  # keep provider errors visible and count them as failures
+                if daily_quota_exhausted(str(exc)):
+                    stopped = "daily_provider_quota"
+                    break
                 per_question.append({"id": q["id"], "passed": False, "error": type(exc).__name__,
                                      "detail": re.sub(r"org_\w+", "org_***", str(exc))[:200]})
                 answerable_n += q["answerable"]
                 abst_fn += not q["answerable"]
                 continue
             finally:
+                latency_ms = round((time.perf_counter() - started) * 1_000)
                 if pace:
                     time.sleep(pace)
         else:
             ans = A.answer_extractive(q["question"], hits)
+            latency_ms = round((time.perf_counter() - started) * 1_000)
         should_abstain = not q["answerable"]
         ok = ans["abstained"] and should_abstain
         if ans["abstained"] and should_abstain:
@@ -284,16 +316,24 @@ def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chun
         if llm is not None:
             cited_ids = {c["chunk_id"] for c in ans["citations"]}
             supported = should_abstain or all(cited_ids & labels for labels in relevant_ids(chunks, q["relevant"]))
-            per_question.append({"id": q["id"], "passed": bool(ok and supported and not forbidden),
+            passed = bool(ok and supported and not forbidden)
+            per_question.append({"id": q["id"], "passed": passed,
                                  "facts_correct": bool(ok), "required_sources_cited": supported,
+                                 "model_returned": model_result is not None,
+                                 "latency_ms": latency_ms,
+                                 "estimated_cost_usd": model_result.cost_usd if model_result else None,
                                  "abstained": ans["abstained"], "answer": ans["answer"], "citations": ans["citations"]})
+            print(f"{len(per_question):2d}/{len(questions)} {'pass' if passed else 'fail'}  {q['id']}", flush=True)
     abst = prf(abst_tp, abst_fp, abst_fn)
     return {
-        "answer_correctness": round(correct / answerable_n, 3),
+        "answer_correctness": round(correct / answerable_n, 3) if answerable_n else None,
         "citation_accuracy": round(cited_ok / cited, 3) if cited else None,
         "abstention": {**abst, "note": "positive class = question should be refused"},
         "injection_parroting": f"{forbidden_hits}/{forbidden_n}",
-        **({"passed": sum(row["passed"] for row in per_question), "per_question": per_question}
+        **({"passed": sum(row["passed"] for row in per_question), "per_question": per_question,
+            "evaluated_questions": len(per_question), "stopped": stopped,
+            "model_answer_count": sum(row.get("model_returned", False) for row in per_question),
+            "latency_ms_p50": p50([row["latency_ms"] for row in per_question if "latency_ms" in row])}
            if llm is not None else {"groundedness": "1.0 by construction (verbatim extractive)"}),
         "failure_examples": examples,
     }

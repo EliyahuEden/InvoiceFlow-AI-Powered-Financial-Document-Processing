@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, get_db, require
+from app.api.routes.insights import dashboard
 from app.api.routes.invoices import invoice_query, open_exception_counts
 from app.models import Approval, Invoice, PurchaseOrder, Supplier, User
 from app.services import audit
@@ -28,6 +30,13 @@ HEBREW = {
     "allocation_number": "מספר הקצאה", "po_reference": "הזמנת רכש", "status": "סטטוס", "open_exceptions": "חריגות פתוחות",
     "approved_date": "תאריך אישור", "net": "סכום נטו", "vat_rate": "שיעור מע\"מ", "vat": "מע\"מ", "po_number": "הזמנת רכש",
     "approved_by": "אושר על ידי",
+    "category": "קטגוריה", "metric": "מדד", "date": "תאריך", "value": "ערך",
+}
+# Keep these labels aligned with the Hebrew invoice inbox.
+INVOICE_STATUS_HEBREW = {
+    "processing": "בעיבוד", "needs_review": "ממתין לבדיקה", "reconciled": "מוכן לאישור", "exception": "חריגה",
+    "approved": "אושר לתשלום", "rejected": "נדחה", "failed": "נכשל", "on_hold": "בהמתנה",
+    "voided": "בוטלה", "credit_note": "תעודת זיכוי",
 }
 
 
@@ -49,19 +58,42 @@ def _fmt(fmt: str) -> str:
     return fmt
 
 
+@router.get("/insights.{fmt}")
+def export_insights(fmt: str, lang: str = "en", p: Principal = Depends(require(Perm.INVOICE_READ)),
+                    db: Session = Depends(get_db)) -> Response:
+    fmt = _fmt(fmt)
+    report = dashboard(p, db)
+    kpis = report["kpis"]
+    rows: list[list[ex.Cell]] = [["summary", metric, None, None, value] for metric, value in kpis.items()
+                               if metric not in {"amount_at_risk", "amount_at_risk_currency", "amount_at_risk_by_currency", "total_value_ils"}]
+    rows.append(["summary", "total_value_ils", None, "ILS", Decimal(kpis["total_value_ils"])])
+    rows.extend(["summary", "amount_at_risk", None, currency, Decimal(value)]
+                for currency, value in kpis["amount_at_risk_by_currency"].items())
+    rows.extend(["invoice_status", key, None, None, count] for key, count in sorted(report["status_counts"].items()))
+    rows.extend(["discrepancy", row["type"], None, None, row["count"]] for row in report["discrepancy_types"])
+    rows.extend(["supplier_exception", row["supplier"], None, None, row["count"]] for row in report["exceptions_by_supplier"])
+    for row in report["daily"]:
+        day = date.fromisoformat(row["date"])
+        rows.extend(["daily", metric, day, None, row[metric]] for metric in ("received", "exceptions"))
+    audit.record(db, org_id=p.org_id, action="export.insights", entity_type="export", entity_id=None,
+                 actor_id=p.user.id, actor_label=p.user.email, meta={"rows": len(rows), "format": fmt})
+    return _send(fmt, "insights", ["category", "metric", "date", "currency", "value"], rows, lang)
+
+
 @router.get("/invoices.{fmt}")
 def export_invoices(fmt: str, q: str | None = None, status: str | None = None, supplier_id: uuid.UUID | None = None,
-                    sort: str = "-created_at", lang: str = "en",
+                    sort: str = "-created_at", lang: str = "en", archived: bool = False,
                     p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = Depends(get_db)) -> Response:
     fmt = _fmt(fmt)
-    found = db.execute(invoice_query(p.org_id, q, status, supplier_id, sort).limit(ex.MAX_ROWS)).all()
+    found = db.execute(invoice_query(p.org_id, q, status, supplier_id, sort, archived).limit(ex.MAX_ROWS)).all()
     exc = open_exception_counts(db, p.org_id)
+    status_labels = INVOICE_STATUS_HEBREW if lang == "he" else {}
     rows = [[i.invoice_number, s.name if s else i.supplier_name_raw, s.tax_id if s else i.supplier_tax_id_raw,
              i.invoice_date, i.due_date, i.currency, i.subtotal, i.tax_total, i.total, i.allocation_number,
-             i.po_reference, i.status, exc.get(i.id, 0)] for i, s, _ in found]
+             i.po_reference, status_labels.get(i.status, i.status), exc.get(i.id, 0)] for i, s, _ in found]
     audit.record(db, org_id=p.org_id, action="export.invoices", entity_type="export", entity_id=None,
                  actor_id=p.user.id, actor_label=p.user.email,
-                 meta={"rows": len(rows), "format": fmt, "filters": {"q": q, "status": status,
+                 meta={"rows": len(rows), "format": fmt, "filters": {"q": q, "status": status, "archived": archived,
                                                                     "supplier_id": str(supplier_id) if supplier_id else None}})
     return _send(fmt, "invoices", INVOICE_COLUMNS, rows, lang)
 
@@ -83,7 +115,9 @@ def export_accounting(fmt: str, approved_from: date | None = None, approved_to: 
             .outerjoin(approver, approver.c.invoice_id == Invoice.id)
             .outerjoin(Supplier, Supplier.id == Invoice.supplier_id)
             .outerjoin(PurchaseOrder, PurchaseOrder.id == Invoice.purchase_order_id)
-            .where(Invoice.organization_id == p.org_id, Invoice.status == "approved")
+            .where(Invoice.organization_id == p.org_id, Invoice.status == "approved", Invoice.payment_paid_on.is_(None),
+                   Supplier.pending_bank_account.is_(None),
+                   or_(Supplier.bank_hold_until.is_(None), Supplier.bank_hold_until <= datetime.now(UTC)))
             .order_by(last.c.approved_at, Invoice.invoice_number))
     if approved_from:
         stmt = stmt.where(func.date(last.c.approved_at) >= approved_from)

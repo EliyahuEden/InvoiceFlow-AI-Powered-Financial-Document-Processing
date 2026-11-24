@@ -4,12 +4,12 @@ from __future__ import annotations
 import csv
 import io
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, get_db, require
-from app.services import audit
+from app.services import audit, email, supplier_banking
 from app.services import bulk_import as bi
 from app.services.rbac import Perm
 
@@ -32,7 +32,7 @@ def template(kind: str, _: Principal = Depends(require(Perm.MASTERDATA_WRITE))) 
 
 
 @router.post("/{kind}")
-async def run_import(kind: str, commit: bool = False, file: UploadFile = File(...),
+async def run_import(kind: str, background: BackgroundTasks, commit: bool = False, file: UploadFile = File(...),
                      p: Principal = Depends(require(Perm.MASTERDATA_WRITE)), db: Session = Depends(get_db)) -> JSONResponse:
     if kind not in KINDS:
         raise HTTPException(404, "Unknown import type")
@@ -46,8 +46,10 @@ async def run_import(kind: str, commit: bool = False, file: UploadFile = File(..
         return JSONResponse(plan.response())
     if plan.errors:  # all or nothing: fix the file and import it again
         return JSONResponse({**plan.response(), "detail": "The file has errors; nothing was imported."}, status_code=422)
+    notices = []
     if kind == "suppliers":
-        bi.apply_suppliers(db, p.org_id, plan)
+        changed = bi.apply_suppliers(db, p.org_id, plan, p.user)
+        notices = supplier_banking.admin_notices(db, p.org, changed)
     elif kind == "purchase-orders":
         bi.apply_purchase_orders(db, p.org_id, p.user.id, plan)
     else:
@@ -56,4 +58,8 @@ async def run_import(kind: str, commit: bool = False, file: UploadFile = File(..
                  actor_id=p.user.id, actor_label=p.user.email,
                  meta={**plan.summary, "file": (file.filename or "")[:200],
                        "keys": [i["key"] for i in plan.items if i["action"] != "skip"][:500]})
+    if notices:
+        db.commit()
+        for message in notices:
+            background.add_task(email.send, message)
     return JSONResponse(plan.response())

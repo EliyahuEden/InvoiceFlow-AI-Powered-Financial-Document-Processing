@@ -64,6 +64,25 @@ def test_live_answer_cannot_attach_a_real_quote_to_a_different_payment_term():
     assert result["abstained"] and "30 days" not in result["answer"]
 
 
+def test_live_answer_cannot_borrow_a_number_from_outside_the_quote_in_the_same_passage():
+    from app.services.llm.provider import LLMResult
+    from app.services.rag.answer import answer_with_llm
+
+    class Model:
+        model = "fake"
+
+        def structured(self, **kwargs):
+            return LLMResult("fake", self.model, 0, data={
+                "answer": "The warranty is 90 days.",
+                "citations": [{"passage": 1, "quote": "The warranty is 60 days."}],
+            })
+
+    result, _ = answer_with_llm(Model(), "How long is the warranty?", [
+        _hit("The warranty is 60 days. Replacement parts may take 90 days to ship."),
+    ])
+    assert result["abstained"] and not result["citations"]
+
+
 def test_extractive_answer_abstains_without_evidence_and_screens_injection():
     assert answer_extractive("anything?", [])["abstained"]
     weak = answer_extractive("What is the cancellation fee for licenses?", [_hit("Hardware carries a 36-month warranty.")])

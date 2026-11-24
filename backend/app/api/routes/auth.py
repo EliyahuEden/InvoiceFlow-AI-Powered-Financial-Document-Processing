@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from app.api.deps import COOKIE_NAME, REFRESH_COOKIE, Principal, get_principal
+from app.api.deps import COOKIE_NAME, REFRESH_COOKIE, Principal, get_principal, requires_mfa_enrollment
 from app.core.client_ip import client_ip
 from app.core.config import get_settings
 from app.core.db import new_session, set_session_org
@@ -73,12 +73,14 @@ def _ip(request: Request) -> str:
 
 
 def _me_payload(user: User, org: Organization, role: str, orgs: list[dict]) -> dict:
+    enrollment_required = requires_mfa_enrollment(user, org)
     return {
         "user": {"id": str(user.id), "email": user.email, "full_name": user.full_name, "locale": user.locale},
         "organization": {"id": str(org.id), "name": org.name, "slug": org.slug,
                          "name_en": org.settings.get("display_name_en"),
                          "base_currency": org.settings.get("base_currency", "ILS")},
-        "role": role, "permissions": permissions_for(role), "organizations": orgs,
+        "role": role, "permissions": [] if enrollment_required else permissions_for(role), "organizations": orgs,
+        "mfa_enrollment_required": enrollment_required, "two_factor": user.totp_enabled_at is not None,
         "ai_mode": mode_label(),
     }
 
@@ -117,7 +119,7 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
     check_rate_limit(f"login:{body.email.lower()}", get_settings().rate_limit_login_per_minute)
     s = new_session()
     try:
-        user = s.scalars(select(User).where(User.email == body.email.lower())).first()
+        user = s.scalars(select(User).where(User.email == body.email.lower()).with_for_update()).first()
         if not user or not user.is_active or not verify_password(body.password, user.password_hash):
             raise HTTPException(401, "Invalid email or password")
         if user.totp_enabled_at is not None:
@@ -505,12 +507,12 @@ def two_factor_status(p: Principal = Depends(get_principal)) -> dict:
 def two_factor_setup(request: Request, p: Principal = Depends(get_principal)) -> dict:
     """A new secret to scan. It does nothing until confirmed with a code (/2fa/enable)."""
     _require_csrf(request)
-    if p.user.totp_enabled_at is not None:
-        raise HTTPException(409, "Two-factor sign-in is already on. Turn it off first to set up a new app.")
     secret = mfa.new_secret()
     s = new_session()
     try:
-        user = s.get(User, p.user.id)
+        user = s.scalars(select(User).where(User.id == p.user.id).with_for_update()).one()
+        if user.totp_enabled_at is not None:
+            raise HTTPException(409, "Two-factor sign-in is already on. Turn it off first to set up a new app.")
         user.totp_secret_enc, user.totp_last_step = mfa.encrypt(secret), None
         s.commit()
     finally:
@@ -535,6 +537,7 @@ def two_factor_enable(body: CodeIn, request: Request, p: Principal = Depends(get
         codes = mfa.new_recovery_codes()
         user.totp_last_step, user.totp_enabled_at = step, datetime.now(UTC)
         user.recovery_codes = [mfa.hash_code(c) for c in codes]
+        auth_sessions.revoke_all(s, user.id, "two_factor_enabled", keep=p.session_id)
         _audit_user(s, p, "auth.2fa_enabled")
         s.commit()
         return {"enabled": True, "recovery_codes": codes}

@@ -3,11 +3,12 @@ falls back to offline mode, and sign-up off by default in production."""
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
 
 import pytest
 
 from app.core.config import Settings, get_settings
-from app.services import ai_budget
+from app.services import ai_budget, ratelimit
 from app.services.events import get_redis
 from app.services.llm import provider as llm_provider
 from app.services.llm.provider import LLMResult
@@ -75,7 +76,13 @@ def test_model_calls_are_charged_when_recorded(world, budget):
 
 
 # ---------------------------------------------------------------- per-user rate limits on model-backed endpoints
-def test_policy_questions_are_rate_limited_per_user(client, as_user, monkeypatch):
+@pytest.fixture()
+def fixed_rate_window(monkeypatch):
+    # Keep requests in one fixed Redis window even if the test starts just before a minute changes.
+    monkeypatch.setattr(ratelimit, "time", SimpleNamespace(time=lambda: 30.0))
+
+
+def test_policy_questions_are_rate_limited_per_user(client, as_user, monkeypatch, fixed_rate_window):
     monkeypatch.setattr(get_settings(), "rate_limit_ai_per_minute", 2)
     fin = as_user("finance@kinneret.example")
     codes = [client.post("/api/knowledge/ask", headers=fin, json={"query": "מה תנאי התשלום?"}).status_code
@@ -85,7 +92,7 @@ def test_policy_questions_are_rate_limited_per_user(client, as_user, monkeypatch
     assert client.post("/api/knowledge/ask", headers=other, json={"query": "payment terms"}).status_code == 200
 
 
-def test_investigations_are_rate_limited_per_user(client, as_user, monkeypatch):
+def test_investigations_are_rate_limited_per_user(client, as_user, monkeypatch, fixed_rate_window):
     from tests.conftest import upload_invoice
 
     fin = as_user("finance@kinneret.example")

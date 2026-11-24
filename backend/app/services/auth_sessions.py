@@ -113,9 +113,11 @@ def revoke(db: Session, sid: uuid.UUID | str, reason: str = "logout") -> None:
         sess.revoked_at, sess.revoked_reason = _now(), reason
 
 
-def revoke_all(db: Session, user_id: uuid.UUID, reason: str = "logout_all") -> int:
-    res = db.execute(update(AuthSession).where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
-                     .values(revoked_at=_now(), revoked_reason=reason))
+def revoke_all(db: Session, user_id: uuid.UUID, reason: str = "logout_all", *, keep: uuid.UUID | None = None) -> int:
+    stmt = update(AuthSession).where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
+    if keep is not None:
+        stmt = stmt.where(AuthSession.id != keep)
+    res = db.execute(stmt.values(revoked_at=_now(), revoked_reason=reason))
     return res.rowcount or 0
 
 

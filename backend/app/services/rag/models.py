@@ -34,11 +34,12 @@ def with_prefix(model: str, texts: list[str], kind: str) -> list[str]:
 
 
 class FastEmbedEmbedder:
-    def __init__(self, model: str, cache_dir: str) -> None:
+    def __init__(self, model: str, cache_dir: str, *, batch_size: int = 32, threads: int | None = None) -> None:
         from fastembed import TextEmbedding
 
         self.name = model
-        self._model = TextEmbedding(model_name=model, cache_dir=cache_dir, threads=None)
+        self._model = TextEmbedding(model_name=model, cache_dir=cache_dir, threads=threads)
+        self._batch_size = batch_size
         self.dim = int(self._model.embedding_size) if hasattr(self._model, "embedding_size") else 384
         self._lock = threading.Lock()
 
@@ -50,7 +51,7 @@ class FastEmbedEmbedder:
 
     def _embed(self, texts: list[str]) -> np.ndarray:
         with self._lock:
-            vecs = np.array(list(self._model.embed(texts, batch_size=32)), dtype=np.float32)
+            vecs = np.array(list(self._model.embed(texts, batch_size=self._batch_size)), dtype=np.float32)
         norms = np.linalg.norm(vecs, axis=1, keepdims=True)
         return vecs / np.maximum(norms, 1e-12)
 
@@ -82,16 +83,17 @@ class Reranker(Protocol):
 
 
 class FastEmbedReranker:
-    def __init__(self, model: str, cache_dir: str) -> None:
+    def __init__(self, model: str, cache_dir: str, *, batch_size: int = 16, threads: int | None = None) -> None:
         from fastembed.rerank.cross_encoder import TextCrossEncoder
 
         self.name = model
-        self._model = TextCrossEncoder(model_name=model, cache_dir=cache_dir)
+        self._model = TextCrossEncoder(model_name=model, cache_dir=cache_dir, threads=threads)
+        self._batch_size = batch_size
         self._lock = threading.Lock()
 
     def score(self, query: str, docs: list[str]) -> list[float]:
         with self._lock:
-            return [float(s) for s in self._model.rerank(query, docs, batch_size=16)]
+            return [float(s) for s in self._model.rerank(query, docs, batch_size=self._batch_size)]
 
 
 @lru_cache

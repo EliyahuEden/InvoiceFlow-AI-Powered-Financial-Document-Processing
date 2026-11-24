@@ -78,3 +78,28 @@ test("capture screenshots", async ({ page }) => {
   await page.screenshot({ path: `${OUT}/10-english-prompt-injection.png` });
   await page.getByRole("button", { name: "Language" }).click();
 });
+
+test("capture import, export and account settings", async ({ page, baseURL }) => {
+  await page.context().addCookies([{ name: "if_locale", value: "en", url: baseURL! }]);
+  await login(page, "admin@kinneret.example");
+
+  await page.goto("/suppliers");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Import from a spreadsheet" })).toBeVisible();
+  await page.screenshot({ path: `${OUT}/11-import.png`, animations: "disabled" });
+
+  await page.goto("/invoices");
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(page.getByRole("menu").getByText("Approved for payment, for accounting")).toBeVisible();
+  await page.screenshot({ path: `${OUT}/12-export.png`, animations: "disabled" });
+
+  await page.goto("/settings");
+  await expect(page.getByRole("button", { name: "Add user" })).toBeVisible();
+  for (const [heading, file] of [["Two-factor sign-in", "13-two-factor"], ["Team", "14-team"]] as const) {
+    const section = page.getByRole("heading", { name: heading, exact: true });
+    await expect(section).toBeVisible();
+    await section.evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await page.screenshot({ path: `${OUT}/${file}.png`, animations: "disabled" });
+  }
+});

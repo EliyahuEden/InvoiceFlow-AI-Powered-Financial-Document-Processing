@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import statistics
 from collections import Counter, defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
@@ -14,9 +14,23 @@ from sqlalchemy.orm import Session
 from app.api.deps import Principal, get_db, money, page_params, paginated, require
 from app.core.config import get_settings
 from app.models import AgentRun, AICall, AuditLog, Discrepancy, ExceptionCase, Invoice, Job, Supplier
+from app.services import supplier_banking
 from app.services.rbac import Perm
 
 router = APIRouter(prefix="/api", tags=["insights"])
+
+
+@router.get("/payments/due")
+def due_payments(p: Principal = Depends(require(Perm.APPROVAL_DECIDE)), db: Session = Depends(get_db)) -> dict:
+    today = date.today()
+    attention = func.least(Invoice.due_date, Invoice.payment_scheduled_for)
+    due = db.execute(select(Invoice, Supplier, attention).outerjoin(Supplier, Supplier.id == Invoice.supplier_id)
+                     .where(Invoice.organization_id == p.org_id, Invoice.status == "approved",
+                            Invoice.payment_paid_on.is_(None), attention <= today + timedelta(days=7))
+                     .order_by(attention, Invoice.id).limit(25)).all()
+    return {"items": [{"id": str(inv.id), "number": inv.invoice_number, "amount": money(inv.total),
+                       "currency": inv.currency, "date": day.isoformat(), "overdue": day < today,
+                       "held": supplier_banking.held(supplier) if supplier else False} for inv, supplier, day in due]}
 
 
 @router.get("/dashboard")
@@ -24,8 +38,9 @@ def dashboard(p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = 
     org = p.org_id
     invoices = db.scalars(select(Invoice).where(Invoice.organization_id == org)).all()
     by_status = Counter(i.status for i in invoices)
-    total_value = sum((i.total or Decimal(0) for i in invoices if i.currency in (None, "ILS")), Decimal(0))
-    processed = [i for i in invoices if i.status not in ("processing", "failed")]
+    active_value = [i for i in invoices if i.status not in ("voided", "credit_note")]
+    total_value = sum((i.total or Decimal(0) for i in active_value if i.currency in (None, "ILS")), Decimal(0))
+    processed = [i for i in active_value if i.status not in ("processing", "failed")]
     first_pass = [i for i in processed if i.status in ("reconciled", "approved")]
     disc = db.execute(select(Discrepancy.type, Discrepancy.severity, Discrepancy.evidence, Invoice.currency)
                       .join(Invoice, Invoice.id == Discrepancy.invoice_id)

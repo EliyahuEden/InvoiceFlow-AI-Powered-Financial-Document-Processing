@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { DocumentViewer } from "@/components/document-viewer";
 import { ActionLabel, FindingTag, SecurityNotice, StatusPill, VerifiedTag, WarningList } from "@/components/domain";
 import { fieldHighlights, FieldList, SourceTags } from "@/components/invoice-fields";
+import { InvoicePayment } from "@/components/invoice-payment";
+import { InvoiceLifecycle } from "@/components/invoice-lifecycle";
 import { useSession } from "@/components/session";
 import { Button, EmptyState, Panel, PanelHeader, Skeleton, Table, Td, Textarea, Th } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -130,6 +132,8 @@ export default function InvoiceOverview() {
             </div>
           )}
         </Panel>
+        <InvoicePayment invoice={inv} onUpdated={() => void mutate()} />
+        <InvoiceLifecycle invoice={inv} onUpdated={() => void mutate()} />
       </div>
     </div>
   );

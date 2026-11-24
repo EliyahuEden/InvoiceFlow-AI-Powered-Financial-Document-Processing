@@ -3,17 +3,17 @@ from __future__ import annotations
 
 import argparse
 import time
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
-from common import write_result
+from common import add_model_options, configure_model, daily_quota_exhausted, p50, write_result
 from app.services.rag.text import normalize
 
 from app.core.config import get_settings
 from app.core.db import session_scope
-from app.models import Organization, User
+from app.models import AICall, Organization, User
 from app.services import copilot
 from app.services.llm.provider import get_llm
 from tests.test_copilot_catalogue import CATALOGUE
@@ -73,10 +73,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pace", type=float, default=15, help="seconds between prompts")
     parser.add_argument("--out", default="copilot_llm", help="result name under eval/results")
+    add_model_options(parser)
     args = parser.parse_args()
     database = make_url(get_settings().database_url).database or ""
     if not database.endswith("_copilot_eval"):
         parser.error("Use a fresh disposable database ending in _copilot_eval with only the synthetic demo seeded.")
+    configure_model(parser, args)
     llm = get_llm()
     if llm is None:
         parser.error("Configure the live model provider before starting the benchmark.")
@@ -89,27 +91,44 @@ def main() -> None:
     if org_id is None or user_id is None:
         parser.error("Seed the synthetic demo with the offline provider first.")
     rows = []
+    stopped = None
+    question_count = len(CATALOGUE)
     for i, ((_, question, tool), facts) in enumerate(zip(CATALOGUE, FACTS, strict=True)):
         if i and args.pace:
             time.sleep(args.pace)
+        started = time.perf_counter()
+        started_at = datetime.now(UTC)
         with session_scope(org_id) as session:
             response = copilot.ask(session, org_id, user_id, "finance_reviewer", question)
+            calls = session.execute(select(AICall.error, AICall.cost_usd).where(
+                AICall.organization_id == org_id, AICall.kind == "copilot", AICall.created_at >= started_at
+            )).all()
+        if any(daily_quota_exhausted(call.error or "") for call in calls):
+            stopped = "daily_provider_quota"
+            break
         tool_ok = tool_matches(i, tool, response["steps"])
         answer_ok = facts_present(response["answer"], facts)
         passed = tool_ok and answer_ok and response["verified"]
         rows.append({"question": question, "passed": passed, "expected_tool": tool, "expected_facts": facts,
                      "expected_tool_and_filters_used": tool_ok, "facts_present": answer_ok,
                      "verified": response["verified"], "mode": response["mode"], "answer": response["answer"],
-                     "steps": response["steps"]})
+                     "steps": response["steps"], "latency_ms": round((time.perf_counter() - started) * 1_000),
+                     "estimated_cost_usd": round(sum(call.cost_usd for call in calls), 6)
+                     if calls and all(call.cost_usd is not None for call in calls) else None})
         print(f"{i + 1:2d}/{len(CATALOGUE)} {'pass' if passed else 'fail'}  {question}", flush=True)
     passed = sum(row["passed"] for row in rows)
-    live_answers = sum(row["mode"].startswith("llm:") for row in rows)
-    result = write_result(args.out, {"model": llm.model, "provider": llm.name,
+    model_rows = [row for row in rows if row["mode"].startswith("llm:")]
+    result = write_result(args.out, {"model": llm.model, "provider": args.provider or llm.name,
+                         "prompt_version": copilot.PROMPT_VERSION,
                          "dataset": "32 English prompts from backend/tests/test_copilot_catalogue.py",
-                         "as_of": date.today().isoformat(), "passed": passed, "questions": len(rows),
-                         "pass_rate": round(passed / len(rows), 3), "model_answer_count": live_answers,
-                         "offline_answer_count": len(rows) - live_answers, "per_question": rows})
-    print(f"{passed}/{len(rows)} passed; results: {result}")
+                         "as_of": date.today().isoformat(), "passed": passed, "questions": question_count,
+                         "evaluated_questions": len(rows), "stopped": stopped,
+                         "latency_ms_p50": p50([row["latency_ms"] for row in rows]),
+                         "pass_rate": round(passed / question_count, 3) if stopped is None else None,
+                         "model_answer_count": len(model_rows),
+                         "model_answer_passed": sum(row["passed"] for row in model_rows),
+                         "offline_answer_count": len(rows) - len(model_rows), "per_question": rows})
+    print(f"{passed}/{len(rows)} evaluated questions passed; results: {result}; stopped: {stopped}")
 
 
 if __name__ == "__main__":

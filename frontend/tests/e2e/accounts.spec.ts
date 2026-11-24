@@ -46,6 +46,24 @@ async function signIn(page: Page, email: string, password: string): Promise<void
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
 
+test("an administrator confirms and deletes their workspace from Settings", async ({ page, request }) => {
+  const email = unique("erase");
+  await signUpByApi(request, email);
+  await signIn(page, email, PASSWORD);
+  await expect(page).toHaveURL(/\/$/);
+  const user = await (await page.request.get("/api/auth/me")).json();
+  await page.goto("/settings");
+  await page.getByText("Delete workspace permanently", { exact: true }).first().click();
+  const confirm = page.getByRole("button", { name: "Delete workspace permanently" });
+  await fill(page.getByLabel("Type the workspace identifier"), user.organization.slug);
+  await expect(confirm).toBeDisabled();
+  await fill(page.locator("#erase-workspace-password"), PASSWORD);
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect((await page.request.get("/api/auth/me")).status()).toBe(401);
+});
+
 /** The link in the newest email to `to`, waiting for it to arrive. */
 async function emailedLink(request: APIRequestContext, to: string, path: "reset-password" | "accept-invite"): Promise<string> {
   const pattern = new RegExp(`https?://[^\\s"<>]+/${path}\\?token=[A-Za-z0-9_\\-]+`);
@@ -233,4 +251,40 @@ test("an administrator resets two-factor for a teammate who lost their phone", a
   const found = await (await request.get(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${mate}"`)}`)).json();
   expect(found.messages?.[0]?.Subject).toContain("two-factor");
   await theirs.dispose();
+});
+
+test("a team member must enroll before opening a workspace that requires two-factor sign-in", async ({ page, request }) => {
+  const admin = unique("policy-admin");
+  const mate = unique("policy-member");
+  await signUpByApi(request, admin);
+  await signIn(page, admin, PASSWORD);
+  await expect(page).toHaveURL(/\/$/);
+  const headers = { "X-Requested-With": "invoiceflow" };
+  const member = await page.request.post("/api/org/members", { headers, data: {
+    email: mate, full_name: "Enrollment Required", role: "finance_reviewer", password: PASSWORD,
+  } });
+  expect(member.status()).toBe(201);
+  const setup = await page.request.post("/api/auth/2fa/setup", { headers });
+  expect(setup.ok()).toBe(true);
+  const enabled = await page.request.post("/api/auth/2fa/enable", { headers, data: { code: totp((await setup.json()).secret) } });
+  expect(enabled.ok()).toBe(true);
+  await page.goto("/settings");
+  await page.getByRole("checkbox", { name: "Require two-factor sign-in for everyone" }).check();
+  const saved = page.waitForResponse((response) => response.url().endsWith("/api/org/settings") && response.request().method() === "PATCH");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  expect((await saved).ok()).toBe(true);
+
+  await signOut(page);
+  await signIn(page, mate, PASSWORD);
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("heading", { name: "Set up two-factor sign-in" })).toBeVisible();
+  expect((await page.request.get("/api/invoices")).status()).toBe(403);
+  await page.getByRole("button", { name: "Set up", exact: true }).click();
+  const secret = await page.locator("code.ltr").textContent();
+  await fill(page.locator("#tf-enable"), totp(secret ?? ""));
+  await page.getByRole("button", { name: "Turn on" }).click();
+  await expect(page.getByText("Save these recovery codes")).toBeVisible();
+  await page.getByRole("button", { name: "I saved them" }).click();
+  await expect(page.getByRole("heading", { name: "Organization settings" })).toBeVisible();
+  expect((await page.request.get("/api/invoices")).ok()).toBe(true);
 });

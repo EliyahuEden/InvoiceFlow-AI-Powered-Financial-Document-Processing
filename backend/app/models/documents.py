@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,7 +56,9 @@ class DocumentPage(UUIDPk, TenantScoped, Base):
 class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     __tablename__ = "invoices"
     # the invoice list's own order, newest first within a business (migration 0009)
-    __table_args__ = (Index("ix_invoices_org_created", "organization_id", text("created_at DESC NULLS LAST")),)
+    __table_args__ = (Index("ix_invoices_org_created", "organization_id", text("created_at DESC NULLS LAST")),
+                      CheckConstraint("(payment_paid_on IS NULL) = (payment_reference IS NULL)",
+                                      name="ck_invoices_payment_record"))
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id"), index=True)
     supplier_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("suppliers.id"), index=True)
     purchase_order_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -69,6 +71,13 @@ class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     invoice_number: Mapped[str | None] = mapped_column(String(80), index=True)
     invoice_date: Mapped[date | None] = mapped_column(Date)
     due_date: Mapped[date | None] = mapped_column(Date)
+    payment_scheduled_for: Mapped[date | None] = mapped_column(Date)
+    payment_paid_on: Mapped[date | None] = mapped_column(Date)
+    payment_reference: Mapped[str | None] = mapped_column(String(120))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    credit_for_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoices.id", name="fk_invoices_credit_for", ondelete="SET NULL"), index=True,
+    )
     currency: Mapped[str | None] = mapped_column(String(3))
     po_reference: Mapped[str | None] = mapped_column(String(50))
     payment_terms: Mapped[str | None] = mapped_column(String(200))

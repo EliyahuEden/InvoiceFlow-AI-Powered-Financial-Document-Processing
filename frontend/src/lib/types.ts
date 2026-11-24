@@ -45,6 +45,10 @@ export type InvoiceDetail = {
   created_at: string; filename: string | null; text_method: string | null; security_flag: boolean;
   supplier_name_raw: string | null; supplier_tax_id_raw: string | null; due_date: string | null; payment_terms: string | null;
   allocation_number: string | null;
+  payment?: { status: "unscheduled" | "scheduled" | "paid"; scheduled_for: string | null; paid_on: string | null; reference: string | null };
+  archived_at?: string | null;
+  credit_for_invoice_id?: string | null;
+  credit_notes?: { id: string; number: string | null; total: string | null }[];
   subtotal: string | null; discount_total: string | null; tax_total: string | null; tax_rate: string | null;
   field_sources: Record<string, Source>; missing_fields: string[];
   validation_warnings: { code: string; message: string; severity?: string; field?: string; snippets?: string[] }[];

@@ -3,6 +3,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 import { Button, Field, Input, Panel, PanelHeader } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
 import { date } from "@/lib/format";
@@ -17,6 +18,7 @@ export function TwoFactorPanel() {
   const { t, locale } = useI18n();
   const m = t.twoFactor;
   const { data, mutate } = useApi<Status>("/api/auth/2fa");
+  const { mutate: revalidate } = useSWRConfig();
   const [mode, setMode] = useState<Mode>("idle");
   const [setup, setSetup] = useState<Setup | null>(null);
   const [code, setCode] = useState("");
@@ -42,7 +44,7 @@ export function TwoFactorPanel() {
     const value = code.trim();
     const isCode = /^\d{6}$/.test(value.replace(/\s/g, ""));
     await api.post("/api/auth/2fa/disable", { password, ...(isCode ? { code: value } : { recovery_code: value }) });
-    reset(); mutate(); toast.success(m.disabled);
+    reset(); mutate(); void revalidate("/api/auth/me"); toast.success(m.disabled);
   });
   const renew = () => run(async () => {
     const r = await api.post<{ recovery_codes: string[] }>("/api/auth/2fa/recovery-codes", { code });
@@ -111,7 +113,7 @@ export function TwoFactorPanel() {
             </ul>
             <div className="flex gap-2">
               <Button onClick={copy}>{m.copy}</Button>
-              <Button variant="primary" onClick={() => { setCodes([]); reset(); }}>{m.done}</Button>
+              <Button variant="primary" onClick={() => { setCodes([]); reset(); void revalidate("/api/auth/me"); }}>{m.done}</Button>
             </div>
           </div>
         )}
