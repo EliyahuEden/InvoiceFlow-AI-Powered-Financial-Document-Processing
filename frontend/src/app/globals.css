@@ -265,6 +265,11 @@
   .palette-group [cmdk-group-heading] { padding: 10px 12px 6px; font-size: 0.75rem; font-weight: 500; color: rgb(var(--ink-3)); }
 }
 
+/* Queue row → workspace (components/transition-link.tsx): the invoice number morphs into the heading, the rest crossfades */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 180ms; animation-timing-function: var(--motion-ease); }
+::view-transition-group(case-title) { animation-duration: 320ms; animation-timing-function: var(--motion-ease); }
+::view-transition-old(case-title), ::view-transition-new(case-title) { height: 100%; object-fit: contain; }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after, ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

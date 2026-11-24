@@ -193,7 +193,7 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
           <span className="mt-1 hidden h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface text-accent sm:grid"><FileText className="h-5 w-5" aria-hidden /></span>
           <div className="min-w-0">
             <h1 className="break-words text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-              {t.review.reviewInvoice} <bdi className="ltr">{e.invoice_number || e.title}</bdi>
+              {t.review.reviewInvoice} <bdi data-vt-target className="ltr inline-block [view-transition-name:case-title]">{e.invoice_number || e.title}</bdi>
             </h1>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-md text-ink-3">
               <span><bdi>{supplierName || t.common.unknown}</bdi></span>

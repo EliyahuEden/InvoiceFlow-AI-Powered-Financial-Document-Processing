@@ -25,6 +25,12 @@ coding agent (or person) can pick up from here.
   [docs/AURORA_PLAN.md](docs/AURORA_PLAN.md). Review screenshots: `cd frontend && BASE=http://localhost:3003 node
   scripts/capture-review.mjs ../.impeccable/review`. Still open: the queue-row → workspace shared-element transition
   and an Aurora pass on the insights charts page.
+- **"Try the demo" sandboxes (2026-11-24):** the sign-in page offers a private copy of the demo company per visitor,
+  deleted after 24 hours (`backend/app/services/sandbox.py`, `POST /api/auth/demo`, tests in `tests/test_sandbox.py`).
+  It copies the seeded `kinneret` workspace row for row with new ids and copied files (no AI calls), signs the visitor in
+  as a finance reviewer, and the worker deletes expired copies through the normal workspace erase. Limits: 5 demos per
+  visitor address per day; the per-visitor AI question limit still applies. On a public deployment, run
+  `python -m app.cli lock-demo-template` after seeding so the published demo password stops working.
 - **API crash fixed (2026-11-24):** PDFium is not thread-safe, and concurrent page-image requests corrupted the heap
   (`munmap_chunk(): invalid pointer`, the API process aborted). All PDFium use now goes through
   `backend/app/services/documents/pdfium_safe.py` (one process-wide lock); `backend/tests/test_pdfium_safe.py` stresses it
@@ -111,9 +117,10 @@ C. **Deskewing verified.** In the [24-scan benchmark](eval/results/scan_stress_d
    image. The original 73-document benchmark still scored 92.0% with rules only. Never use `example invocies/`.
 D. **Make it visible in five minutes:**
    - a live demo (P0 item 1) with the demo accounts and offline or budget-capped AI;
-   - the [recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) (1:03, Aurora design) shows sign-in, the dashboard, a live
-     Hebrew upload, the three-way match, the AI investigation, the investigation workspace, a reviewer decision and the
-     verified audit chain. Re-record with `frontend/scripts/record-walkthrough.mjs` on a disposable stack. The [interview script](docs/DEMO_SCRIPT.md) is also available.
+   - the [recorded walkthrough](docs/demo/invoiceflow-walkthrough.webm) (1:50, live gpt-4.1-mini, under 1 cent) shows sign-in,
+     the dashboard, a live Hebrew upload, the three-way match, the AI investigation, the queue-to-workspace transition,
+     evidence traced to the page, a Copilot answer with sources, a reviewer decision, a cited policy answer and the
+     verified audit chain. Re-record with `frontend/scripts/record-walkthrough.mjs` against demo data only. The [interview script](docs/DEMO_SCRIPT.md) is also available.
    - the [README](README.md) has the pitch, diagram, benchmark table and screenshots; add the hosted demo link after deployment;
    - [CV bullets](docs/CV_BULLETS.md) are split into full-stack and AI engineering versions.
 E. **Payment controls:** Supplier banking, dual control and payment tracking are available locally. Masav remains
@@ -122,13 +129,18 @@ E. **Payment controls:** Supplier banking, dual control and payment tracking are
 ## To do, in priority order
 
 ### P0: going live, awaiting an authorized hosting target
+0. **Free option:** [docs/DEPLOY_FREE.md](docs/DEPLOY_FREE.md) runs the whole stack at no cost (Oracle Cloud Always Free
+   in Jerusalem, DuckDNS, Backblaze B2, Brevo, Groq).
 1. **Buy a domain and a server** (4 vCPU, 8–16 GB RAM, Israeli region for data residency), then follow the
    10-step runbook in `docs/DEPLOYMENT.md`. Keep `JWT_SECRET` stable once live: two-factor secrets are encrypted
    with a key derived from it.
 2. **AI plan for customers.** Done for the portfolio demo: OpenAI `gpt-4.1-mini` with Groq and offline fallbacks (see
    Current state). Keep auto-recharge off in the OpenAI account; the paid budget caps daily spend per business.
-3. **Legal.** Privacy policy, terms of use, Israel's data-security regulations, data-processing agreements with the
-   AI and email providers.
+3. **Legal drafts in place (2026-11-24), lawyer review pending.** Public pages at `/legal`: terms of use, privacy policy,
+   data-processing agreement (with security annex and sub-processor list), accessibility statement and business
+   details. Sign-up requires accepting the current version (`LEGAL_VERSION` in `backend/app/core/legal.py` and
+   `frontend/src/lib/legal.ts`), recorded as `legal.accepted` in the audit log. Before launch: fill the `[bracketed]`
+   operator details in `frontend/src/lib/legal.ts` and have a lawyer review the texts.
 4. **Brevo domain verification** (SPF, DKIM, DMARC) once there is a domain.
 
 ### P1: next for pilot users (code)

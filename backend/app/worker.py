@@ -130,8 +130,13 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
     log.info("worker_started", worker_id=worker_id)
+    next_expiry = 0.0
     while not stop["flag"]:
         try:
+            if time.monotonic() >= next_expiry:  # delete "Try the demo" workspaces past their day
+                next_expiry = time.monotonic() + s.sandbox_expiry_check_seconds
+                from app.services.sandbox import expire_due
+                expire_due()
             if not run_one(worker_id):
                 time.sleep(s.worker_poll_seconds)
         except Exception as exc:  # noqa: BLE001 - keep the worker alive on infrastructure hiccups

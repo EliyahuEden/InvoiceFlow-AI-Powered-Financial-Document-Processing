@@ -3,6 +3,7 @@ import json
 import uuid
 import zipfile
 
+from app.core.legal import LEGAL_VERSION
 from tests.conftest import DATA, upload_invoice
 
 
@@ -43,7 +44,8 @@ def test_workspace_erase_requires_reauthentication_and_retries_storage_cleanup(c
 
     signed_up = client.post("/api/auth/signup", headers={"X-Requested-With": "invoiceflow"},
                             json={"company_name": "Disposable Workspace", "full_name": "Workspace Admin",
-                                  "email": "workspace-admin@disposable.example", "password": DEMO_PASSWORD})
+                                  "email": "workspace-admin@disposable.example", "password": DEMO_PASSWORD,
+                                  "accepted_legal_version": LEGAL_VERSION})
     assert signed_up.status_code == 201, signed_up.text
     identity = signed_up.json()
     admin = {"Authorization": f"Bearer {identity['access_token']}"}

@@ -2,6 +2,7 @@
 
 import { Check, Languages } from "lucide-react";
 import { InvoiceStack } from "./invoice-stack";
+import { LegalFooter } from "./legal-footer";
 import { LogoMark } from "./logo";
 import { useI18n } from "@/lib/i18n";
 import { MatchStack } from "./match-stack";
@@ -75,6 +76,7 @@ export function AuthShell({ title, children }: { title: string; children: React.
           <p className="mt-1 text-base text-ink-3 lg:hidden">{t.app.tagline}</p>
         </div>
         {children}
+        <LegalFooter className="px-0 py-2 text-xs" />
       </div>
     </main>
   );

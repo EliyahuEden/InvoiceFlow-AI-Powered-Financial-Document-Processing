@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { expect, type APIRequestContext, type Locator, type Page, test } from "@playwright/test";
+import { LEGAL_VERSION } from "../../src/lib/legal";
 
 // Account flows in the browser: sign-up, password reset by email, team invitation by email, two-factor sign-in.
 // Emails are read from the stack's Mailpit inbox, so run this only against the throwaway stack
@@ -34,7 +35,8 @@ async function fill(field: Locator, value: string): Promise<void> {
 async function signUpByApi(request: APIRequestContext, email: string): Promise<void> {
   const r = await request.post("/api/auth/signup", {
     headers: { "X-Requested-With": "invoiceflow" },
-    data: { company_name: `E2E Co ${Date.now()}`, full_name: "E2E Person", email, password: PASSWORD, locale: "en" },
+    data: { company_name: `E2E Co ${Date.now()}`, full_name: "E2E Person", email, password: PASSWORD, locale: "en",
+      accepted_legal_version: LEGAL_VERSION },
   });
   expect(r.status(), await r.text()).toBe(201);
 }
@@ -100,7 +102,10 @@ test("a new business signs up and lands in its own empty workspace", async ({ pa
   await fill(page.locator("#name"), "Noa Tester");
   await fill(page.locator("#email"), email);
   await fill(page.locator("#password"), PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
+  const create = page.getByRole("button", { name: "Create account" });
+  await expect(create).toBeDisabled(); // the terms must be accepted first
+  await page.getByRole("checkbox").check();
+  await create.click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText("Noa Tester")).toBeVisible();
   await expect(page.getByText("Administrator").first()).toBeVisible();
@@ -114,6 +119,7 @@ test("a new business signs up and lands in its own empty workspace", async ({ pa
   await fill(page.locator("#name"), "Someone Else");
   await fill(page.locator("#email"), email);
   await fill(page.locator("#password"), PASSWORD);
+  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("An account with this email already exists")).toBeVisible();
 });

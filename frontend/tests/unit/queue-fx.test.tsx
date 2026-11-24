@@ -1,8 +1,11 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewQueue } from "@/components/review-queue";
 import { I18nProvider } from "@/lib/i18n";
 import type { ReviewQueueItem } from "@/lib/types";
+
+// queue rows open cases through TransitionLink, which uses the app router
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/" }));
 
 const item = (over: Partial<ReviewQueueItem>): ReviewQueueItem => ({
   exception_id: "e1", invoice_id: "i1", invoice_number: "FX-1", supplier_id: null, supplier_name: "Arava", supplier_name_en: null,

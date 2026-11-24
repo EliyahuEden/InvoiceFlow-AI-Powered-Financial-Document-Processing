@@ -28,6 +28,8 @@ x-backend-env: &backend-env
   AI_DAILY_TOKEN_BUDGET: ${AI_DAILY_TOKEN_BUDGET:-100000}   # per business per day, then offline; 0 = unlimited
   RATE_LIMIT_AI_PER_MINUTE: ${RATE_LIMIT_AI_PER_MINUTE:-20}
   RATE_LIMIT_AI_PER_DAY: ${RATE_LIMIT_AI_PER_DAY:-40}   # AI questions per visitor address per day
+  DEMO_SANDBOX_ENABLED: ${DEMO_SANDBOX_ENABLED:-true}   # "Try the demo": a private copy of the demo per visitor, 24 h
+  RATE_LIMIT_DEMO_PER_DAY: ${RATE_LIMIT_DEMO_PER_DAY:-5}   # demos a visitor address may open per day
   # Email: the local Mailpit inbox (http://localhost:8025) by default. For real delivery set SMTP_HOST, SMTP_PORT,
   # SMTP_USERNAME, SMTP_PASSWORD, SMTP_SECURITY (starttls|ssl) and EMAIL_FROM in .env.
   EMAIL_BACKEND: ${EMAIL_BACKEND:-auto}

@@ -18,6 +18,8 @@ import { CopilotPanel } from "./copilot";
 import { ReviewNextButton } from "./review-next";
 import { SessionProvider, useSession } from "./session";
 import { Button, cx } from "./ui";
+import { LegalFooter } from "./legal-footer";
+import { SandboxBanner } from "./sandbox-banner";
 import { LogoMark } from "./logo";
 import { label } from "@/lib/i18n/label";
 
@@ -317,7 +319,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LiveEvents />
         <a href="#main" className="command-skip">{t.nav.skipContent}</a>
         <KeyedShell open={open} setOpen={setOpen}>
-          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1520px] flex-1 px-4 pb-14 pt-2 focus:outline-none sm:px-6 lg:px-8">{children}</main>
+          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1520px] flex-1 px-4 pb-6 pt-2 focus:outline-none sm:px-6 lg:px-8"><SandboxBanner />{children}</main>
+          <LegalFooter className="w-full max-w-[1520px] px-4 pb-8 pt-2 sm:px-6 lg:px-8" />
         </KeyedShell>
       </Tooltip.Provider>
     </SessionProvider>

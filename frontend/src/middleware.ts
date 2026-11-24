@@ -8,7 +8,8 @@ export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   // The access cookie lives 15 minutes; the refresh cookie keeps the session alive longer.
   const hasSession = req.cookies.has("invoiceflow_session") || req.cookies.has("invoiceflow_refresh");
-  if (!hasSession && !PUBLIC.has(pathname)) {
+  // the legal pages (terms, privacy, data processing, accessibility, business details) must be readable by anyone
+  if (!hasSession && !PUBLIC.has(pathname) && !pathname.startsWith("/legal")) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(pathname + search)}`;

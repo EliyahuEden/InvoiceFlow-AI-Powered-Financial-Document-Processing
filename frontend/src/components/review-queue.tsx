@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TransitionLink } from "./transition-link";
 import { useEffect, useState } from "react";
 import { ArrowRight, CheckCheck, ChevronRight, ClipboardCheck } from "lucide-react";
 import { PriorityBadge, ReasonText, StatusPill } from "./domain";
@@ -52,20 +53,20 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
 
   if (compact) return <ol className="divide-y divide-line">
     {rows.map(({ item, href, done, current: active, supplier, amount, amountTitle, due }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
-      <Link href={href} aria-current={active || undefined}
+      <TransitionLink href={href} aria-current={active || undefined}
         className={cx("group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 transition-colors hover:bg-ink/[.03] sm:grid-cols-[auto_minmax(0,1.1fr)_minmax(0,1.4fr)_auto_auto]",
           active && "bg-accent-soft/40")}>
         <Rank priority={item.priority} />
         <div className="min-w-0">
           <p className="flex min-w-0 items-center gap-2"><PriorityBadge level={item.priority.level} />
             <span dir="auto" className="truncate text-base font-medium text-ink">{supplier}</span></p>
-          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-ink-3"><bdi className={cx("whitespace-nowrap font-mono text-xs", done && "line-through")}>{item.invoice_number ?? "—"}</bdi>
+          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-ink-3"><bdi data-vt-source className={cx("inline-block whitespace-nowrap font-mono text-xs", done && "line-through")}>{item.invoice_number ?? "—"}</bdi>
             <span aria-hidden>·</span><bdi className="whitespace-nowrap">{due}</bdi><SessionState done={done} current={active} /></p>
         </div>
         <p className="col-start-2 truncate text-sm text-ink-2 sm:col-start-auto">{item.priority.reasons[0] ? <ReasonText reason={item.priority.reasons[0]} currency={item.currency} /> : null}</p>
         <bdi className="col-start-2 justify-self-start whitespace-nowrap text-base font-medium text-ink num ltr sm:col-start-auto sm:justify-self-end" title={amountTitle}>{amount}</bdi>
         <ChevronRight className="hidden h-3.5 w-3.5 text-ink-3 group-hover:text-ink rtl:rotate-180 sm:block" aria-hidden />
-      </Link>
+      </TransitionLink>
     </li>)}
   </ol>;
 
@@ -76,7 +77,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
         <div className="flex items-start gap-3">
           <Rank priority={item.priority} />
           <div className="min-w-0 flex-1"><p dir="auto" className="break-words font-medium text-ink">{supplier}</p>
-            <Link href={href} className={cx("text-sm text-accent hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></Link></div>
+            <TransitionLink href={href} className={cx("text-sm text-accent hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></TransitionLink></div>
           <PriorityBadge level={item.priority.level} />
         </div>
         <ul className="space-y-1 text-sm text-ink-2">{item.priority.reasons.map((reason, index) =>
@@ -99,7 +100,7 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
         <Td><Rank priority={item.priority} /></Td>
         <Td><PriorityBadge level={item.priority.level} /></Td>
         <Td><div className="min-w-24 space-y-0.5"><p dir="auto" className="break-words font-medium leading-snug">{supplier}</p>
-          <Link href={href} className={cx("block font-mono text-xs text-accent underline-offset-4 hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></Link>
+          <TransitionLink href={href} className={cx("block w-fit font-mono text-xs text-accent underline-offset-4 hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></TransitionLink>
           {(done || active) && <div className="flex flex-wrap gap-1"><SessionState done={done} current={active} /></div>}
         </div></Td>
         <Td><ul className="min-w-28 space-y-1 text-sm leading-snug text-ink-2">{item.priority.reasons.map((reason, index) =>

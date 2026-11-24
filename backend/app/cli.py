@@ -99,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--reset", action="store_true", help="truncate all data first")
     sp.add_argument("--no-process", action="store_true", help="enqueue jobs but do not run them")
     sub.add_parser("verify-audit")
+    sub.add_parser("lock-demo-template", help="make the demo template's accounts unusable (public demo deployments)")
     rp = sub.add_parser("reindex-embeddings")
     rp.add_argument("--all", action="store_true", help="re-embed every chunk, not only those without a vector")
     args = p.parse_args(argv)
@@ -130,6 +131,10 @@ def main(argv: list[str] | None = None) -> int:
         for org in orgs:
             with session_scope(org.id) as s:
                 print(org.slug, verify_chain(s, org.id))
+    elif args.cmd == "lock-demo-template":
+        from app.services.sandbox import lock_template
+
+        print(f"locked {lock_template()} demo template accounts; visitors use Try the demo")
     elif args.cmd == "reindex-embeddings":
         print(f"embedded {reindex_embeddings(all_chunks=args.all)} chunks")
     return 0

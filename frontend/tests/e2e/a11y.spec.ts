@@ -43,7 +43,7 @@ test("core screens have no serious or critical accessibility violations", async 
 
   for (const locale of ["he", "en"]) {
     await page.context().addCookies([{ name: "if_locale", value: locale, url: base }]);
-    for (const p of ["/login", "/signup", "/forgot-password"]) {
+    for (const p of ["/login", "/signup", "/forgot-password", "/legal", "/legal/terms", "/legal/privacy", "/legal/dpa", "/legal/accessibility"]) {
       await page.goto(p);
       record(`${locale} light ${p}`, await scan(page));
     }

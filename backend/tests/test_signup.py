@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.legal import LEGAL_VERSION
+
 pytestmark = pytest.mark.integration
 CSRF = {"X-Requested-With": "invoiceflow"}
 STRONG = "a-long-passphrase-42"
@@ -11,7 +13,7 @@ STRONG = "a-long-passphrase-42"
 
 def signup(client, **over):  # noqa: ANN001, ANN201
     body = {"company_name": "Galil Bakery Ltd", "full_name": "Noa Peretz", "email": "noa@galil-bakery.example",
-            "password": STRONG, "tax_id": "516111117", **over}
+            "password": STRONG, "tax_id": "516111117", "accepted_legal_version": LEGAL_VERSION, **over}
     return client.post("/api/auth/signup", json=body)
 
 
@@ -100,3 +102,27 @@ def test_users_change_their_own_password(client):
     assert client.post("/api/auth/login", json={"email": "noa@galil-bakery.example", "password": STRONG}).status_code == 401
     assert client.post("/api/auth/login", json={"email": "noa@galil-bakery.example",
                                                 "password": "new-passphrase-777"}).status_code == 200
+
+
+def test_signup_requires_and_records_acceptance_of_the_current_legal_documents(client, as_user):
+    assert signup(client, accepted_legal_version="2000-01-01").status_code == 400
+    body = {"company_name": "No Consent Ltd", "full_name": "No Consent", "email": "none@consent.example", "password": STRONG}
+    assert client.post("/api/auth/signup", json=body).status_code == 422
+    r = signup(client)
+    assert r.status_code == 201, r.text
+    from sqlalchemy import select
+
+    from app.core.db import new_session
+    from app.models import AuditLog
+    s = new_session(r.json()["organization"]["id"])
+    try:
+        entry = s.scalars(select(AuditLog).where(AuditLog.action == "legal.accepted")).first()
+        assert entry is not None and entry.meta["version"] == LEGAL_VERSION
+    finally:
+        s.close()
+
+
+def test_backend_and_frontend_agree_on_the_legal_version():
+    from pathlib import Path
+    frontend = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "legal.ts"
+    assert f'LEGAL_VERSION = "{LEGAL_VERSION}"' in frontend.read_text(encoding="utf-8")

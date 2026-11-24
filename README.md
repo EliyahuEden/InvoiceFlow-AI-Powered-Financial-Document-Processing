@@ -11,7 +11,7 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 3. In **AI investigation**, open a citation to see the relevant clause in the source PDF. Open the exception, write a reviewer note and approve the proposed resolution.
 4. In **Audit trail**, find the decision and select **Verify chain**. Use **Ask Copilot** to ask which cases need attention or how much is at risk by currency.
 
-[Recorded walkthrough (1:03)](docs/demo/invoiceflow-walkthrough.webm) · [Interview demo script](docs/DEMO_SCRIPT.md) · [AP Copilot capabilities](docs/COPILOT.md)
+[Recorded walkthrough with live AI (1:50)](docs/demo/invoiceflow-walkthrough.webm) · [Interview demo script](docs/DEMO_SCRIPT.md) · [AP Copilot capabilities](docs/COPILOT.md)
 
 [Spreadsheet import](docs/screenshots/11-import.png) · [Invoice export](docs/screenshots/12-export.png) · [Two-factor sign-in](docs/screenshots/13-two-factor.png) · [Team management](docs/screenshots/14-team.png)
 

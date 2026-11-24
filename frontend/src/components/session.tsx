@@ -14,6 +14,8 @@ export type Me = {
   permissions: string[];
   organizations: { id: string; name: string; role: string }[];
   ai_mode: string;
+  /** a private "Try the demo" workspace and when it is deleted; absent for real businesses */
+  sandbox?: { expires_at: string | null } | null;
   mfa_enrollment_required?: boolean;
   two_factor?: boolean;
 };

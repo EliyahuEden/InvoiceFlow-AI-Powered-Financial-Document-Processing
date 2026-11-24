@@ -38,6 +38,8 @@ class SignupIn(BaseModel):
     password: str = Field(..., min_length=12, max_length=200)
     tax_id: str | None = Field(None, pattern=r"^\d{9}$", description="the business's own company/VAT number")
     locale: str = Field("he", pattern="^(he|en)$")
+    #: the version of the terms of use, privacy policy and data-processing agreement the person agreed to
+    accepted_legal_version: str = Field(..., min_length=1, max_length=40)
 
 
 class PasswordIn(BaseModel):
@@ -82,6 +84,8 @@ def _me_payload(user: User, org: Organization, role: str, orgs: list[dict]) -> d
         "role": role, "permissions": [] if enrollment_required else permissions_for(role), "organizations": orgs,
         "mfa_enrollment_required": enrollment_required, "two_factor": user.totp_enabled_at is not None,
         "ai_mode": mode_label(),
+        # a private "Try the demo" workspace and when it is deleted (null for real businesses)
+        "sandbox": ({"expires_at": org.settings["sandbox"].get("expires_at")} if org.settings.get("sandbox") else None),
     }
 
 
@@ -110,6 +114,33 @@ def _open_session(s, user: User, organization_slug: str | None, request: Request
     _set_cookies(response, token, issued.refresh_token)
     return {"access_token": token, "token_type": "bearer", "expires_in": get_settings().access_token_minutes * 60,
             **_me_payload(user, org, m.role.value, orgs)}
+
+
+class DemoIn(BaseModel):
+    locale: str = Field("he", pattern="^(he|en)$")
+
+
+@router.post("/demo", status_code=201)
+def try_demo(body: DemoIn, request: Request, response: Response) -> dict:
+    """"Try the demo": a private copy of the demo workspace for this visitor, signed in, deleted after a day. Nobody
+    else sees what the visitor uploads or decides there."""
+    from app.services import sandbox
+
+    s_cfg = get_settings()
+    if not s_cfg.demo_sandbox_enabled:
+        raise HTTPException(403, "The demo is not available on this installation.")
+    _require_csrf(request)
+    check_rate_limit(f"demo:{_ip(request)}", s_cfg.rate_limit_demo_per_day, window_seconds=86400)
+    try:
+        user, _org = sandbox.create(body.locale)
+    except sandbox.SandboxUnavailable:
+        raise HTTPException(503, "The demo is being prepared. Please try again in a few minutes.") from None
+    s = new_session()
+    try:
+        visitor = s.get(User, user.id)
+        return _open_session(s, visitor, None, request, response, meta={"via": "try_demo"})
+    finally:
+        s.close()
 
 
 @router.post("/login")
@@ -200,6 +231,10 @@ def signup(body: SignupIn, request: Request, response: Response) -> dict:
     ip = _ip(request)
     check_rate_limit(f"signup:{ip}", s_cfg.rate_limit_signup_per_hour, window_seconds=3600)
     email = body.email.lower().strip()
+    from app.core.legal import LEGAL_VERSION
+
+    if body.accepted_legal_version != LEGAL_VERSION:
+        raise HTTPException(400, "Please accept the current terms of use, privacy policy and data-processing agreement.")
     s = new_session()
     try:
         if s.scalars(select(User).where(User.email == email)).first():
@@ -217,6 +252,10 @@ def signup(body: SignupIn, request: Request, response: Response) -> dict:
         set_session_org(s, org.id)
         audit.record(s, org_id=org.id, action="org.created", entity_type="organization", entity_id=org.id,
                      actor_id=user.id, actor_label=user.email, after={"name": org.name})
+        # evidence of consent: who agreed, to which version, when (the audit entry is timestamped and hash-chained)
+        audit.record(s, org_id=org.id, action="legal.accepted", entity_type="user", entity_id=user.id,
+                     actor_id=user.id, actor_label=user.email,
+                     meta={"version": LEGAL_VERSION, "documents": ["terms", "privacy", "dpa"]})
         s.commit()
         _set_cookies(response, token, issued.refresh_token)
         return {"access_token": token, "token_type": "bearer", "expires_in": s_cfg.access_token_minutes * 60,

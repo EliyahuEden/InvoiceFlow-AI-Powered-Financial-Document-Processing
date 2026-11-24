@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -8,14 +8,42 @@ import { AuthShell } from "@/components/auth-shell";
 import { Button, Field, Input, Panel } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { label } from "@/lib/i18n/label";
 
-const DEMO = [
-  { email: "finance@kinneret.example", role: "finance_reviewer" },
-  { email: "procurement@kinneret.example", role: "procurement_manager" },
-  { email: "admin@kinneret.example", role: "admin" },
-  { email: "viewer@kinneret.example", role: "read_only" },
-];
+/** "Try the demo": a private copy of the demo company for this visitor, signed in, deleted after a day. */
+function TryDemo() {
+  const { t, locale } = useI18n();
+  const d = t.login.tryDemo;
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const start = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post("/api/auth/demo", { locale });
+      router.replace("/");
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 429 ? d.limit : err instanceof ApiError && err.status === 403 ? d.off : d.failed);
+      setBusy(false);
+    }
+  };
+  return (
+    <Panel className="p-5 sm:p-7">
+      <h2 className="flex items-center gap-2 text-lg font-bold"><Sparkles className="h-5 w-5 text-accent" aria-hidden />{d.title}</h2>
+      <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{d.body}</p>
+      <ul className="mt-3 space-y-1.5 text-sm text-ink-2">
+        {[d.point1, d.point2, d.point3].map((point) => <li key={point} className="flex items-start gap-2">
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-ok" aria-hidden />{point}</li>)}
+      </ul>
+      {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+      <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" loading={busy} onClick={start}>
+        {d.cta}<ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden />
+      </Button>
+      <p className="mt-2.5 text-xs text-ink-3">{d.consent}{locale === "he" ? "" : " "}<Link href="/legal/terms" className="underline underline-offset-2 hover:text-ink">{t.legal.terms}</Link>
+        {" · "}<Link href="/legal/privacy" className="underline underline-offset-2 hover:text-ink">{t.legal.privacy}</Link></p>
+    </Panel>
+  );
+}
 
 function LoginForm() {
   const { t } = useI18n();
@@ -121,20 +149,7 @@ function LoginForm() {
           <p className="text-center text-sm"><Link href="/forgot-password" className="text-ink-2 underline-offset-4 hover:text-ink hover:underline">{t.recover.forgotLink}</Link></p>
           </form>
         </Panel>
-        <Panel className="p-5 sm:p-7">
-          <h2 className="text-lg font-semibold">{t.login.demoTitle}</h2>
-          <p className="mt-1 text-sm text-ink-2">{t.login.demoHint}</p>
-          <ul className="mt-3 divide-y divide-line">
-            {DEMO.map((d) => <li key={d.email}>
-              <button type="button" onClick={() => { setEmail(d.email); document.getElementById("password")?.focus(); }}
-                className="flex w-full items-center justify-between gap-3 rounded-md px-1 py-2.5 text-start hover:bg-sunken">
-                <span className="min-w-0"><span className="block text-sm font-medium">{label(t.roles, d.role)}</span>
-                  <bdi className="break-all text-sm text-ink-2">{d.email}</bdi></span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-ink-3 rtl:rotate-180" aria-hidden />
-              </button>
-            </li>)}
-          </ul>
-        </Panel>
+        <TryDemo />
       </div>
       <p className="text-center text-sm text-ink-2">{t.signup.newBusiness} <Link href="/signup" className="font-semibold text-ink underline-offset-4 hover:underline">{t.signup.create}</Link></p>
     </AuthShell>
