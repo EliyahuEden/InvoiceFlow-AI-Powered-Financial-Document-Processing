@@ -1,31 +1,46 @@
 "use client";
 
-import { CheckCircle2, CircleAlert, FileText, FileUp, Loader2, Shield, Workflow } from "lucide-react";
+import { CheckCircle2, CircleAlert, CloudUpload, FileText, Loader2, Shield, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StatusPill } from "@/components/domain";
+import { ExtractionScene, type ExtractedFields } from "@/components/extraction-scene";
+import { StationSteps } from "@/components/station-steps";
 import { useSession } from "@/components/session";
 import { PageHeader } from "@/components/shell";
 import { Button, cx, EmptyState, ErrorState, Panel, PanelHeader, Skeleton } from "@/components/ui";
 import { api, ApiError, useApi } from "@/lib/api";
 import { onLiveEvent } from "@/lib/events";
 import { useI18n } from "@/lib/i18n";
+import { label } from "@/lib/i18n/label";
+import { date, money } from "@/lib/format";
 
 type Item = {
   key: string; name: string; size: number; state: "queued" | "uploading" | "processing" | "done" | "failed" | "duplicate" | "rejected";
-  invoiceId?: string; jobId?: string; progress?: number; message?: string; status?: string;
+  invoiceId?: string; jobId?: string; progress?: number; message?: string; status?: string; fields?: ExtractedFields;
 };
+
+/** Pipeline stage from the job's own progress points (processing.py: 5 loading, 10-55 reading/OCR, 60 extracting,
+ *  85 reconciling): 0 uploaded, 1 reading, 2 extracting, 3 matching, 4 ready. */
+function stageOf(it: Item): number {
+  if (it.state === "done") return 4;
+  if (it.state !== "processing") return 0;
+  const p = it.progress ?? 0;
+  return p >= 85 ? 3 : p >= 60 ? 2 : p >= 10 ? 1 : 0;
+}
+type Filter = "all" | "processing" | "ready" | "errors";
 
 type JobStatus = { status: string; progress: number; message: string | null; error: string | null; entity_id: string | null };
 type UploadResponse = { invoice_id: string; job_id: string };
 const PARALLEL_UPLOADS = 3;
 
 export default function UploadPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { can, me } = useSession();
   const allowed = can("invoice:upload");
   const [items, setItems] = useState<Item[]>([]);
   const [drag, setDrag] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
   const input = useRef<HTMLInputElement>(null);
   const queue = useRef<{ active: number; pending: (() => Promise<void>)[] }>({ active: 0, pending: [] });
   const tracked = useRef<Item[]>([]);
@@ -77,6 +92,21 @@ export default function UploadPage() {
     return () => { cancelled = true; clearInterval(id); };
   }, [hasActive, patch, t.upload.trackingUnavailable]);
 
+  // the fields of a finished invoice, for the document-to-data scene (fetched once per finished item)
+  const fetched = useRef(new Set<string>());
+  useEffect(() => {
+    for (const it of items) {
+      if (it.state !== "done" || !it.invoiceId || fetched.current.has(it.key)) continue;
+      fetched.current.add(it.key);
+      void api.get<{ status: string; supplier_name: string | null; supplier_name_raw: string | null; invoice_number: string | null;
+        invoice_date: string | null; total: string | null; currency: string | null }>(`/api/invoices/${it.invoiceId}`).then((inv) => patch(it.key, {
+        status: inv.status,
+        fields: { supplier: inv.supplier_name ?? inv.supplier_name_raw, number: inv.invoice_number,
+          date: inv.invoice_date ? date(inv.invoice_date, locale) : null, total: inv.total ? money(inv.total, inv.currency) : null },
+      })).catch(() => undefined);
+    }
+  }, [items, patch, locale]);
+
   const enqueue = (key: string, run: () => Promise<UploadResponse>) => {
     const pending = queue.current;
     pending.pending.push(async () => {
@@ -122,74 +152,112 @@ export default function UploadPage() {
     enqueue(it.key, () => api.post("/api/invoices/demo/samples/upload", { file }));
   };
 
+  const errors = (i: Item) => ["failed", "rejected", "duplicate"].includes(i.state);
+  const counts = { all: items.length, processing: items.filter((i) => ["queued", "uploading", "processing"].includes(i.state)).length,
+    ready: items.filter((i) => i.state === "done").length, errors: items.filter(errors).length };
+  const shown = items.filter((i) => filter === "all" || (filter === "processing" ? ["queued", "uploading", "processing"].includes(i.state)
+    : filter === "ready" ? i.state === "done" : errors(i)));
+  const focus = items.find((i) => i.state === "processing") ?? items.find((i) => i.state === "done");
+  const latestDone = items.find((i) => i.fields);
+  const stages = [t.upload.stage.uploaded, t.upload.stage.reading, t.upload.stage.extracting, t.upload.stage.matching, t.upload.stage.ready];
+
   return (
     <div className="space-y-5">
-      <PageHeader title={t.upload.title} back={{ href: "/invoices", label: t.nav.inbox }} />
+      <PageHeader title={<span className="inline-flex items-center gap-3"><CloudUpload className="h-8 w-8 text-accent" aria-hidden />{t.upload.title}</span>}
+        sub={t.upload.subtitle} back={{ href: "/invoices", label: t.nav.inbox }} />
       {!me ? <Skeleton className="h-60" /> : !allowed ? <Panel><EmptyState icon={<Shield className="h-7 w-7" />} title={t.upload.restricted} /></Panel> : (
-      <div className="command-layout grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="min-w-0 space-y-5">
-          <Panel className="command-panel p-3 sm:p-5">
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
-            className={cx(
-              "flex min-h-80 flex-col items-center justify-center rounded-[20px] border-2 border-dashed px-4 py-12 text-center transition-colors",
-              drag ? "border-accent bg-accent-soft" : "border-line-strong bg-sunken hover:border-accent/60",
-            )}
-          >
-            <span className="grid h-16 w-16 place-items-center rounded-[20px] border border-line bg-surface text-accent-ink shadow-raise"><FileUp className="h-8 w-8" aria-hidden /></span>
-            <h2 className="mt-5 text-xl font-semibold tracking-tight text-ink sm:text-2xl">{t.upload.drop}</h2>
-            <p className="mt-2 max-w-md text-sm text-ink-2">{t.upload.limits}</p>
-            <Button className="mt-5" variant="primary" type="button" onClick={() => input.current?.click()}>{t.upload.browse}</Button>
-            <input ref={input} type="file" multiple accept="application/pdf,image/png,image/jpeg" hidden aria-label={t.upload.browse}
-              onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} data-testid="file-input" />
-          </div>
+          <Panel className="p-5">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-ink"><Sparkles className="h-5 w-5 text-accent" aria-hidden />{t.upload.pipelineTitle}</h2>
+            <div className="mt-5">
+              <StationSteps names={stages} current={focus ? stageOf(focus) : -1} done={focus?.state === "done"}
+                detail={focus?.state === "processing" && focus.progress !== undefined ? `${focus.progress}%` : undefined} />
+            </div>
+            <p className="mt-4 flex items-center gap-2 rounded-xl bg-sunken px-3 py-2 text-sm text-ink-2" role="status">
+              {counts.processing > 0 ? <><Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden />{t.upload.processingCount.replace("{n}", String(counts.processing))}</>
+                : focus ? <><CheckCircle2 className="h-4 w-4 text-ok" aria-hidden />{t.upload.allDone}</> : t.upload.idle}
+              {focus?.message && counts.processing > 0 && <span className="ms-auto truncate text-ink-3">{focus.message}</span>}
+            </p>
           </Panel>
 
-          {items.length > 0 && (
-            <Panel className="command-panel">
-              <PanelHeader title={t.inbox.received} actions={<span className="num text-sm text-ink-2">{items.length}</span>} />
-              <ul className="divide-y divide-line">
-                {items.map((it) => (
-                  <li key={it.key} className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {it.state === "done" ? <CheckCircle2 className="h-5 w-5 text-ok" /> :
-                        ["failed", "rejected"].includes(it.state) ? <CircleAlert className="h-5 w-5 text-danger" /> :
-                        it.state === "duplicate" ? <CircleAlert className="h-5 w-5 text-warn" /> :
-                        <Loader2 className="h-5 w-5 animate-spin text-info" />}
-                      <div className="min-w-24 flex-1">
-                        <p className="truncate text-base font-medium text-ink" dir="auto">{it.name}</p>
-                        <p className="break-words text-sm text-ink-2" role="status">{it.message ?? (it.state === "failed" ? t.invoice.failedTitle : it.state === "processing" ? t.invoice.processingNow : t.upload[it.state])}</p>
-                      </div>
-                      {it.status && <StatusPill status={it.status} />}
-                      {it.invoiceId && ["done", "duplicate", "failed"].includes(it.state) && (
-                        <Button asChild size="sm"><Link href={`/invoices/${it.invoiceId}`}>{t.upload.openInvoice}</Link></Button>
-                      )}
+          <Panel>
+            <PanelHeader title={t.upload.jobs} actions={<span className="num text-sm text-ink-3">{items.length}</span>} />
+            <div role="tablist" aria-label={t.upload.jobs} className="flex flex-wrap gap-2 px-5 pt-4">
+              {(["all", "processing", "ready", "errors"] as const).map((f) => (
+                <button key={f} type="button" role="tab" aria-selected={filter === f} onClick={() => setFilter(f)}
+                  className={cx("h-9 rounded-full border px-4 text-sm font-semibold transition-colors",
+                    filter === f ? "border-accent/30 bg-accent-soft text-accent-ink" : "border-line bg-surface text-ink-2 hover:bg-sunken")}>
+                  {t.upload.filters[f]} <bdi className="num">({counts[f]})</bdi>
+                </button>
+              ))}
+            </div>
+            {shown.length === 0 ? <p className="px-5 py-8 text-center text-sm text-ink-3">{items.length ? t.common.noResults : t.upload.noJobs}</p> : (
+            <ul className="mt-2 divide-y divide-line">
+              {shown.map((it) => (
+                <li key={it.key} className="px-5 py-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="grid h-11 w-9 shrink-0 place-items-center rounded-md border border-line bg-sunken text-ink-3"><FileText className="h-4 w-4" aria-hidden /></span>
+                    <div className="min-w-24 flex-1">
+                      <p className="truncate text-base font-bold text-ink" dir="auto">{it.name}</p>
+                      <p className="break-words text-sm text-ink-3" role="status">
+                        {it.size >= 50_000 ? <><bdi className="num">{(it.size / 1024 / 1024).toFixed(1)} MB</bdi> · </> : null}
+                        <span>{it.message ?? (it.state === "failed" ? t.invoice.failedTitle : it.state === "processing" ? stages[stageOf(it)] : t.upload[it.state])}</span>
+                      </p>
                     </div>
-                    {it.state === "processing" && it.progress !== undefined && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-sunken" role="progressbar" aria-label={it.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={it.progress}>
-                          <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${it.progress}%` }} />
-                        </div>
-                        <bdi className="text-xs font-semibold num">{it.progress}%</bdi>
-                      </div>
+                    {it.state === "done" ? <span className="inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-3 py-1 text-sm font-bold text-ok"><CheckCircle2 className="h-4 w-4" aria-hidden />{t.upload.stage.ready}</span>
+                      : errors(it) ? <span className={cx("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold", it.state === "duplicate" ? "bg-warn-soft text-warn" : "bg-danger-soft text-danger")}><CircleAlert className="h-4 w-4" aria-hidden />{it.state === "duplicate" ? t.upload.duplicate : t.upload.rejected}</span>
+                      : <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-sm font-bold text-accent-ink"><Loader2 className="h-4 w-4 animate-spin" aria-hidden />{stages[stageOf(it)]}</span>}
+                    {it.status && it.state === "done" && <StatusPill status={it.status} />}
+                    {it.invoiceId && ["done", "duplicate", "failed"].includes(it.state) && (
+                      <Button asChild size="sm"><Link href={`/invoices/${it.invoiceId}`}>{t.upload.openInvoice}</Link></Button>
                     )}
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
-          <Panel className="command-panel">
+                  </div>
+                  {it.state === "processing" && it.progress !== undefined && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sunken" role="progressbar" aria-label={it.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={it.progress}>
+                        <div className="h-full rounded-full bg-gradient-to-l from-[#a78bfa] to-accent transition-[width] duration-500" style={{ width: `${it.progress}%` }} />
+                      </div>
+                      <bdi className="text-xs font-bold text-ink-2 num">{it.progress}%</bdi>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>)}
+          </Panel>
+        </div>
+
+        <div className="min-w-0 space-y-5">
+          <section className="command-hero overflow-hidden p-0">
+            <ExtractionScene fields={latestDone?.fields ?? null} active={counts.processing > 0} sourceName={latestDone?.name} />
+            <div className="border-t border-line p-4 sm:p-5">
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
+                className={cx("flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-colors",
+                  drag ? "border-accent bg-accent-soft/70" : "border-accent/30 bg-surface/60 hover:border-accent/60")}
+              >
+                <CloudUpload className="h-10 w-10 text-accent" aria-hidden />
+                <h2 className="mt-3 text-xl font-extrabold tracking-tight text-ink">{t.upload.drop}</h2>
+                <p className="mt-1 max-w-md text-sm text-ink-3">{t.upload.limits}</p>
+                <Button className="mt-4" variant="primary" type="button" onClick={() => input.current?.click()}>{t.upload.browse}</Button>
+                <input ref={input} type="file" multiple accept="application/pdf,image/png,image/jpeg" hidden aria-label={t.upload.browse}
+                  onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} data-testid="file-input" />
+              </div>
+            </div>
+          </section>
+
+          <Panel>
             <PanelHeader title={t.upload.samples} sub={t.upload.samplesHint} />
             {sampleError ? <div className="p-4"><ErrorState message={t.common.error} onRetry={() => reloadSamples()} retryLabel={t.common.retry} /></div> :
              !samples ? <div className="p-4"><Skeleton /></div> : <ul className="divide-y divide-line">
               {samples?.items.map((s) => (
-                <li key={s.file} className="flex items-center gap-3 px-4 py-3">
+                <li key={s.file} className="flex items-center gap-3 px-5 py-3">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-ink"><FileText className="h-4 w-4" aria-hidden /></span>
                   <div className="min-w-0 flex-1">
                     <bdi className="block truncate font-mono text-xs text-ink">{s.file.split("/").pop()}</bdi>
-                    <p className="mt-0.5 text-sm text-ink-2">{s.description}</p>
+                    <p className="mt-0.5 text-sm text-ink-2" dir="auto">{label(t.upload.sampleText, s.scenario, s.description)}</p>
                   </div>
                   <Button size="sm" onClick={() => uploadSample(s.file)}>{t.inbox.upload}</Button>
                 </li>
@@ -197,20 +265,6 @@ export default function UploadPage() {
             </ul>}
           </Panel>
         </div>
-          <Panel className="command-aside">
-            <PanelHeader title={<span className="inline-flex items-center gap-2"><Workflow className="h-5 w-5 text-accent-ink" />{t.upload.steps}</span>} />
-            <ol className="p-5 text-sm font-medium text-ink-2">
-              {t.upload.pipeline.map((s, i) => (
-                <li key={s} className="relative flex min-h-12 items-start gap-3 pb-4 last:min-h-0 last:pb-0">
-                  {i !== t.upload.pipeline.length - 1 && <span aria-hidden className="absolute bottom-0 start-[13px] top-7 w-px bg-line-strong" />}
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">{i + 1}</span>
-                  <span className="pt-1">
-                  {s}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </Panel>
       </div>)}
     </div>
   );

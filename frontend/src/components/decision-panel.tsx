@@ -4,7 +4,8 @@ import { Check, GitBranch, HelpCircle, ShieldAlert, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { ActionLabel } from "./domain";
 import { Button, Field, Panel, PanelHeader, Select, Textarea } from "./ui";
-import { label } from "@/lib/i18n/label";
+import { label, translateStored } from "@/lib/i18n/label";
+import { dictionaries } from "@/lib/i18n/dictionaries";
 
 export type Decision = "approve" | "reject" | "request_info" | "escalate";
 
@@ -24,7 +25,7 @@ export function DecisionPanel({ proposedAction, detail, allowedActions, note, ov
       <div className="rounded-md bg-sunken px-3 py-2.5">
         <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-ink-2"><GitBranch className="h-3.5 w-3.5" aria-hidden />{t.exceptions.proposed} · {t.ai.deterministic}</p>
         <p className="mt-1 font-semibold leading-snug"><ActionLabel action={override || proposedAction} /></p>
-        {detail && !override && <p className="mt-1 break-words text-sm leading-snug text-ink-2" dir="auto">{detail}</p>}
+        {detail && !override && <p className="mt-1 break-words text-sm leading-snug text-ink-2" dir="auto">{translateStored(dictionaries.en.review.actionDetail, t.review.actionDetail, detail)}</p>}
       </div>
       {restricted && <p className="rounded-md bg-warn-soft p-3 text-sm text-warn">{t.review.escalationRestricted}</p>}
       {!restricted && (canDecide || canRequestInfo) && <>

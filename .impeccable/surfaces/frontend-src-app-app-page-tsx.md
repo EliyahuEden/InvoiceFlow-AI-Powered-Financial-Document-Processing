@@ -2,25 +2,25 @@
 version: 1
 slug: "frontend-src-app-app-page-tsx"
 primary_target: "frontend/src/app/(app)/page.tsx"
-related_targets: ["frontend/src/app/(app)/exceptions/page.tsx","frontend/src/app/(app)/exceptions/[id]/page.tsx","frontend/src/app/login/page.tsx"]
+related_targets: ["frontend/src/app/(app)/exceptions/page.tsx","frontend/src/app/(app)/exceptions/[id]/page.tsx","frontend/src/app/login/page.tsx","frontend/src/app/(app)/invoices/upload/page.tsx"]
 ---
 
 ## Scope
-Operate surface: the whole authenticated InvoiceFlow app plus the sign-in pages (login, sign-up, forgot/reset password, accept invite). Core screens: review dashboard (/), priority queue (/exceptions), investigation workspace (/exceptions/[id]), invoice inbox and detail, purchase orders, suppliers, settings. Every other page inherits the system through shared components. Hebrew RTL default, English supported, dark-first with an equally polished light theme. Replaces the 2026-11-22 "Command Center" look (owner: "looks like trash"; wants a high-tech SaaS product).
+Operate surface: the whole authenticated InvoiceFlow app plus sign-in pages. Deep redesigns: dashboard (/), priority queue (/exceptions), investigation workspace (/exceptions/[id]), upload (/invoices/upload), Copilot and insights. Every other route inherits through shared components. Hebrew RTL default, English supported, light flagship with an art-directed dark theme. Plan: docs/AURORA_PLAN.md.
 
 ## Audience and task
-Finance reviewers and procurement in Israeli SMBs in long queue sessions; also recruiters and engineers opening the portfolio demo for five minutes. Task: see what needs attention and why, inspect evidence, decide, move on. Constraints: no automatic financial decisions; AI advisory and labelled; WCAG 2.2 AA with the axe scan at 0; every string in Hebrew and English.
+Finance reviewers and procurement in Israeli SMBs in long queue sessions; recruiters and engineers opening the portfolio demo. Task: see what needs attention, why and how much is at risk, review evidence, decide, move on. Constraints: real data only (no fabricated metrics or charts), AI advisory and labelled, no automatic payment, WCAG 2.2 AA (axe 0), every string in Hebrew and English.
 
 ## Direction contract
-THESIS: A precise instrument for money, not a dashboard of cards: the three-way match made visible as a carbon-copy stack, everything else quiet. Refuses the white-KPI-card SaaS default and the neon-on-black "dark mode" cliché.
-OWN-WORLD: Dark-first graphite: near-black ground, three surface steps, hairline borders at low opacity, one sharp accent (electric indigo-blue) for selection, focus and the primary action only. State colours muted and meaningful: red critical, amber warning/pending, green verified. AI text marked by label, not colour. Crisp grotesk UI type with Hebrew support, mono for codes and amounts columns, tight 1.2 scale, rank by weight and size. Radii small (6/8/12). Light theme: cool white with the same structure.
-STORY: The reviewer sees how much needs them, opens the top case, sees the invoice, PO and receipt layers fall out of register exactly where the money is wrong, reads the cited reason, decides, lands on the next item.
-FIRST VIEWPORT: Slim graphite sidebar (inline-start) with grouped navigation and the workspace switcher; compact top bar with command-search (⌘K), AI mode, Copilot, theme/language, user. Dashboard: one line of four dense figures with denominators, then the priority queue as a steady table (columns never move, rows update in place), primary "Review next priority" top-end.
-FORM: Triplicate carbon-copy form, position 4 of my grounded list (assigned by the roll), translated into the owner-pinned Linear/Vercel world; seed:51d1f0d9c0e721bd. Signature: "carbon-copy three-way match" (invoice / PO / receipt as three offset layers per line; misregistration marks the discrepancy). Raises: lifecycle "station line" on invoice pages (from the transit-map challenger: state as stations on one disciplined line); fixed columns, rows update in place (split-flap); strict 4px grid alignment (Crouwel grid); elevation used only for layers that float (acetate manual: ply is the only rank); small type scale, rank by weight (timetable).
+THESIS: Aurora Finance OS: a calm, luminous finance workspace where the atmosphere is pale light and every piece of evidence is crisp paper; urgent money is impossible to miss. Refuses grey enterprise tables and neon dark "AI" chrome.
+OWN-WORLD: Pale periwinkle, ice-blue and lavender-white atmosphere behind a frosted shell; opaque white content cards with hairlines and soft large-radius shadows; deep charcoal type; one near-black primary button per view; indigo/violet for selection, focus and AI marks; red/amber/green only for business states, as soft tinted badges. Assistant with heavy headings, tabular numerals. Dark theme: graphite with the same indigo.
+STORY: The reviewer greets the day, sees how many invoices need review and the money at risk, starts the top case, compares invoice, order and receipt with the source value traced on the document, decides, and moves on.
+FIRST VIEWPORT: Frosted sidebar (inline-start) with the logo, grouped navigation and user; slim top bar with business switcher, search and Copilot. Dashboard hero card: needs-review count, money at risk badge, urgent breakdown and the dark "Review next priority" button, beside a real received-vs-exceptions chart; a decorative CSS-3D invoice stack in the hero's quiet corner; three KPI cards; the priority queue table.
+FORM: Owner-pinned direction from the brief and four reference images (art direction only); seed: none (pinned) — "Create an original design language called Aurora Finance OS ... Light theme should be the visual flagship" and, for the first viewport, "Risk-first Morning Command Center ... The first 5 seconds must clearly answer: What needs attention? Why? How much is at risk? What should I do next?" (brief §4).
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Memorable moment
-The carbon-copy match on the investigation workspace: three layers of the same line, the discrepant cell visibly out of register, the delta marked.
+The investigation workspace: three source cards (invoice, order, receipt) with the disagreeing value marked, and a connector from the extracted total to its highlighted spot on the original invoice.
 
 ## Unresolved
-Final accent hue tuned for 4.5:1 in both themes; Hebrew font choice verified for glyph coverage and weight range.
+Exact pale-surface text contrast; whether the CSS-3D upload scene needs any library (plan: none).

@@ -7,13 +7,16 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AiSummaryView } from "@/components/ai-summary";
 import { DecisionPanel, type Decision } from "@/components/decision-panel";
+import { TraceConnector } from "@/components/trace-connector";
 import { DiscrepancyTable } from "@/components/discrepancy-table";
 import { DocumentViewer, type Highlight } from "@/components/document-viewer";
 import { FindingTag, PriorityBadge, ReasonText, StatusPill } from "@/components/domain";
+import { fieldHighlights } from "@/components/invoice-fields";
+import { EvidenceTrace, SourceCompare } from "@/components/source-compare";
 import { useSession, type Me } from "@/components/session";
 import { Button, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Textarea } from "@/components/ui";
 import { api, ApiError, qs, useApi } from "@/lib/api";
-import { dateTime } from "@/lib/format";
+import { date, dateTime, money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { markReviewed } from "@/lib/review";
 import type { AiSummary, InvoiceDetail, ReviewNext, ReviewQueueItem } from "@/lib/types";
@@ -62,6 +65,17 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
   const [recorded, setRecorded] = useState(false);
   const [activeLine, setActiveLine] = useState<string | null>(null);
   const { data: invoice, error: invoiceError, mutate: retryInvoice } = useApi<InvoiceDetail>(`/api/invoices/${e.invoice_id}`);
+  // Open on the evidence, not the whole page: once the invoice arrives, select the first invoice line with an open
+  // finding, so the document zooms to it and the reviewer can read it without hunting. Only once per case; a line the
+  // reviewer already picked wins.
+  const [autoFocused, setAutoFocused] = useState(false);
+  useEffect(() => {
+    if (!invoice || autoFocused) return;
+    setAutoFocused(true);
+    const line = invoice.lines.find((l) => l.source?.bbox?.length === 4
+      && invoice.discrepancies.some((f) => f.status === "open" && f.invoice_line_id === l.id));
+    if (line) setActiveLine((current) => current ?? line.id);
+  }, [invoice, autoFocused]);
   const inReviewQueue = ["open", "escalated"].includes(e.status);
   const { data: queue } = useApi<{ items: ReviewQueueItem[]; total: number }>(
     `/api/review/queue${qs({ q: e.invoice_number ?? undefined, status: inReviewQueue ? "open,escalated" : e.status, page_size: 100 })}`);
@@ -158,6 +172,7 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
     id: line.id, page: line.source.page ?? 1, bbox: line.source.bbox!,
     tone: invoice.discrepancies.some((finding) => finding.status === "open" && finding.invoice_line_id === line.id && finding.severity === "critical") ? "finding" : "field", label: line.description,
   })) ?? [];
+  if (invoice) highlights.push(...fieldHighlights(invoice).filter((h) => h.id.startsWith("f:")));
   const titleFinding = e.discrepancy_types[0];
   const supplierName = (locale === "en" && (invoice?.supplier_name_en || current?.supplier_name_en))
     || invoice?.supplier_name || current?.supplier_name || invoice?.supplier_name_raw;
@@ -170,24 +185,30 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
 
   return <div className="min-w-0 space-y-4">
     <header className="command-hero min-w-0 space-y-3 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
-        <Link href="/exceptions" className="inline-flex items-center gap-1 font-medium hover:underline"><ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden />{t.review.backToQueue}</Link>
-        {e.invoice_number && <><span aria-hidden>/</span><bdi>{e.invoice_number}</bdi></>}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-ink-3">
+        <Link href="/exceptions" className="inline-flex items-center gap-1 font-semibold hover:text-ink"><ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden />{t.review.backToQueue}</Link>
       </div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0 flex-[1_1_18rem]">
-          <h1 className="break-words text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-            <bdi>{supplierName || e.invoice_number || e.title}</bdi>{titleFinding && <> · {label(t.finding, titleFinding)}</>}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {current && <PriorityBadge level={current.priority.level} />}
-            <StatusPill status={e.status} />
-            {current && positionTotal !== undefined && <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-ink-2">
-              {t.review.position} <bdi className="num">{current.priority.rank}</bdi> {t.review.of} <bdi className="num">{positionTotal}</bdi></span>}
-            {e.discrepancy_types.slice(1).map((type) => <FindingTag key={type} type={type} />)}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-[1_1_20rem] items-start gap-3">
+          <span className="mt-1 hidden h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface text-accent sm:grid"><FileText className="h-5 w-5" aria-hidden /></span>
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+              {t.review.reviewInvoice} <bdi className="ltr">{e.invoice_number || e.title}</bdi>
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-md text-ink-3">
+              <span><bdi>{supplierName || t.common.unknown}</bdi></span>
+              {invoice?.invoice_date && <><span aria-hidden className="text-line-strong">|</span><bdi>{date(invoice.invoice_date, locale)}</bdi></>}
+              {invoice?.total && <><span aria-hidden className="text-line-strong">|</span><bdi className="ltr font-bold text-ink num">{money(invoice.total, invoice.currency)}</bdi></>}
+              {titleFinding && <><span aria-hidden className="text-line-strong">|</span><span>{label(t.finding, titleFinding)}</span></>}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {current && <PriorityBadge level={current.priority.level} />}
+          <StatusPill status={e.status} />
+          {current && positionTotal !== undefined && <span className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-ink-2">
+            <bdi className="num">{current.priority.rank}</bdi> {t.review.of} <bdi className="num">{positionTotal}</bdi></span>}
+          {e.discrepancy_types.slice(1).map((type) => <FindingTag key={type} type={type} />)}
           <Button className="xl:hidden" onClick={() => jumpTo("review-decision")}><Scale className="h-4 w-4" aria-hidden />{open ? t.agent.decision : t.review.viewDecision}</Button>
           {open && <Button onClick={skip} loading={busy === "next"} disabled={!!busy}>{t.review.skip}<ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden /></Button>}
         </div>
@@ -207,8 +228,14 @@ function Workspace({ exception: e, me, refresh }: { exception: Exc; me: Me; refr
           : <p className="p-4 text-sm text-ink-2">{t.review.noDocument}</p>}
       </section>
       <div className="workspace-findings min-w-0 space-y-4">
+        <TraceConnector activeId={activeLine} />
+        {invoice && <SourceCompare invoice={invoice} />}
         {invoice && <DiscrepancyTable invoice={invoice} onSelectLine={(lineId) => {
           setActiveLine(lineId);
+          if (window.matchMedia("(max-width: 1279px)").matches) jumpTo("review-document");
+        }} />}
+        {invoice && <EvidenceTrace invoice={invoice} active={activeLine} onShow={(id) => {
+          setActiveLine(id);
           if (window.matchMedia("(max-width: 1279px)").matches) jumpTo("review-document");
         }} />}
         {e.ai_summary && !e.ai_summary.stale ? <AiSummaryView s={e.ai_summary} currency={invoice?.currency ?? current?.currency} /> : <Panel><EmptyState icon={<Bot className="h-8 w-8 text-ai" />} title={e.ai_summary?.stale ? t.exceptions.staleAi : t.exceptions.noAi}

@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-// Fonts ship with the app (@fontsource), so building never depends on a network call. Geist covers Latin and figures;
-// Heebo covers Hebrew (Geist has no Hebrew glyphs, so the font stack falls through per character).
-import "@fontsource/geist-sans/400.css";
-import "@fontsource/geist-sans/500.css";
-import "@fontsource/geist-sans/600.css";
-import "@fontsource/heebo/400.css";
-import "@fontsource/heebo/500.css";
-import "@fontsource/heebo/600.css";
+// Fonts ship with the app (@fontsource), so building never depends on a network call. Assistant covers Hebrew and
+// Latin with tabular figures; Geist Mono is only for codes, SKUs and IDs.
+import "@fontsource/assistant/400.css";
+import "@fontsource/assistant/500.css";
+import "@fontsource/assistant/600.css";
+import "@fontsource/assistant/700.css";
+import "@fontsource/assistant/800.css";
 import "@fontsource/geist-mono/400.css";
 import "@fontsource/geist-mono/500.css";
 import { cookies } from "next/headers";
@@ -26,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const store = await cookies();
   const locale: Locale = store.get(LOCALE_COOKIE)?.value === "en" ? "en" : "he";
   return (
-    <html lang={locale} dir={locale === "he" ? "rtl" : "ltr"} data-theme="dark" suppressHydrationWarning>
+    <html lang={locale} dir={locale === "he" ? "rtl" : "ltr"} data-theme="light" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

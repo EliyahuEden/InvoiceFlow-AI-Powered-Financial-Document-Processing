@@ -17,6 +17,14 @@ coding agent (or person) can pick up from here.
   2/3-way reconciliation (13 finding types, including Israel's allocation number) → risk-ranked review queue →
   decisions with justified overrides → two-step approval → hash-chained audit trail. AP Copilot and policy answers
   with verified citations. Multi-business (sign-up, team invitations, password reset by email, row-level security).
+- **Aurora redesign (2026-11-24, uncommitted until the owner commits):** light-first "Aurora Finance OS" from
+  `InvoiceFlow-Aurora-Visual-References/`. Frosted shell and hero, opaque white evidence, near-black primary button,
+  indigo accent, Assistant type, graphite dark theme. New dashboard hero with a 30-day received/exceptions chart,
+  workspace source-compare cards and evidence trace, an upload pipeline stepper with a CSS-3D extraction scene,
+  Copilot answer cards with sources. The system of record is [DESIGN.md](DESIGN.md); the plan is
+  [docs/AURORA_PLAN.md](docs/AURORA_PLAN.md). Review screenshots: `cd frontend && BASE=http://localhost:3003 node
+  scripts/capture-review.mjs ../.impeccable/review`. Still open: the queue-row → workspace shared-element transition
+  and an Aurora pass on the insights charts page.
 - **Added 2026-11-23:**
   - **Bulk import** of suppliers, purchase orders and goods receipts (CSV/Excel, check first, all-or-nothing):
     `services/bulk_import.py`, `api/routes/imports.py`, `components/import-dialog.tsx`.

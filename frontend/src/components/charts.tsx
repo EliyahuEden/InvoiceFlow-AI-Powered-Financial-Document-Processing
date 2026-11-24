@@ -8,7 +8,7 @@
   - every chart has a hover tooltip; >=2 series always show a legend
 */
 import {
-  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { useI18n } from "@/lib/i18n";
 
@@ -93,6 +93,39 @@ export function Lines({ data, xKey, series, height = 220 }: {
               dot={{ r: 4, strokeWidth: 2, stroke: "rgb(var(--surface))", fill: SERIES[i] }} activeDot={{ r: 5 }} />
           ))}
         </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/** The first series as a soft filled area, the rest as lines over it (e.g. invoices received vs exceptions per day). */
+export function Areas({ data, xKey, series, height = 200 }: {
+  data: Record<string, unknown>[]; xKey: string; series: SeriesDef[]; height?: number;
+}) {
+  const { dir } = useI18n();
+  const [first, ...rest] = series;
+  return (
+    <div style={{ height }} dir="ltr">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="area-fill-1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--series-1)" stopOpacity={0.32} />
+              <stop offset="100%" stopColor="var(--series-1)" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+          <XAxis dataKey={xKey} {...axisProps} reversed={dir === "rtl"} minTickGap={24} />
+          <YAxis {...axisProps} width={30} allowDecimals={false} orientation={dir === "rtl" ? "right" : "left"} />
+          <Tooltip cursor={{ stroke: "var(--chart-axis)", strokeDasharray: "3 3" }} content={<ChartTooltip />} />
+          {series.length > 1 && <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: "var(--chart-axis)" }} />}
+          {first && <Area type="monotone" dataKey={first.key} name={first.label} stroke="var(--series-1)" strokeWidth={2.25}
+            fill="url(#area-fill-1)" activeDot={{ r: 5, strokeWidth: 2, stroke: "rgb(var(--surface))" }} />}
+          {rest.map((s, i) => (
+            <Area key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={SERIES[i + 1]} strokeWidth={2}
+              fill="transparent" activeDot={{ r: 4 }} />
+          ))}
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

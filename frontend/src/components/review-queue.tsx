@@ -53,16 +53,17 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
   if (compact) return <ol className="divide-y divide-line">
     {rows.map(({ item, href, done, current: active, supplier, amount, amountTitle, due }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
       <Link href={href} aria-current={active || undefined}
-        className={cx("group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 transition-colors hover:bg-ink/[.03] sm:grid-cols-[auto_minmax(0,1.1fr)_minmax(0,1.4fr)_auto_auto]",
+        className={cx("group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 transition-colors hover:bg-ink/[.03] sm:grid-cols-[auto_minmax(0,1.1fr)_minmax(0,1.4fr)_auto_auto]",
           active && "bg-accent-soft/40")}>
         <Rank priority={item.priority} />
         <div className="min-w-0">
-          <p dir="auto" className="truncate text-base font-medium text-ink">{supplier}</p>
-          <p className="flex items-center gap-1.5 text-sm text-ink-3"><bdi className={cx("font-mono text-xs", done && "line-through")}>{item.invoice_number ?? "—"}</bdi>
-            <span aria-hidden>·</span><bdi>{due}</bdi><SessionState done={done} current={active} /></p>
+          <p className="flex min-w-0 items-center gap-2"><PriorityBadge level={item.priority.level} />
+            <span dir="auto" className="truncate text-base font-medium text-ink">{supplier}</span></p>
+          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-ink-3"><bdi className={cx("whitespace-nowrap font-mono text-xs", done && "line-through")}>{item.invoice_number ?? "—"}</bdi>
+            <span aria-hidden>·</span><bdi className="whitespace-nowrap">{due}</bdi><SessionState done={done} current={active} /></p>
         </div>
         <p className="col-start-2 truncate text-sm text-ink-2 sm:col-start-auto">{item.priority.reasons[0] ? <ReasonText reason={item.priority.reasons[0]} currency={item.currency} /> : null}</p>
-        <bdi className="row-start-1 col-start-3 whitespace-nowrap text-end text-base font-medium text-ink num ltr sm:col-start-auto sm:row-start-auto" title={amountTitle}>{amount}</bdi>
+        <bdi className="col-start-2 justify-self-start whitespace-nowrap text-base font-medium text-ink num ltr sm:col-start-auto sm:justify-self-end" title={amountTitle}>{amount}</bdi>
         <ChevronRight className="hidden h-3.5 w-3.5 text-ink-3 group-hover:text-ink rtl:rotate-180 sm:block" aria-hidden />
       </Link>
     </li>)}

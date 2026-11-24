@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Download, FileScan, Minus, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { Button, cx, ErrorState } from "./ui";
@@ -55,6 +55,30 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
   // jump to the page of the hovered/focused field (only when the active highlight changes)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (active && active.page !== page) setPage(active.page); }, [activeId]);
+  // A field picked from the findings (a click, never a hover): zoom in far enough to read it, then centre its box in
+  // the scroll region. The page itself does not scroll.
+  const regionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (active?.bbox?.length === 4 && toBox(active.bbox)) setZoom((z) => Math.max(z, 1.6));
+  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // measure after the zoomed page has laid out; an instant jump, so a second run never fights a running animation
+    const centre = () => {
+      const region = regionRef.current;
+      const box = region?.querySelector<HTMLElement>('[data-active="true"]');
+      if (!region || !box) return;
+      const r = region.getBoundingClientRect(), b = box.getBoundingClientRect();
+      // a box wider than the frame (a whole invoice line): show its figures end, where quantity, price and line total
+      // sit, which is the left in a Hebrew document and the right in a Latin one
+      let left = b.left - r.left - (r.width - b.width) / 2;
+      if (b.width > r.width - 32) left = box.dataset.figures === "left" ? b.left - r.left - 16 : b.right - r.right + 16;
+      region.scrollBy({ top: b.top - r.top - (r.height - b.height) / 2, left });
+    };
+    // once on the next frame, and again after a zoom change has finished laying out (centring twice is harmless)
+    const frame = requestAnimationFrame(centre);
+    const later = window.setTimeout(centre, 180);
+    return () => { cancelAnimationFrame(frame); window.clearTimeout(later); };
+  }, [activeId, zoom, loaded, page]);
 
   const quoteBoxes = useMemo(() => (quote && pageInfo ? locateQuote(pageInfo.words, quote) : []), [quote, pageInfo]);
   const shown = highlights.filter((h) => h.page === page && h.bbox?.length === 4);
@@ -91,7 +115,7 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
         </Button>
       </div>
       {/* focusable, so keyboard users can scroll the pages with the arrow and Page keys */}
-      <div className="flex-1 overflow-auto p-4" tabIndex={0} role="region" aria-label={t.common.documentPages}>
+      <div ref={regionRef} className="flex-1 overflow-auto p-4" tabIndex={0} role="region" aria-label={t.common.documentPages}>
         <div className="relative mx-auto bg-surface shadow-raise" style={{ width: `${zoom * 100}%`, maxWidth: zoom > 1 ? "none" : "100%" }}>
           {status === "loading" && <div className="skeleton aspect-[1/1.414] w-full" />}
           {status === "failed" && <ErrorState message={t.invoice.evidenceUnavailable} retryLabel={t.common.retry}
@@ -106,7 +130,7 @@ export function DocumentViewer({ documentId, pageCount = 1, highlights = [], act
             draggable={false}
           />}
           {loaded && shown.map((h) => (
-            <div key={h.id} title={h.label}
+            <div key={h.id} title={h.label} data-active={h.id === activeId || undefined} data-figures={/[֐-׿]/.test(h.label ?? "") ? "left" : "right"}
               className={cx("pointer-events-none absolute rounded-[2px] transition-[background-color,box-shadow] duration-150",
                 h.id === activeId ? "bg-hl/35 ring-2 ring-hl" :
                 h.tone === "finding" ? "bg-danger/10 ring-1 ring-danger/50" : "bg-accent/[0.06] ring-1 ring-accent/25")}

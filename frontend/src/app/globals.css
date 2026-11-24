@@ -2,137 +2,150 @@
 @tailwind components;
 @tailwind utilities;
 
-/* InvoiceFlow, dark-first graphite. Near-black ground, three surface steps, hairlines at low opacity, one electric
-   indigo accent for selection, focus and the primary action. State colours carry meaning only. The signature is the
-   carbon-copy three-way match (components/match-stack.tsx). Light theme keeps the same structure on cool white. */
-/* Geist for Latin and figures, Heebo for Hebrew (Geist has no Hebrew glyphs, so the stack falls through per
-   character); Geist Mono for codes, SKUs and amount columns. Loaded from @fontsource in app/layout.tsx. */
-:root { --font-sans: "Geist", "Heebo"; --font-mono: "Geist Mono", "Heebo"; }
+/* Aurora Finance OS. Light is the flagship: a pale periwinkle / ice-blue / lavender-white atmosphere behind a frosted
+   shell, opaque white content surfaces, deep charcoal type, one near-black primary button per view, indigo-violet for
+   selection, focus and AI marks, red/amber/green only for business states. Glass only on the shell and hero; evidence,
+   tables and forms stay crisp and opaque. The dark theme is graphite with the same indigo. Plan: docs/AURORA_PLAN.md. */
+/* Assistant (Hebrew + Latin) for everything; Geist Mono only for codes, SKUs and IDs. Loaded in app/layout.tsx. */
+:root { --font-sans: "Assistant"; --font-mono: "Geist Mono", "Assistant"; }
 
-/* Dark is the default theme; [data-theme="light"] opts into light. */
 :root,
-[data-theme="dark"] {
-  --bg: 9 9 11;
-  --surface: 17 17 20;
-  --raised: 24 24 28;
-  --sunken: 28 28 33;
-  --ink: 237 237 241;
-  --ink-2: 168 168 179;
-  --ink-3: 136 136 148;
-  --line: 255 255 255;            /* used at low alpha: hairlines are light on dark */
-  --line-a: .08;
-  --line-strong: 82 82 92;
-  --rule: 39 39 45;
-  --accent: 141 151 255;
-  --accent-soft: 31 33 66;
-  --accent-ink: 199 205 255;
-  --primary: 94 100 238;
-  --primary-hover: 110 116 246;
+[data-theme="light"] {
+  --bg: 243 244 252;
+  --surface: 255 255 255;
+  --raised: 255 255 255;
+  --sunken: 245 246 252;
+  --ink: 16 18 36;
+  --ink-2: 70 74 98;
+  --ink-3: 98 102 126;
+  --line: 34 38 92;               /* used at low alpha: hairlines are tinted navy on light */
+  --line-a: .10;
+  --line-strong: 170 174 204;
+  --rule: 224 226 242;
+  --accent: 88 76 214;
+  --accent-soft: 237 235 254;
+  --accent-ink: 62 52 168;
+  --primary: 20 22 38;
+  --primary-hover: 40 43 64;
   --primary-ink: 255 255 255;
-  --primary-line: 118 124 255;
+  --primary-line: 20 22 38;
+  --ok: 18 110 52;
+  --ok-soft: 228 246 235;
+  --warn: 156 70 6;
+  --warn-soft: 254 243 222;
+  --danger: 186 26 46;
+  --danger-soft: 255 233 236;
+  --info: 88 76 214;
+  --info-soft: 237 235 254;
+  --ai: 104 72 226;
+  --ai-soft: 246 244 255;
+  --ai-line: 222 216 252;
+  --highlight: 250 204 21;
+  --rail: 255 255 255;
+  --rail-ink: 16 18 36;
+  --rail-ink-2: 82 86 112;
+  --rail-line: 226 228 244;
+  --rail-active: 233 232 253;
+  --atmosphere-a: 214 214 255;    /* periwinkle */
+  --atmosphere-b: 214 236 255;    /* ice blue */
+  --atmosphere-c: 241 232 255;    /* lavender */
+  --hero: 255 255 255;
+  --hero-wave: 224 226 242;
+  --series-1: #6a5ae0;
+  --series-2: #d18a1f;
+  --series-3: #1f9d5c;
+  --series-4: #8b90b0;
+  --chart-grid: #e7e8f5;
+  --chart-axis: #6c7092;
+  --copy-invoice: 88 76 214;
+  --copy-po: 2 132 199;
+  --copy-gr: 21 128 61;
+  --glass: 255 255 255;
+  --glass-a: .62;
+  --radius-control: 10px;
+  --radius-panel: 18px;
+  --radius-hero: 22px;
+  --shadow-panel: 0 1px 2px rgb(34 38 92 / .04), 0 14px 36px -18px rgb(70 66 160 / .22);
+  --shadow-pop: 0 24px 60px -18px rgb(46 42 120 / .30), 0 0 0 1px rgb(34 38 92 / .06);
+  --shadow-hero: 0 1px 0 rgb(255 255 255 / .9) inset, 0 20px 50px -24px rgb(70 66 160 / .30);
+  --motion-fast: 160ms;
+  --motion-ease: cubic-bezier(.16, 1, .3, 1);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: 10 10 16;
+  --surface: 19 19 28;
+  --raised: 26 26 37;
+  --sunken: 30 30 42;
+  --ink: 237 237 245;
+  --ink-2: 170 170 190;
+  --ink-3: 138 138 160;
+  --line: 255 255 255;
+  --line-a: .08;
+  --line-strong: 84 84 104;
+  --rule: 40 40 56;
+  --accent: 156 146 255;
+  --accent-soft: 36 32 72;
+  --accent-ink: 205 200 255;
+  --primary: 237 237 245;
+  --primary-hover: 214 214 228;
+  --primary-ink: 14 14 22;
+  --primary-line: 237 237 245;
   --ok: 95 210 150;
   --ok-soft: 16 44 31;
   --warn: 240 184 92;
   --warn-soft: 52 37 14;
   --danger: 248 125 125;
   --danger-soft: 58 21 24;
-  --info: 141 151 255;
-  --info-soft: 31 33 66;
-  --ai: 196 181 253;
-  --ai-soft: 22 22 27;
-  --ai-line: 52 52 62;
+  --info: 156 146 255;
+  --info-soft: 36 32 72;
+  --ai: 190 176 255;
+  --ai-soft: 26 24 44;
+  --ai-line: 60 54 104;
   --highlight: 245 193 68;
-  --rail: 12 12 14;
-  --rail-ink: 237 237 241;
-  --rail-ink-2: 150 150 162;
-  --rail-line: 32 32 37;
-  --rail-active: 30 30 36;
-  --atmosphere-a: 9 9 11;
-  --atmosphere-b: 9 9 11;
-  --hero: 17 17 20;
-  --hero-wave: 39 39 45;
-  --series-1: #8d97ff;
+  --rail: 16 16 24;
+  --rail-ink: 237 237 245;
+  --rail-ink-2: 152 152 174;
+  --rail-line: 34 34 48;
+  --rail-active: 36 32 66;
+  --atmosphere-a: 58 46 140;
+  --atmosphere-b: 24 54 96;
+  --atmosphere-c: 46 26 80;
+  --hero: 19 19 28;
+  --hero-wave: 40 40 56;
+  --series-1: #9c92ff;
   --series-2: #f0b85c;
   --series-3: #5fd296;
-  --series-4: #a3a3b3;
-  --chart-grid: #26262c;
-  --chart-axis: #8c8c99;
-  /* the three copies of the carbon-copy match */
-  --copy-invoice: 237 237 241;
-  --copy-po: 141 151 255;
+  --series-4: #a3a3c0;
+  --chart-grid: #2a2a3a;
+  --chart-axis: #8c8ca8;
+  --copy-invoice: 156 146 255;
+  --copy-po: 125 196 255;
   --copy-gr: 95 210 150;
-  --radius-control: 8px;
-  --radius-panel: 12px;
-  --radius-hero: 12px;
-  --shadow-panel: 0 0 0 0 transparent;
+  --glass: 22 22 34;
+  --glass-a: .66;
+  --shadow-panel: 0 0 0 1px rgb(255 255 255 / .02);
   --shadow-pop: 0 24px 64px -16px rgb(0 0 0 / .75), 0 0 0 1px rgb(255 255 255 / .06);
-  --motion-fast: 140ms;
-  --motion-ease: cubic-bezier(.16, 1, .3, 1);
+  --shadow-hero: 0 1px 0 rgb(255 255 255 / .05) inset, 0 20px 50px -24px rgb(0 0 0 / .6);
   color-scheme: dark;
-}
-
-[data-theme="light"] {
-  --bg: 250 250 251;
-  --surface: 255 255 255;
-  --raised: 255 255 255;
-  --sunken: 244 244 246;
-  --ink: 17 17 20;
-  --ink-2: 80 80 92;
-  --ink-3: 104 104 116;
-  --line: 17 17 24;
-  --line-a: .09;
-  --line-strong: 176 176 188;
-  --rule: 226 226 232;
-  --accent: 79 70 229;
-  --accent-soft: 238 238 255;
-  --accent-ink: 55 48 163;
-  --primary: 79 70 229;
-  --primary-hover: 67 56 202;
-  --primary-ink: 255 255 255;
-  --primary-line: 67 56 202;
-  --ok: 21 128 61;
-  --ok-soft: 230 246 236;
-  --warn: 161 84 10;
-  --warn-soft: 254 242 220;
-  --danger: 190 30 45;
-  --danger-soft: 254 232 234;
-  --info: 79 70 229;
-  --info-soft: 238 238 255;
-  --ai: 109 40 217;
-  --ai-soft: 249 249 251;
-  --ai-line: 228 228 234;
-  --highlight: 217 160 18;
-  --rail: 246 246 248;
-  --rail-ink: 17 17 20;
-  --rail-ink-2: 88 88 100;
-  --rail-line: 228 228 234;
-  --rail-active: 233 233 238;
-  --atmosphere-a: 250 250 251;
-  --atmosphere-b: 250 250 251;
-  --hero: 255 255 255;
-  --hero-wave: 226 226 232;
-  --series-1: #4f46e5;
-  --series-2: #c2780c;
-  --series-3: #15803d;
-  --series-4: #71717a;
-  --chart-grid: #e7e7ec;
-  --chart-axis: #6b6b78;
-  --copy-invoice: 17 17 20;
-  --copy-po: 79 70 229;
-  --copy-gr: 21 128 61;
-  --shadow-panel: 0 1px 2px rgb(16 16 24 / .04);
-  --shadow-pop: 0 20px 48px -16px rgb(16 16 24 / .22), 0 0 0 1px rgb(16 16 24 / .06);
-  color-scheme: light;
 }
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
   body {
-    @apply bg-bg text-ink font-sans text-base antialiased;
-    font-feature-settings: "kern", "liga", "calt", "ss01";
+    @apply text-ink font-sans text-base antialiased;
+    font-feature-settings: "kern", "liga", "calt";
     text-rendering: optimizeLegibility;
+    /* the Aurora atmosphere: still light washes on the page ground only, never behind data inside cards */
+    background-color: rgb(var(--bg));
+    background-image:
+      radial-gradient(1100px 620px at 88% -8%, rgb(var(--atmosphere-a) / .55), transparent 62%),
+      radial-gradient(900px 560px at 4% 6%, rgb(var(--atmosphere-b) / .55), transparent 58%),
+      radial-gradient(900px 700px at 50% 108%, rgb(var(--atmosphere-c) / .45), transparent 60%);
+    background-attachment: fixed;
   }
-  ::selection { background: rgb(var(--accent) / 0.28); color: rgb(var(--ink)); }
+  ::selection { background: rgb(var(--accent) / 0.22); color: rgb(var(--ink)); }
   :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 6px; }
   input, textarea, select { caret-color: rgb(var(--accent)); }
   a { text-underline-offset: 3px; text-decoration-thickness: 1px; }
@@ -140,9 +153,9 @@
   * { scrollbar-width: thin; scrollbar-color: rgb(var(--line-strong) / .7) transparent; }
   *::-webkit-scrollbar { width: 10px; height: 10px; }
   *::-webkit-scrollbar-thumb { background: rgb(var(--line-strong) / .55); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
-  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; }
+  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.015em; }
   ::placeholder { color: rgb(var(--ink-3)); opacity: 1; }
-  /* Hebrew in Heebo sits optically smaller than Geist's Latin at the same size */
+  /* Assistant draws Hebrew and Latin at matching optical sizes, so no size adjustment */
   :lang(he) { font-size-adjust: none; }
 }
 
@@ -150,19 +163,25 @@
   /* hairline border colour used everywhere: light on dark, dark on light */
   .hairline { border-color: rgb(var(--line) / var(--line-a)); }
 
+  /* frosted hero / summary surface: the only glass besides the shell */
   .command-hero {
     position: relative;
+    isolation: isolate;
+    overflow: hidden;
     border: 1px solid rgb(var(--line) / var(--line-a));
     border-radius: var(--radius-hero);
-    background: rgb(var(--surface));
-    padding: 20px 24px;
+    background: linear-gradient(180deg, rgb(var(--glass) / calc(var(--glass-a) + .2)), rgb(var(--glass) / var(--glass-a)));
+    backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: var(--shadow-hero);
+    padding: 24px 28px;
   }
   .command-metric {
     min-width: 0;
     border: 1px solid rgb(var(--line) / var(--line-a));
-    border-radius: 10px;
+    border-radius: var(--radius-panel);
     background: rgb(var(--surface));
-    padding: 14px 16px;
+    box-shadow: var(--shadow-panel);
+    padding: 18px 20px;
   }
   .command-panel {
     min-width: 0;
@@ -172,6 +191,11 @@
     background: rgb(var(--surface));
     box-shadow: var(--shadow-panel);
   }
+  /* the frosted app shell: sidebar and top bar */
+  .shell-glass {
+    background: rgb(var(--glass) / var(--glass-a));
+    backdrop-filter: blur(20px) saturate(1.5);
+  }
   .command-aside { min-width: 0; align-self: start; }
   .command-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
@@ -180,7 +204,7 @@
   .command-table { overflow-x: auto; }
   .command-table table { border-collapse: separate; border-spacing: 0; }
   .command-table tbody tr { transition: background-color var(--motion-fast) var(--motion-ease); }
-  .command-table tbody tr:hover { background: rgb(var(--ink) / .035); }
+  .command-table tbody tr:hover { background: rgb(var(--accent) / .045); }
   .command-table tbody tr:last-child td { border-bottom: 0; }
   .command-table td { font-variant-numeric: tabular-nums; }
   .command-nav-link { transition: background-color var(--motion-fast), color var(--motion-fast); }
@@ -225,8 +249,16 @@
 }
 
 /* Sign-in brand panel */
-.brand-panel { background: rgb(var(--rail)); border-inline-end: 1px solid rgb(var(--line) / var(--line-a)); }
+.brand-panel {
+  background:
+    radial-gradient(80% 60% at 85% 10%, rgb(var(--atmosphere-a) / .75), transparent 70%),
+    radial-gradient(70% 60% at 10% 90%, rgb(var(--atmosphere-c) / .7), transparent 70%),
+    linear-gradient(160deg, rgb(var(--atmosphere-b) / .55), rgb(var(--bg)));
+  border-inline-end: 1px solid rgb(var(--line) / var(--line-a));
+}
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scan { 0% { transform: translateY(-40%); } 100% { transform: translateY(420%); } }
+@keyframes stack-in { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
 @keyframes palette-in { from { opacity: 0; transform: translateY(-4px) scale(.99); } to { opacity: 1; transform: none; } }
 
 @layer components {

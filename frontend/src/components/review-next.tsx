@@ -10,7 +10,7 @@ import type { NextResp } from "@/lib/types";
 import { Button } from "./ui";
 
 /** Opens the highest-priority invoice the backend says this user can act on now. */
-export function ReviewNextButton({ size = "md", after, className }: { size?: "sm" | "md" | "lg"; after?: string; className?: string }) {
+export function ReviewNextButton({ size = "md", after, className, variant = "primary" }: { size?: "sm" | "md" | "lg"; after?: string; className?: string; variant?: "primary" | "secondary" }) {
   const { t } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -27,7 +27,7 @@ export function ReviewNextButton({ size = "md", after, className }: { size?: "sm
     }
   };
   return (
-    <Button variant="primary" size={size} loading={busy} onClick={go} className={className} data-testid="review-next">
+    <Button variant={variant} size={size} loading={busy} onClick={go} className={className} data-testid="review-next">
       {t.review.reviewNext}
       <ArrowLeft className="h-4 w-4 ltr:rotate-180" aria-hidden />
     </Button>

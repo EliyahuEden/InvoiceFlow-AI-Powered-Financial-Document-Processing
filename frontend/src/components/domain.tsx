@@ -43,7 +43,7 @@ export function Pill({ tone = "neutral", children, className, icon }: {
   tone?: Tone; children: React.ReactNode; className?: string; icon?: React.ReactNode;
 }) {
   return (
-    <span className={cx("inline-flex h-5 items-center gap-1 whitespace-nowrap rounded-[5px] border px-1.5 text-xs font-medium", TONE[tone], className)}>
+    <span className={cx("inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-lg border px-2 text-xs font-bold", TONE[tone], className)}>
       {icon}
       {children}
     </span>
@@ -129,11 +129,11 @@ export function Citation({ c, index }: { c: CitationT; index?: number }) {
           <span className="grid h-4 min-w-4 place-items-center rounded bg-ai/15 px-1 text-2xs font-semibold text-ai">{index}</span>
         )}
         <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span className="truncate font-medium text-ink-2">{c.title}</span>
+        <span dir="auto" className="min-w-0 truncate font-medium text-ink-2">{c.title}</span>
         <span className="shrink-0">· {t.common.page_short} {c.page}</span>
         {c.effective_date && <span className="shrink-0 ltr">· {c.effective_date}</span>}
       </div>
-      <blockquote dir="auto" className="mt-1.5 border-s-2 border-ai-line ps-2.5 text-sm leading-relaxed text-ink">
+      <blockquote dir="auto" className="mt-1.5 text-sm leading-relaxed text-ink">
         “{c.quote}”
       </blockquote>
     </>
