@@ -1,0 +1,1149 @@
+{
+  "generated_at": "2026-11-24T07:28:54+00:00",
+  "git_rev": "76bfa6b",
+  "python": "3.13.0",
+  "dataset": "eval/datasets/rag/questions_heldout.jsonl",
+  "questions": 35,
+  "model": "gpt-4.1-mini",
+  "provider": "openai",
+  "prompt_version": "rag-answer-v5",
+  "embedding": "intfloat/multilingual-e5-large",
+  "retrieval": "hybrid_rerank",
+  "reranker": "jinaai/jina-reranker-v2-base-multilingual",
+  "inference_batch_size_override": 4,
+  "inference_threads": 4,
+  "retrieval_note": null,
+  "answer_correctness": 1.0,
+  "citation_accuracy": 1.0,
+  "abstention": {
+    "tp": 10,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "note": "positive class = question should be refused"
+  },
+  "injection_parroting": "0/0",
+  "passed": 35,
+  "per_question": [
+    {
+      "id": "ho-he-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6483,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "תבור מספקת הזמנה תוך 5 ימי עסקים ממועד ההזמנה, בצירוף תעודת משלוח חתומה.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#4",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "5. אספקה",
+          "quote": "האספקה תתבצע תוך 5 ימי עסקים ממועד ההזמנה, בצירוף תעודת משלוח חתומה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6692,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "\"מוצרים פגומים יוחלפו על ידי הספק תוך 14 יום ללא חיוב נוסף.\"",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#6",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "8. החזרות",
+          "quote": "מוצרים פגומים יוחלפו על ידי הספק תוך 14 יום ללא חיוב נוסף.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-03",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5768,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "יש להודיע לתבור בכתב 60 יום מראש אם אחד הצדדים לא רוצה להאריך את ההסכם.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#1",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "2. תקופת ההסכם",
+          "quote": "ההסכם בתוקף מיום 1 בינואר 2026 ועד 31 בדצמבר 2026, ויוארך לשנה נוספת אלא אם אחד הצדדים הודיע אחרת בכתב 60 יום מראש.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-04",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 8325,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "המחיר של פולי קפה נטול קפאין מחברת חרמון קלייה הוא 132 ש\"ח לק\"ג לפני מע\"מ. המחירים קבועים עד 31 בדצמבר 2026.",
+      "citations": [
+        {
+          "chunk_id": "agreement_hermon#0",
+          "knowledge_document_id": "agreement_hermon",
+          "document_id": null,
+          "title": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "quote": "מחיר פולי קפה אספרסו בלנד הבית הוא 118 ש\"ח לק\"ג לפני מע\"מ, ומחיר פולי קפה נטול קפאין הוא 132 ש\"ח לק\"ג. המחירים קבועים עד 31 בדצמבר 2026.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 2,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-05",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6757,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "מהסכם אספקת קפה של חרמון קלייה בע\"מ עולה כי תאריך הקלייה של פולי הקפה לא יעלה על 14 יום ממועד האספקה.",
+      "citations": [
+        {
+          "chunk_id": "agreement_hermon#3",
+          "knowledge_document_id": "agreement_hermon",
+          "document_id": null,
+          "title": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "4. סטיית משקל",
+          "quote": "תאריך הקלייה של פולי הקפה לא יעלה על 14 יום ממועד האספקה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-06",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5733,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "כדי להזמין ניקוי חלונות מ'כרמל שירותי ניקיון בע\"מ' יש לבצע הזמנת עבודה מראש, שכן ניקוי חלונות נחשב לשירות נוסף, ו\"שירותים נוספים, כגון ניקוי חלונות או פוליש רצפות, יבוצעו רק על פי הזמנת עבודה מראש וייחויבו בנפרד\".",
+      "citations": [
+        {
+          "chunk_id": "agreement_carmel#3",
+          "knowledge_document_id": "agreement_carmel",
+          "document_id": null,
+          "title": "הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "4. שירותים נוספים",
+          "quote": "שירותים נוספים, כגון ניקוי חלונות או פוליש רצפות, יבוצעו רק על פי הזמנת עבודה מראש וייחויבו בנפרד.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-07",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6349,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "כדי שתבור ישנה את המחיר נדרש \"שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה\".",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-08",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6570,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "המחירים של תבור אינם צמודים למדד. המחירים המפורטים בנספח א' קבועים לכל תקופת ההסכם ואינם צמודים למדד.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "המחירים המפורטים בנספח א' קבועים לכל תקופת ההסכם ואינם צמודים למדד.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-09",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5299,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "\"עבור שירותים נדרש אישור קבלת שירות במקום תעודת קבלה.\"",
+      "citations": [
+        {
+          "chunk_id": "policy_purchasing_2026#3",
+          "knowledge_document_id": "policy_purchasing_2026",
+          "document_id": null,
+          "title": "נוהל רכש והתקשרויות - כנרת אירוח (גרסה 3.0)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "3. התאמה משולשת",
+          "quote": "עבור שירותים נדרש אישור קבלת שירות במקום תעודת קבלה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-he-10",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6039,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "לא, אין לשלם לספק שאינו מופיע בכרטיס ספקים מאושר. נוהל הרכש קובע כי \"אין לשלם לספק שלא הוקם בכרטיס ספקים מאושר\".",
+      "citations": [
+        {
+          "chunk_id": "policy_purchasing_2026#8",
+          "knowledge_document_id": "policy_purchasing_2026",
+          "document_id": null,
+          "title": "נוהל רכש והתקשרויות - כנרת אירוח (גרסה 3.0)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "8. ספקים",
+          "quote": "אין לשלם לספק שלא הוקם בכרטיס ספקים מאושר.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6143,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "The BlueWave IT Solutions Ltd agreement is effective from 1 February 2026 for a period of 24 months.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#1",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "1. Term",
+          "quote": "This Master Services Agreement between Kinneret Hospitality Ltd (\"Customer\") and BlueWave IT Solutions Ltd (\"Supplier\") is effective from 1 February 2026 for a period of 24 months.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6038,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "The WD19S docking station is priced at ILS 890 per unit.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#2",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "2. Pricing",
+          "quote": "The WD19S docking station at ILS 890 per unit.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-03",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 4811,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "Hardware from BlueWave IT Solutions Ltd is considered accepted when the Customer signs the delivery note.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#4",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. Hardware delivery and acceptance",
+          "quote": "Hardware is accepted when the Customer signs the delivery note.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-04",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5220,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "Yes, you may hold back a disputed amount from BlueWave. The Master Services Agreement with BlueWave IT Solutions Ltd states that \"The Customer may withhold any disputed amount while paying the undisputed balance on time.\"",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#8",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "7. Late payment",
+          "quote": "The Customer may withhold any disputed amount while paying the undisputed balance on time.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-05",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 4403,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "Exceptions that are not resolved within 10 business days are escalated to the Finance Manager.",
+      "citations": [
+        {
+          "chunk_id": "procedure_finance_exceptions#6",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "6. Service levels",
+          "quote": "Exceptions must be resolved within 10 business days. Unresolved exceptions are escalated to the Finance Manager.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-06",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 4814,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "Yes, partial payment of undisputed lines is allowed with Finance Manager approval for invoices with critical exceptions that are placed on hold.",
+      "citations": [
+        {
+          "chunk_id": "procedure_finance_exceptions#4",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "4. Payment holds",
+          "quote": "Invoices with critical exceptions are placed on hold. Partial payment of undisputed lines is allowed with Finance Manager approval.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-en-07",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 4398,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "Every decision on an exception must be documented in the system with the reviewer's reason.",
+      "citations": [
+        {
+          "chunk_id": "procedure_finance_exceptions#8",
+          "knowledge_document_id": "procedure_finance_exceptions",
+          "document_id": null,
+          "title": "Finance Procedures - Exception Handling and Payment Holds",
+          "doc_type": "procedure",
+          "page": 1,
+          "section": "8. Documentation",
+          "quote": "Every decision on an exception must be documented in the system with the reviewer's reason.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-mx-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6577,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "A roll of סרט הדבקה (packing tape) from Arava costs ILS 6.90 per roll.",
+      "citations": [
+        {
+          "chunk_id": "agreement_arava#0",
+          "knowledge_document_id": "agreement_arava",
+          "document_id": null,
+          "title": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "quote": "ILS 6.90 per roll :(סרט הדבקה)",
+          "effective_date": "2025-06-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-mx-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6528,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "החשבוניות של Arava Packaging צריכות להיות במטבע שקלים חדשים ישראליים (ILS).",
+      "citations": [
+        {
+          "chunk_id": "agreement_arava#0",
+          "knowledge_document_id": "agreement_arava",
+          "document_id": null,
+          "title": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "Arava Packaging - Supply Terms / תנאי אספקה",
+          "quote": "All prices and invoices are in Israeli New Shekels (ILS). חשבוניות שיוגשו במטבע אחר יוחזרו לספק לתיקון ולא ישולמו.",
+          "effective_date": "2025-06-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-cl-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6450,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "The monthly fee for cleaning wing A is 6,800 ILS before VAT.",
+      "citations": [
+        {
+          "chunk_id": "agreement_carmel#1",
+          "knowledge_document_id": "agreement_carmel",
+          "document_id": null,
+          "title": "הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "2. תמורה",
+          "quote": "התמורה החודשית עבור ניקיון אגף א היא 6,800 ש\\'ח, ועבור ניקיון אגף ב היא 5,900 ש\\'ח, לפני מע\\'מ.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-cl-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5323,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "\"Disputes are escalated to the account managers within 10 business days.\"",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#8",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "7. Late payment",
+          "quote": "Disputes are escalated to the account managers within 10 business days.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-md-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 7601,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "The BlueWave IT Solutions Ltd agreement states that \"Invoices with prices above Schedule A will be paid at the Schedule A price.\" The Tavor agreement similarly states that \"חשבונית הכוללת מחיר גבוה ממחירי נספח א' תשולם לפי המחיר המוסכם בלבד,\" which means invoices with prices higher than those in Appendix A will be paid only at the agreed price.",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#3",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "2. Pricing",
+          "quote": "Invoices with prices above Schedule A will be paid at the Schedule A price.",
+          "effective_date": "2026-02-01",
+          "version": null
+        },
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "חשבונית הכוללת מחיר גבוה ממחירי נספח א' תשולם לפי המחיר המוסכם בלבד.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-md-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6842,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "לגבי תבור ציוד משרדי בע\"מ, יש צורך בהודעה מוקדמת בכתב של 30 יום על שינוי מחיר: \"שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.\" לגבי BlueWave IT Solutions Ltd, נדרש 60 ימים הודעה מוקדמת בכתב ושינוי מחיר חייב בתיקון חתום: \"60 days written notice and a signed amendment.\"",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        },
+        {
+          "chunk_id": "agreement_bluewave#3",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "2. Pricing",
+          "quote": "60 days written notice and a signed amendment.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-cf-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6130,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "חשבונית עד 20,000 ש\"ח כולל מע\"מ מאושרת על ידי סוקר כספים בלבד.",
+      "citations": [
+        {
+          "chunk_id": "policy_purchasing_2026#7",
+          "knowledge_document_id": "policy_purchasing_2026",
+          "document_id": null,
+          "title": "נוהל רכש והתקשרויות - כנרת אירוח (גרסה 3.0)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "7. סמכויות אישור",
+          "quote": "חשבונית עד 20,000 ש\"ח כולל מע\"מ מאושרת על ידי סוקר כספים.",
+          "effective_date": "2026-01-01",
+          "version": null
+        },
+        {
+          "chunk_id": "policy_purchasing_2023#2",
+          "knowledge_document_id": "policy_purchasing_2023",
+          "document_id": null,
+          "title": "נוהל רכש - גרסה 2.1 (2023)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "4. אישורים",
+          "quote": "כל חשבונית מאושרת על ידי מנהל הכספים בלבד.",
+          "effective_date": "2023-03-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-cf-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5628,
+      "estimated_cost_usd": null,
+      "abstained": false,
+      "answer": "Under the 2023 purchasing policy, a purchase order was required for any purchase amount exceeding 10,000 ש\"ח before VAT. This is supported by the clause: \"הזמנת רכש נדרשת לכל רכישה שסכומה עולה על 10,000 ש\\\"ח לפני מע\\\"מ.\"",
+      "citations": [
+        {
+          "chunk_id": "policy_purchasing_2023#1",
+          "knowledge_document_id": "policy_purchasing_2023",
+          "document_id": null,
+          "title": "נוהל רכש - גרסה 2.1 (2023)",
+          "doc_type": "purchasing_policy",
+          "page": 1,
+          "section": "2. הזמנת רכש",
+          "quote": "הזמנת רכש נדרשת לכל רכישה שסכומה עולה על 10,000 ש\\\"ח לפני מע\\\"מ.",
+          "effective_date": "2023-03-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": false,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-01",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 7171,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "The provided evidence passages for the Tavor agreement do not specify the price of A4 copy paper or any particular item besides a general statement about pricing terms. Passage 3 states that prices are fixed as per Appendix A and any price changes require prior written notice and approval, but the actual prices in Appendix A, including the price of A4 copy paper, are not given in the evidence.",
+      "citations": [
+        {
+          "chunk_id": "agreement_tavor#2",
+          "knowledge_document_id": "agreement_tavor",
+          "document_id": null,
+          "title": "הסכם אספקה - תבור ציוד משרדי בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. מחירים",
+          "quote": "המחירים המפורטים בנספח א' קבועים לכל תקופת ההסכם ואינם צמודים למדד. שינוי מחיר מחייב הודעה מוקדמת בכתב של 30 יום ואישור בכתב של מנהל הרכש של החברה.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-02",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 4809,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "אני נמנע מלתת תשובה כי המסמכים המסופקים אינם מכילים את מספר הטלפון של מנהל הלקוח ב-BlueWave IT Solutions Ltd.",
+      "citations": [],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-03",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5838,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "The provided evidence passages from Carmel Cleaning Services agreement do not specify the number of cleaning staff assigned per shift.",
+      "citations": [],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-04",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6451,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "הראיות המסופקות עבור ההסכמים עם חרמון קלייה בע\"מ אינן מכילות מידע על ריבית על איחור בתשלום. תנאי התשלום שניתנו הם \"שוטף + 30\" אך לא מוזכר ריבית על איחור בתשלום בהסכמים אלה.",
+      "citations": [
+        {
+          "chunk_id": "agreement_hermon#4",
+          "knowledge_document_id": "agreement_hermon",
+          "document_id": null,
+          "title": "הסכם אספקת קפה - חרמון קלייה בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "6. תשלום",
+          "quote": "6. תשלום תנאי התשלום הם שוטף + 30.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-05",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5632,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "Abstain because the provided evidence does not include any information about discounts given by Hermon for orders above 50 kg or any other quantity-based discounts related to Hermon.",
+      "citations": [],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-06",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5430,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "העדויות המסופקות אינן כוללות מידע על תקציב הרכש השנתי של כנרת אירוח.",
+      "citations": [],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-07",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5694,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "The evidence passages provided do not mention any courier company delivering Arava Packaging orders. Therefore, the information is not available in the supplied documents.",
+      "citations": [],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-08",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5725,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "abstain",
+      "citations": [
+        {
+          "chunk_id": "agreement_bluewave#4",
+          "knowledge_document_id": "agreement_bluewave",
+          "document_id": null,
+          "title": "Master Services Agreement - BlueWave IT Solutions Ltd",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "3. Hardware delivery and acceptance",
+          "quote": "Hardware carries a 36-month warranty.",
+          "effective_date": "2026-02-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-09",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 5267,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "The provided excerpts from the Carmel cleaning agreement do not include any information about who signed the agreement on behalf of the hotel.",
+      "citations": [],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    },
+    {
+      "id": "ho-un-10",
+      "passed": true,
+      "facts_correct": true,
+      "required_sources_cited": true,
+      "model_returned": true,
+      "latency_ms": 6660,
+      "estimated_cost_usd": null,
+      "abstained": true,
+      "answer": "המסמכים של כרמל שירותי ניקיון בע\"מ אינם מציינים מחיר עבור פוליש רצפות. יש רק ציון כי שירותים נוספים כגון פוליש רצפות יבוצעו על פי הזמנת עבודה מראש וייחויבו בנפרד.",
+      "citations": [
+        {
+          "chunk_id": "agreement_carmel#3",
+          "knowledge_document_id": "agreement_carmel",
+          "document_id": null,
+          "title": "הסכם שירותי ניקיון - כרמל שירותי ניקיון בע\"מ",
+          "doc_type": "supplier_agreement",
+          "page": 1,
+          "section": "4. שירותים נוספים",
+          "quote": "שירותים נוספים, כגון ניקוי חלונות או פוליש רצפות, יבוצעו רק על פי הזמנת עבודה מראש וייחויבו בנפרד.",
+          "effective_date": "2026-01-01",
+          "version": null
+        }
+      ],
+      "diagnostics": {
+        "model_abstained": true,
+        "dropped_citations": 0,
+        "unsupported_numbers": [],
+        "attempts": 1,
+        "raw_answer": null,
+        "raw_quotes": null
+      }
+    }
+  ],
+  "evaluated_questions": 35,
+  "stopped": null,
+  "model_answer_count": 35,
+  "latency_ms_p50": 6038,
+  "failure_examples": []
+}

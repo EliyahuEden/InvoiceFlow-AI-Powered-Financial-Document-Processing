@@ -2,25 +2,25 @@
 version: 1
 slug: "frontend-src-app-app-page-tsx"
 primary_target: "frontend/src/app/(app)/page.tsx"
-related_targets: ["frontend/src/app/(app)/exceptions/page.tsx","frontend/src/app/(app)/exceptions/[id]/page.tsx"]
+related_targets: ["frontend/src/app/(app)/exceptions/page.tsx","frontend/src/app/(app)/exceptions/[id]/page.tsx","frontend/src/app/login/page.tsx"]
 ---
 
 ## Scope
-Operate surface: the authenticated InvoiceFlow app. Core screens redesigned: review dashboard (/), priority queue (/exceptions), investigation workspace (/exceptions/[id]); every other page inherits the system through shared components. Hebrew RTL default, English supported, light and dark.
+Operate surface: the whole authenticated InvoiceFlow app plus the sign-in pages (login, sign-up, forgot/reset password, accept invite). Core screens: review dashboard (/), priority queue (/exceptions), investigation workspace (/exceptions/[id]), invoice inbox and detail, purchase orders, suppliers, settings. Every other page inherits the system through shared components. Hebrew RTL default, English supported, dark-first with an equally polished light theme. Replaces the 2026-11-22 "Command Center" look (owner: "looks like trash"; wants a high-tech SaaS product).
 
 ## Audience and task
-Finance reviewers and procurement in Israeli SMBs, at office desktops in daylight, in long queue sessions. Task: see which invoices need attention, why, and what first; inspect evidence; decide (approve, reject, request clarification, escalate); move to the next. Constraints: no automatic financial decisions; AI is advisory and labelled; priority is computed by the backend and shown identically everywhere.
+Finance reviewers and procurement in Israeli SMBs in long queue sessions; also recruiters and engineers opening the portfolio demo for five minutes. Task: see what needs attention and why, inspect evidence, decide, move on. Constraints: no automatic financial decisions; AI advisory and labelled; WCAG 2.2 AA with the axe scan at 0; every string in Hebrew and English.
 
 ## Direction contract
-THESIS: An audited ledger, modernized: precise figures, quiet structure, and the auditor's mark reserved for the one number that is wrong. It refuses the category default of white KPI cards with a blue accent and colour used as decoration.
-OWN-WORLD: Calm cool-neutral ground with a deep ink-navy shell rail; ink-navy figures in tabular numerals; hairline rules in a cool grey-green; one disciplined state vocabulary: auditor red only for critical discrepancies, amber for warnings, green for verified/completed, violet only for AI-generated text. Totals carry a double rule. A discrepant figure is shown struck through with the expected figure beside it in red. One workhorse sans for everything, tight 1.2 type scale.
-STORY: The reviewer sees how much needs them and how much money is at risk, understands the top item's problem from its row, presses "Review next priority", sees the wrong figure marked against PO and receipt with cited evidence, decides with a note, and lands on the next item.
-FIRST VIEWPORT: Ink rail (right in RTL) with navigation; top bar with organization, mode and the primary "Review next priority" button. A ledger header strip of four figures: needs review (critical/high split), money at risk over value under review, ready for approval, awaiting information, each a large tabular figure over a hairline. Below, the priority queue: dense ranked rows (rank, priority mark, invoice, supplier, reason in words, money at risk, due), the critical rows led by a red rule in the leading margin.
-FORM: Ledger & Red Pen, position 1 of my grounded list (picked by the user over the rolled direction); seed:37d3a84c8a6aa7e0. Interpretation pinned by the user: "a modern, premium financial operations SaaS, not a literal paper ledger"; "Reserve red for genuine high-risk discrepancies and critical issues. Use amber for warnings and green for verified or completed states."
+THESIS: A precise instrument for money, not a dashboard of cards: the three-way match made visible as a carbon-copy stack, everything else quiet. Refuses the white-KPI-card SaaS default and the neon-on-black "dark mode" cliché.
+OWN-WORLD: Dark-first graphite: near-black ground, three surface steps, hairline borders at low opacity, one sharp accent (electric indigo-blue) for selection, focus and the primary action only. State colours muted and meaningful: red critical, amber warning/pending, green verified. AI text marked by label, not colour. Crisp grotesk UI type with Hebrew support, mono for codes and amounts columns, tight 1.2 scale, rank by weight and size. Radii small (6/8/12). Light theme: cool white with the same structure.
+STORY: The reviewer sees how much needs them, opens the top case, sees the invoice, PO and receipt layers fall out of register exactly where the money is wrong, reads the cited reason, decides, lands on the next item.
+FIRST VIEWPORT: Slim graphite sidebar (inline-start) with grouped navigation and the workspace switcher; compact top bar with command-search (⌘K), AI mode, Copilot, theme/language, user. Dashboard: one line of four dense figures with denominators, then the priority queue as a steady table (columns never move, rows update in place), primary "Review next priority" top-end.
+FORM: Triplicate carbon-copy form, position 4 of my grounded list (assigned by the roll), translated into the owner-pinned Linear/Vercel world; seed:51d1f0d9c0e721bd. Signature: "carbon-copy three-way match" (invoice / PO / receipt as three offset layers per line; misregistration marks the discrepancy). Raises: lifecycle "station line" on invoice pages (from the transit-map challenger: state as stations on one disciplined line); fixed columns, rows update in place (split-flap); strict 4px grid alignment (Crouwel grid); elevation used only for layers that float (acetate manual: ply is the only rank); small type scale, rank by weight (timetable).
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Memorable moment
-The red-pen correction: in the workspace's discrepancy table and on the PO page, the invoice figure struck through with the expected figure written in red beside it.
+The carbon-copy match on the investigation workspace: three layers of the same line, the discrepant cell visibly out of register, the delta marked.
 
 ## Unresolved
-Exact Hebrew copy for new labels; dark-mode tuning of the red so it stays legible without glowing.
+Final accent hue tuned for 4.5:1 in both themes; Hebrew font choice verified for glyph coverage and weight range.

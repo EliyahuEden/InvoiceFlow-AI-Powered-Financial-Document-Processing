@@ -272,20 +272,23 @@ def ans_po(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
 
 
 def ans_payables(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
-    out = call_tool(ctx, "open_payables", {}, source="copilot")
+    out = call_tool(ctx, "open_payables", args, source="copilot")
     stages = {"approved_for_payment": ("אושר לתשלום", "approved for payment"),
               "awaiting_approval": ("ממתין לאישור", "awaiting approval"), "in_review": ("בבדיקה", "in review")}
     lines = []
     for r in out.get("suppliers", []):
         parts = [f"{stages[k][0 if a.he else 1]}: {totals_text(v, a.he)}" for k, v in r["by_stage"].items() if k in stages]
-        lines.append(f"• {r['name']}: " + " · ".join(parts))
+        total = totals_text(r["total_owed"], a.he) if r.get("total_owed") else ""
+        lines.append(f"• {r['name']}: " + (f"{a.t('סה״כ', 'total')} {total} (" + " · ".join(parts) + ")" if total else " · ".join(parts)))
         a.cite("supplier", r["supplier_id"], r["name"])
     if not lines:
         return a.t("אין כרגע חשבוניות פתוחות לתשלום.", "No invoices are open for payment right now.")
     note = a.t("הערה: המערכת לא רושמת תשלומים בפועל. 'אושר לתשלום' הוא סכום שאושר ועדיין צריך לשלם מחוץ למערכת.",
                "Note: InvoiceFlow does not record payments. 'Approved for payment' is approved and still to be paid "
                "outside the system.")
-    return a.t("סכומים פתוחים לפי ספק:", "Open amounts by supplier:") + "\n" + "\n".join(lines) + "\n" + note
+    head = (a.t(f"{len(lines)} הספקים שאנחנו חייבים להם הכי הרבה:", f"The {len(lines)} suppliers we owe the most:")
+            if args.get("limit") else a.t("סכומים פתוחים לפי ספק, מהגבוה לנמוך:", "Open amounts by supplier, highest first:"))
+    return head + "\n" + "\n".join(lines) + "\n" + note
 
 
 def ans_spend(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
@@ -428,6 +431,24 @@ def ans_capabilities(ctx: ToolContext, a: Answer, q: str, args: dict) -> str:
 
 
 # ------------------------------------------------------------------ intent table
+NUMBER_WORDS = {"two": 2, "three": 3, "four": 4, "five": 5, "ten": 10, "שני": 2, "שתי": 2, "שלוש": 3, "שלושה": 3,
+                "ארבע": 4, "ארבעה": 4, "חמש": 5, "חמישה": 5, "עשר": 10, "עשרה": 10}
+MOST = re.compile(r"\bmost\b|\btop\b|largest|biggest|highest|הכי|הגדול|הגבוה|המובילים", re.IGNORECASE)
+
+
+def top_n(q: str) -> dict:
+    """{"limit": N} for "top 3", "the 3 companies we owe the most", "שלושת הספקים"; {} for a plain question."""
+    if not MOST.search(q):
+        return {}
+    digits = re.search(r"\b(\d{1,2})\b", q)
+    if digits:
+        return {"limit": max(1, min(int(digits.group(1)), 50))}
+    for word, n in NUMBER_WORDS.items():
+        if re.search(rf"(?<![\w]){word}", q, re.IGNORECASE):
+            return {"limit": n}
+    return {"limit": 5} if re.search(r"\btop\b", q, re.IGNORECASE) else {}
+
+
 def _re(pattern: str) -> re.Pattern:
     return re.compile(pattern, I)
 
@@ -497,7 +518,7 @@ def route(ctx: ToolContext, q: str, today: date) -> tuple[Callable, dict] | None
     if finding and not OWED.search(q):
         return ans_findings, {"finding_type": finding}
     if OWED.search(q):
-        return ans_payables, {}
+        return ans_payables, top_n(q)
     if PROBLEM_SUP.search(q):
         return ans_suppliers, {"sort": "open_cases"}
     if SPEND.search(q) and (re.search(r"supplier|vendor|ספק", q, I) or not TOTALS.search(q)):

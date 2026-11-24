@@ -17,30 +17,42 @@ from app.services.events import get_redis
 log = get_logger(__name__)
 
 
-def _key(org_id: uuid.UUID | str) -> str:
-    return f"invoiceflow:ai_tokens:{org_id}:{datetime.now(UTC).date().isoformat()}"
+PAID_PROVIDERS = {"openai", "anthropic"}  # billed per token; "groq" (free tier) and local servers are "shared"
 
 
-def used_today(org_id: uuid.UUID | str) -> int:
+def bucket_for(provider: str | None) -> str:
+    return "paid" if provider in PAID_PROVIDERS else "shared"
+
+
+def _key(org_id: uuid.UUID | str, bucket: str = "shared") -> str:
+    suffix = "" if bucket == "shared" else f":{bucket}"
+    return f"invoiceflow:ai_tokens:{org_id}:{datetime.now(UTC).date().isoformat()}{suffix}"
+
+
+def used_today(org_id: uuid.UUID | str, bucket: str | None = None) -> int:
+    """Tokens used today: one bucket, or both when ``bucket`` is None."""
     try:
-        return int(get_redis().get(_key(org_id)) or 0)
+        r = get_redis()
+        keys = [_key(org_id, b) for b in (("shared", "paid") if bucket is None else (bucket,))]
+        return sum(int(r.get(k) or 0) for k in keys)
     except Exception as exc:  # noqa: BLE001
         log.warning("ai_budget_unavailable", error=str(exc)[:200])
         return 0
 
 
-def charge(org_id: uuid.UUID | str, tokens: int) -> None:
+def charge(org_id: uuid.UUID | str, tokens: int, bucket: str = "shared") -> None:
     if tokens <= 0:
         return
     try:
         r = get_redis()
-        key = _key(org_id)
+        key = _key(org_id, bucket)
         r.incrby(key, tokens)
         r.expire(key, 2 * 24 * 3600)
     except Exception as exc:  # noqa: BLE001
         log.warning("ai_budget_unavailable", error=str(exc)[:200])
 
 
-def allowed(org_id: uuid.UUID | str) -> bool:
-    budget = get_settings().ai_daily_token_budget
-    return budget <= 0 or used_today(org_id) < budget
+def allowed(org_id: uuid.UUID | str, bucket: str = "shared") -> bool:
+    s = get_settings()
+    budget = s.ai_paid_daily_token_budget if bucket == "paid" else s.ai_daily_token_budget
+    return budget <= 0 or used_today(org_id, bucket) < budget

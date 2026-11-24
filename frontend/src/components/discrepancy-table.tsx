@@ -7,6 +7,7 @@ import { findingMessage } from "@/lib/findings";
 import { money, num, unitPrice } from "@/lib/format";
 import type { InvoiceDetail } from "@/lib/types";
 import { FindingTag } from "./domain";
+import { MatchStack } from "./match-stack";
 import { cx, Panel, PanelHeader } from "./ui";
 
 const MONEY_TYPES = new Set(["PRICE_MISMATCH", "LINE_TOTAL_MISMATCH", "SUBTOTAL_MISMATCH", "TOTAL_MISMATCH", "TAX_MISMATCH"]);
@@ -43,15 +44,21 @@ export function DiscrepancyTable({ invoice, onSelectLine }: { invoice: InvoiceDe
           ...(finding.type === "QUANTITY_EXCEEDS_RECEIVED" && poLine ? [{ label: t.pos.ordered, value: poLine.quantity }] : []),
           { label: expectedLabels[finding.type] ?? t.recon.expected, value: finding.expected },
         ];
-        return <li key={finding.id} className="space-y-3 p-4">
+        return <li key={finding.id} className="space-y-3 px-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><FindingTag type={finding.type} severity={finding.severity} /></div>
           {line && (onSelectLine && line.source?.bbox?.length === 4 ?
-            <button type="button" className="inline-flex max-w-full items-center gap-1.5 text-start text-sm font-medium text-accent underline underline-offset-4"
-              title={t.review.document} onClick={() => onSelectLine(line.id)}><ScanLine className="h-4 w-4 shrink-0" aria-hidden /><bdi className="break-words">{line.description}</bdi></button>
+            <button type="button" className="inline-flex max-w-full items-center gap-1.5 text-start text-base font-medium text-ink hover:text-accent"
+              title={t.review.document} onClick={() => onSelectLine(line.id)}><ScanLine className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden /><bdi className="break-words">{line.description}</bdi></button>
             : <p className="text-sm font-medium" dir="auto">{line.description}</p>)}
-          {(finding.actual != null || finding.expected != null || finding.difference != null || poLine?.received != null) && <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
+          {line && poLine && (quantityFinding || finding.type === "PRICE_MISMATCH") ? <MatchStack
+            invoice={{ quantity: line.quantity, unit_price: line.unit_price }}
+            order={{ quantity: poLine.quantity, unit_price: poLine.unit_price }}
+            receivedQty={poLine.received ?? null} currency={invoice.currency}
+            mismatch={finding.type === "PRICE_MISMATCH" ? "price" : "quantity"}
+            difference={finding.difference} severity={finding.severity} />
+          : (finding.actual != null || finding.expected != null || finding.difference != null || poLine?.received != null) && <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
             {rows.filter((row) => row.value != null).map((row) => <div key={row.label} className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 px-3 py-1.5">
-              <dt className="min-w-0 text-sm text-ink-2">{row.label}</dt><dd className="break-words font-semibold num"><bdi>{format(row.value)}</bdi></dd>
+              <dt className="min-w-0 text-sm text-ink-2">{row.label}</dt><dd className="break-words font-mono text-sm num"><bdi>{format(row.value)}</bdi></dd>
             </div>)}
             {poLine?.received != null && finding.type !== "QUANTITY_EXCEEDS_RECEIVED" && <div className="flex flex-wrap items-baseline justify-between gap-2 px-3 py-1.5">
               <dt className="text-sm text-ink-2">{t.review.received}</dt><dd className="font-semibold num"><bdi>{num(poLine.received)}</bdi></dd>

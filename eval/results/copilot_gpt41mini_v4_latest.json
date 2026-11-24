@@ -1,0 +1,839 @@
+{
+  "generated_at": "2026-11-24T08:36:03+00:00",
+  "git_rev": "76bfa6b",
+  "python": "3.13.0",
+  "model": "gpt-4.1-mini",
+  "provider": "openai",
+  "prompt_version": "copilot-v4",
+  "dataset": "32 English prompts from backend/tests/test_copilot_catalogue.py",
+  "as_of": "2026-11-24",
+  "passed": 32,
+  "questions": 32,
+  "evaluated_questions": 32,
+  "stopped": null,
+  "latency_ms_p50": 3767.5,
+  "pass_rate": 1.0,
+  "model_answer_count": 31,
+  "model_answer_passed": 31,
+  "offline_answer_count": 1,
+  "per_question": [
+    {
+      "question": "What is most urgent?",
+      "passed": true,
+      "expected_tool": "review_queue",
+      "expected_facts": [
+        "critical|urgent|highest priority"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The most urgent item is the invoice BW-2026-0419 from BlueWave IT Solutions Ltd with a total of 61,171.20 ILS and an amount at risk of 51,840.00 ILS. It is critical priority with a finding of missing goods receipt and the proposed action is to request the goods receipt.",
+      "steps": [
+        {
+          "tool": "review_queue",
+          "input": {
+            "level": "critical",
+            "limit": 5
+          },
+          "status": "ok",
+          "latency_ms": 763
+        }
+      ],
+      "latency_ms": 6614,
+      "estimated_cost_usd": 0.003282
+    },
+    {
+      "question": "Which invoices are overdue?",
+      "passed": true,
+      "expected_tool": "review_queue",
+      "expected_facts": [
+        "overdue|past due"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No invoices are overdue.",
+      "steps": [
+        {
+          "tool": "review_queue",
+          "input": {
+            "overdue": true,
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 14
+        }
+      ],
+      "latency_ms": 3333,
+      "estimated_cost_usd": 0.002172
+    },
+    {
+      "question": "Which cases are due this week?",
+      "passed": true,
+      "expected_tool": "review_queue",
+      "expected_facts": [
+        "due|deadline"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No cases are due this week.",
+      "steps": [
+        {
+          "tool": "review_queue",
+          "input": {
+            "due_within_days": 6
+          },
+          "status": "ok",
+          "latency_ms": 13
+        }
+      ],
+      "latency_ms": 3335,
+      "estimated_cost_usd": 0.002164
+    },
+    {
+      "question": "Which cases are waiting for information?",
+      "passed": true,
+      "expected_tool": "review_queue",
+      "expected_facts": [
+        "no cases|no invoices|none|0 cases"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No cases are waiting for information.",
+      "steps": [
+        {
+          "tool": "review_queue",
+          "input": {
+            "status": "pending_info",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 5
+        }
+      ],
+      "latency_ms": 3300,
+      "estimated_cost_usd": 0.002155
+    },
+    {
+      "question": "What has been escalated?",
+      "passed": true,
+      "expected_tool": "review_queue",
+      "expected_facts": [
+        "no cases|no invoices|none|0 cases|have been escalated"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No cases have been escalated.",
+      "steps": [
+        {
+          "tool": "review_queue",
+          "input": {
+            "status": "escalated",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 5
+        }
+      ],
+      "latency_ms": 3022,
+      "estimated_cost_usd": 0.002181
+    },
+    {
+      "question": "Which invoices are ready for approval?",
+      "passed": true,
+      "expected_tool": "search_invoices",
+      "expected_facts": [
+        "TV-24518|TV-24602"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The invoices ready for approval are:\n- BW-2026-0431 from BlueWave IT Solutions Ltd, amount 9204.00 ILS\n- TV-24602 from תבור ציוד משרדי בע\"מ, amount 7483.80 ILS\n- HC-8853 from חרמון קלייה בע\"מ with a total of 0.00 (currency not specified)\n- TV-24518 from תבור ציוד משרדי בע\"מ, amount 7633.42 ILS",
+      "steps": [
+        {
+          "tool": "search_invoices",
+          "input": {
+            "status": "reconciled",
+            "sort": "newest",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 22
+        }
+      ],
+      "latency_ms": 6801,
+      "estimated_cost_usd": 0.003116
+    },
+    {
+      "question": "Give me a summary",
+      "passed": true,
+      "expected_tool": "queue_summary",
+      "expected_facts": [
+        "open|review"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "There are 9 items needing review, including 5 critical, 3 high, and 1 normal priority. None are overdue. Four items are ready for payment approval. Amounts under review total 125,870.60 ILS, 3,455.04 USD, and 10,465.42 in unknown currency, with amounts at risk of 54,370.00 ILS, 3,455.04 USD, and 7,633.42 in unknown currency. Amounts are not summed across currencies.",
+      "steps": [
+        {
+          "tool": "queue_summary",
+          "input": {},
+          "status": "ok",
+          "latency_ms": 13
+        }
+      ],
+      "latency_ms": 5269,
+      "estimated_cost_usd": 0.002664
+    },
+    {
+      "question": "How much money is at risk by currency?",
+      "passed": true,
+      "expected_tool": "queue_summary",
+      "expected_facts": [
+        "ILS|NIS|shekel|₪",
+        "USD|dollar|$"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The amounts at risk by currency are 54,370.00 ILS, 3,455.04 USD, and 7,633.42 in an unknown currency. These amounts are specific to each currency and are not summed across currencies.",
+      "steps": [
+        {
+          "tool": "queue_summary",
+          "input": {},
+          "status": "ok",
+          "latency_ms": 10
+        }
+      ],
+      "latency_ms": 3836,
+      "estimated_cost_usd": 0.002442
+    },
+    {
+      "question": "What is the status of invoice TV-24518?",
+      "passed": true,
+      "expected_tool": "invoice_case",
+      "expected_facts": [
+        "TV-24518",
+        "reconciled|duplicate|approval"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "Invoice TV-24518 from supplier תבור ציוד משרדי בע\"מ is currently reconciled with a total of 7633.42 ILS. However, it is awaiting pending approval from a finance reviewer (step 1).",
+      "steps": [
+        {
+          "tool": "invoice_case",
+          "input": {
+            "invoice_number": "TV-24518"
+          },
+          "status": "ok",
+          "latency_ms": 35
+        }
+      ],
+      "latency_ms": 4228,
+      "estimated_cost_usd": 0.002463
+    },
+    {
+      "question": "Why is invoice HC-8841 blocked?",
+      "passed": true,
+      "expected_tool": "invoice_case",
+      "expected_facts": [
+        "HC-8841",
+        "received|receipt",
+        "50"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "Invoice HC-8841 is blocked due to a critical exception where the quantity billed (60) exceeds the quantity received (50) on goods receipts, with an amount at risk of 1180.00 ILS. The case is open and the proposed action is to request a credit note.",
+      "steps": [
+        {
+          "tool": "invoice_case",
+          "input": {
+            "invoice_number": "HC-8841"
+          },
+          "status": "ok",
+          "latency_ms": 15
+        }
+      ],
+      "latency_ms": 3712,
+      "estimated_cost_usd": 0.002561
+    },
+    {
+      "question": "What happened to invoice TV-24518?",
+      "passed": true,
+      "expected_tool": "invoice_history",
+      "expected_facts": [
+        "TV-24518",
+        "uploaded|upload",
+        "reconciled|reconciliation"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "Invoice TV-24518 was uploaded on 2026-11-24 by procurement@kinneret.example, then extracted by the worker, and finally reconciled by the reconciliation engine all on the same day.",
+      "steps": [
+        {
+          "tool": "invoice_history",
+          "input": {
+            "invoice_number": "TV-24518"
+          },
+          "status": "ok",
+          "latency_ms": 12
+        }
+      ],
+      "latency_ms": 3821,
+      "estimated_cost_usd": 0.002451
+    },
+    {
+      "question": "Show me the invoices from Hermon",
+      "passed": true,
+      "expected_tool": "search_invoices",
+      "expected_facts": [
+        "HC-8841|HC-8853"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "There are two invoices from Hermon (חרמון קלייה בע\"מ): Invoice HC-8853 dated 2026-10-10 with a total of 0.0000 (no currency specified), marked as reconciled, and Invoice HC-8841 dated 2026-09-11 with a total of 10,903.20 ILS marked as exception.",
+      "steps": [
+        {
+          "tool": "search_invoices",
+          "input": {
+            "text": "Hermon",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 10
+        }
+      ],
+      "latency_ms": 4466,
+      "estimated_cost_usd": 0.002646
+    },
+    {
+      "question": "Which invoices were rejected?",
+      "passed": true,
+      "expected_tool": "search_invoices",
+      "expected_facts": [
+        "no rejected|none|0 rejected|no invoices"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No invoices were rejected as no invoices were found in the records.",
+      "steps": [
+        {
+          "tool": "search_invoices",
+          "input": {
+            "status": "rejected",
+            "sort": "newest",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 3
+        }
+      ],
+      "latency_ms": 3278,
+      "estimated_cost_usd": 0.002196
+    },
+    {
+      "question": "What are the largest invoices?",
+      "passed": true,
+      "expected_tool": "search_invoices",
+      "expected_facts": [
+        "BW-2026-0412|BW-2026-0419|BW-2026-0425"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The largest invoices are: BW-2026-0419 from BlueWave IT Solutions Ltd for 61,171.20 ILS, BW-2026-0412 also from BlueWave IT Solutions Ltd for 39,471.00 ILS, and HC-8841 from חרמון קלייה בע\"מ for 10,903.20 ILS.",
+      "steps": [
+        {
+          "tool": "search_invoices",
+          "input": {
+            "sort": "largest",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 9
+        }
+      ],
+      "latency_ms": 5493,
+      "estimated_cost_usd": 0.003452
+    },
+    {
+      "question": "Which invoices came in this month?",
+      "passed": true,
+      "expected_tool": "search_invoices",
+      "expected_facts": [
+        "invoice|received"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No invoices came in this month.",
+      "steps": [
+        {
+          "tool": "search_invoices",
+          "input": {
+            "date_from": "2026-11-01",
+            "date_to": "2026-11-24",
+            "limit": 25,
+            "sort": "newest"
+          },
+          "status": "ok",
+          "latency_ms": 8
+        }
+      ],
+      "latency_ms": 3130,
+      "estimated_cost_usd": 0.002201
+    },
+    {
+      "question": "Are there duplicate invoices?",
+      "passed": true,
+      "expected_tool": "findings_by_type",
+      "expected_facts": [
+        "TV-24518"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "There is one duplicate invoice: invoice number TV-24518 from the supplier תבור ציוד משרדי בע\"מ, with an amount at risk of 7,633.42 (currency not specified).",
+      "steps": [
+        {
+          "tool": "findings_by_type",
+          "input": {
+            "finding_type": "DUPLICATE_INVOICE",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 12
+        }
+      ],
+      "latency_ms": 4091,
+      "estimated_cost_usd": 0.002454
+    },
+    {
+      "question": "Which invoices are priced above the PO?",
+      "passed": true,
+      "expected_tool": "findings_by_type",
+      "expected_facts": [
+        "BW-2026-0412"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "There is one invoice priced above the PO: invoice BW-2026-0412 from BlueWave IT Solutions Ltd. The unit price is 5650.00 ILS compared to 5380.00 ILS on PO-2026-1003, which is a +5.02% difference exceeding the 1.0% tolerance.",
+      "steps": [
+        {
+          "tool": "findings_by_type",
+          "input": {
+            "finding_type": "PRICE_MISMATCH"
+          },
+          "status": "ok",
+          "latency_ms": 7
+        }
+      ],
+      "latency_ms": 4209,
+      "estimated_cost_usd": 0.002567
+    },
+    {
+      "question": "Which invoices have no goods receipt?",
+      "passed": true,
+      "expected_tool": "findings_by_type",
+      "expected_facts": [
+        "BW-2026-0419"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The invoice BW-2026-0419 from BlueWave IT Solutions Ltd in the amount of 51840.0000 ILS has no goods receipt recorded. This pertains to purchase order PO-2026-1004 and means nothing can be confirmed as delivered yet.",
+      "steps": [
+        {
+          "tool": "findings_by_type",
+          "input": {
+            "finding_type": "MISSING_GOODS_RECEIPT",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 8
+        }
+      ],
+      "latency_ms": 3653,
+      "estimated_cost_usd": 0.002502
+    },
+    {
+      "question": "Which documents are not invoices?",
+      "passed": true,
+      "expected_tool": "findings_by_type",
+      "expected_facts": [
+        "none|no documents|no invoices|no records|0 documents"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "There are no documents identified as not being invoices.",
+      "steps": [
+        {
+          "tool": "findings_by_type",
+          "input": {
+            "finding_type": "NOT_AN_INVOICE",
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 3
+        }
+      ],
+      "latency_ms": 2898,
+      "estimated_cost_usd": 0.002235
+    },
+    {
+      "question": "List all suppliers",
+      "passed": true,
+      "expected_tool": "list_suppliers",
+      "expected_facts": [
+        "Tavor",
+        "Hermon",
+        "BlueWave"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "There are six active suppliers: BlueWave IT Solutions Ltd, Hermon Coffee Roasters Ltd, Carmel Clean-Tech Ltd, Carmel Cleaning Services Ltd, Arava Packaging Ltd, and Tavor Office Supplies Ltd.",
+      "steps": [
+        {
+          "tool": "list_suppliers",
+          "input": {
+            "sort": "name"
+          },
+          "status": "ok",
+          "latency_ms": 10
+        }
+      ],
+      "latency_ms": 8378,
+      "estimated_cost_usd": 0.003431
+    },
+    {
+      "question": "Tell me about Hermon Coffee",
+      "passed": true,
+      "expected_tool": "supplier_overview",
+      "expected_facts": [
+        "Hermon",
+        "coffee|roasters"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "Hermon Coffee Roasters Ltd (חרמון קלייה בע\"מ) is an active supplier with tax ID 515000230. They have payment terms of net 30 days. There is currently one open exception on an invoice totaling 10,903.20 ILS (invoice HC-8841). Recent purchase orders include PO-2026-1002 (partially received), PO-2026-1009 (received), and PO-2026-1011 (received), all in ILS currency. Another recent reconciled invoice (HC-8853) shows a zero amount.",
+      "steps": [
+        {
+          "tool": "supplier_overview",
+          "input": {
+            "name": "Hermon Coffee"
+          },
+          "status": "ok",
+          "latency_ms": 24
+        }
+      ],
+      "latency_ms": 5644,
+      "estimated_cost_usd": 0.002942
+    },
+    {
+      "question": "Which suppliers are blocked?",
+      "passed": true,
+      "expected_tool": "list_suppliers",
+      "expected_facts": [
+        "no blocked|none|0 blocked|no suppliers"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No suppliers are blocked as there are no suppliers listed in the system currently.",
+      "steps": [
+        {
+          "tool": "list_suppliers",
+          "input": {
+            "status": "blocked"
+          },
+          "status": "ok",
+          "latency_ms": 8
+        }
+      ],
+      "latency_ms": 2491,
+      "estimated_cost_usd": 0.002167
+    },
+    {
+      "question": "Which supplier has the most problems?",
+      "passed": true,
+      "expected_tool": "list_suppliers",
+      "expected_facts": [
+        "BlueWave|Hermon"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "BlueWave IT Solutions Ltd has the most problems with 3 open cases.",
+      "steps": [
+        {
+          "tool": "list_suppliers",
+          "input": {
+            "sort": "open_cases"
+          },
+          "status": "ok",
+          "latency_ms": 5
+        }
+      ],
+      "latency_ms": 2870,
+      "estimated_cost_usd": 0.00267
+    },
+    {
+      "question": "Which supplier do we buy from the most?",
+      "passed": true,
+      "expected_tool": "supplier_spend",
+      "expected_facts": [
+        "BlueWave"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "We buy the most from BlueWave IT Solutions Ltd, with a total spend of 114,802.20 ILS across 4 invoices.",
+      "steps": [
+        {
+          "tool": "supplier_spend",
+          "input": {
+            "limit": 1
+          },
+          "status": "ok",
+          "latency_ms": 11
+        }
+      ],
+      "latency_ms": 3124,
+      "estimated_cost_usd": 0.002331
+    },
+    {
+      "question": "Which suppliers do we owe money to?",
+      "passed": true,
+      "expected_tool": "open_payables",
+      "expected_facts": [
+        "BlueWave",
+        "ILS|NIS|shekel|₪"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "We owe money to the following suppliers: BlueWave IT Solutions Ltd (ILS 114,802.20), Tavor Office Supplies Ltd (ILS 15,117.22 plus an unknown currency amount of 7,633.42), Arava Packaging Ltd (ILS 1,345.20 and USD 3,455.04), Hermon Coffee Roasters Ltd (ILS 10,903.20), and Carmel Cleaning Services Ltd (ILS 8,024.00).",
+      "steps": [
+        {
+          "tool": "open_payables",
+          "input": {
+            "limit": 10
+          },
+          "status": "ok",
+          "latency_ms": 7
+        }
+      ],
+      "latency_ms": 6186,
+      "estimated_cost_usd": 0.003289
+    },
+    {
+      "question": "What is the status of PO-2026-1001?",
+      "passed": true,
+      "expected_tool": "po_status",
+      "expected_facts": [
+        "PO-2026-1001",
+        "Tavor"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The status of PO-2026-1001 is 'received'. All items have been fully received and invoiced with no remaining quantities to receive or invoice. The supplier is Tavor Office Supplies Ltd, and the currency is ILS.",
+      "steps": [
+        {
+          "tool": "po_status",
+          "input": {
+            "po_number": "PO-2026-1001"
+          },
+          "status": "ok",
+          "latency_ms": 110
+        }
+      ],
+      "latency_ms": 4398,
+      "estimated_cost_usd": 0.002627
+    },
+    {
+      "question": "How much VAT were we invoiced this month?",
+      "passed": true,
+      "expected_tool": "period_totals",
+      "expected_facts": [
+        "VAT|tax"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "No VAT invoiced this month, as no invoices are recorded or included in the period totals for November 2026 yet.",
+      "steps": [
+        {
+          "tool": "period_totals",
+          "input": {
+            "date_from": "2026-11-01",
+            "date_to": "2026-11-24"
+          },
+          "status": "ok",
+          "latency_ms": 7
+        }
+      ],
+      "latency_ms": 4035,
+      "estimated_cost_usd": 0.002395
+    },
+    {
+      "question": "Who needs to approve an invoice of 30,000?",
+      "passed": true,
+      "expected_tool": "approval_rules",
+      "expected_facts": [
+        "finance",
+        "admin"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "An invoice of 30,000 ILS requires dual approval because it is above the dual approval threshold of 20,000 ILS. Step 1 requires approval by a finance reviewer, and step 2 requires approval by an administrator. The same person cannot approve both steps, and the uploader cannot approve either step.",
+      "steps": [
+        {
+          "tool": "approval_rules",
+          "input": {},
+          "status": "ok",
+          "latency_ms": 1
+        }
+      ],
+      "latency_ms": 3537,
+      "estimated_cost_usd": 0.002467
+    },
+    {
+      "question": "How do I approve an invoice?",
+      "passed": true,
+      "expected_tool": "app_help",
+      "expected_facts": [
+        "approve|approval",
+        "invoice",
+        "review|reconcil"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "To approve an invoice, open the invoice, ensure it is reconciled, and then use the Approve option in the approval panel. Note that invoices above the dual-approval threshold require a second approver who must be an administrator.",
+      "steps": [
+        {
+          "tool": "app_help",
+          "input": {
+            "topic": "approve"
+          },
+          "status": "ok",
+          "latency_ms": 0
+        }
+      ],
+      "latency_ms": 3561,
+      "estimated_cost_usd": 0.002387
+    },
+    {
+      "question": "What did I do this week?",
+      "passed": true,
+      "expected_tool": "my_activity",
+      "expected_facts": [
+        "no activity|no actions|none|0 actions|no recorded|haven't|haven’t"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "You had no recorded activity in the last 7 days.",
+      "steps": [
+        {
+          "tool": "my_activity",
+          "input": {
+            "days": 7
+          },
+          "status": "ok",
+          "latency_ms": 4
+        }
+      ],
+      "latency_ms": 3714,
+      "estimated_cost_usd": 0.002222
+    },
+    {
+      "question": "What can you do?",
+      "passed": true,
+      "expected_tool": null,
+      "expected_facts": [
+        "invoice",
+        "suppliers|purchase orders",
+        "read-only|cannot approve|can't approve|can’t approve"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "offline",
+      "answer": "I can help with:\n• The review queue: what is urgent, overdue, waiting for information, a summary\n• Invoices: find by number, supplier, status or period; why one is blocked; what happened to it\n• Problems: duplicates, prices above the PO, missing goods receipts, documents that are not invoices\n• Suppliers: the list, one supplier, blocked suppliers, spend, what we owe\n• Purchase orders: ordered, received, invoiced and remaining\n• Totals and VAT for a period\n• Approval rules, tolerances and how to do things in the app\nI am read-only: I never approve, reject or pay.",
+      "steps": [],
+      "latency_ms": 3239,
+      "estimated_cost_usd": 0.001369
+    },
+    {
+      "question": "What are the payment terms in the BlueWave agreement?",
+      "passed": true,
+      "expected_tool": "knowledge_search",
+      "expected_facts": [
+        "45"
+      ],
+      "expected_tool_and_filters_used": true,
+      "facts_present": true,
+      "verified": true,
+      "mode": "llm:gpt-4.1-mini",
+      "answer": "The payment terms in the BlueWave agreement are Net 45 days from receipt of a valid invoice, with each invoice required to reference a valid purchase order number issued by the Customer.",
+      "steps": [
+        {
+          "tool": "search_supplier_agreements",
+          "input": {
+            "query": "BlueWave payment terms"
+          },
+          "status": "ok",
+          "latency_ms": 15722
+        }
+      ],
+      "latency_ms": 19534,
+      "estimated_cost_usd": 0.002888
+    }
+  ]
+}

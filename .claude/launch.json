@@ -62,6 +62,23 @@
       "port": 3002
     },
     {
+      "name": "web-design",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3003"
+      ],
+      "env": {
+        "BACKEND_URL": "http://localhost:8010"
+      },
+      "port": 3003
+    },
+    {
       "name": "web-e2e",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

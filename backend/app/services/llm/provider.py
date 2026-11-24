@@ -133,21 +133,36 @@ class AnthropicProvider:
                                             for tid, out in results]}
 
 
+OFFICIAL_OPENAI_URL = "https://api.openai.com/v1"
+
+
 class OpenAICompatibleProvider:
     name = "openai"
 
-    def __init__(self, model: str) -> None:
+    def __init__(self, model: str, *, api_key: str | None = None, base_url: str | None = None,
+                 use_settings: bool = True, max_retries: int | None = None) -> None:
+        """An OpenAI-compatible endpoint. Without arguments it uses OPENAI_API_KEY and OPENAI_BASE_URL; the fallback
+        chain passes the official API's key and no base URL explicitly (``use_settings=False``)."""
         from openai import OpenAI
+        from app.core.config import GROQ_BASE_URL
 
         s = get_settings()
+        if use_settings:
+            api_key = s.openai_api_key.get_secret_value() if s.openai_api_key else None
+            base_url = s.openai_base_url or None
+        # Always pass an explicit address: with base_url=None the OpenAI SDK reads the OPENAI_BASE_URL environment
+        # variable (Groq's address in Docker), which would send an OpenAI key to another provider.
+        base_url = base_url or OFFICIAL_OPENAI_URL
         self.model = model
-        self.base_url = s.openai_base_url or None
+        self.base_url = base_url
+        # recorded in ai_calls and used for the paid/shared token budget
+        self.name = "groq" if (self.base_url or "").rstrip("/") == GROQ_BASE_URL else "openai"
         self.reasoning_effort_setting = s.llm_reasoning_effort
         self.client = OpenAI(
-            api_key=s.openai_api_key.get_secret_value() if s.openai_api_key else "not-needed",
-            base_url=s.openai_base_url or None,
+            api_key=api_key or "not-needed",
+            base_url=self.base_url,
             timeout=s.llm_timeout_seconds,
-            max_retries=s.llm_max_retries,
+            max_retries=s.llm_max_retries if max_retries is None else max_retries,
         )
 
     REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
@@ -157,7 +172,7 @@ class OpenAICompatibleProvider:
         """Token-limit arguments for this endpoint. The official API takes max_completion_tokens
         (and reasoning models count their thinking against it); local OpenAI-compatible servers
         such as Ollama or vLLM still take max_tokens."""
-        if self.base_url:
+        if (self.base_url or OFFICIAL_OPENAI_URL).rstrip("/") != OFFICIAL_OPENAI_URL:  # None also means the official API
             return {"max_tokens": max_tokens}
         if self.model.startswith(self.REASONING_PREFIXES):
             return {"max_completion_tokens": max_tokens + self.REASONING_HEADROOM,
@@ -228,18 +243,88 @@ class OpenAICompatibleProvider:
         return [{"role": "tool", "tool_call_id": tid, "content": out} for tid, out in results]
 
 
-def get_llm(org_id: uuid.UUID | str | None = None) -> AnthropicProvider | OpenAICompatibleProvider | None:
-    """Return the configured provider, or None in offline mode, without credentials, or when the business
-    (``org_id``) has used its daily AI token budget. The budget is checked on every call, never cached."""
-    llm = _configured_llm()
-    if llm is None or org_id is None:
-        return llm
-    from app.services import ai_budget
+COOLDOWN_SECONDS = 120
+_cooldown_until: dict[str, float] = {}
 
-    if get_settings().ai_daily_token_budget > 0 and not ai_budget.allowed(org_id):
-        log.info("ai_budget_exhausted", org_id=str(org_id))
+
+class FallbackChain:
+    """Providers in order (the paid primary, then the free fallback). Each call goes to the first provider that is not
+    cooling down; when it fails (rate limit, quota, timeout, outage) the call moves to the next one and the failed
+    provider is skipped for a short while. If every provider fails, the last error is raised and the caller takes its
+    offline path, as it always has. All members speak the OpenAI message format, so a tool loop can continue on the
+    next provider."""
+
+    def __init__(self, providers: list[OpenAICompatibleProvider]) -> None:
+        self.providers = providers
+        self.last = providers[0]
+
+    @property
+    def name(self) -> str:
+        return self.last.name
+
+    @property
+    def model(self) -> str:
+        return self.last.model
+
+    def _call(self, method: str, **kw: Any) -> LLMResult:
+        now = time.monotonic()
+        ready = [p for p in self.providers if _cooldown_until.get(p.name, 0) <= now] or self.providers[-1:]
+        error: Exception | None = None
+        for p in ready:
+            try:
+                result = getattr(p, method)(**kw)
+                self.last = p
+                return result
+            except Exception as exc:  # noqa: BLE001 - any provider failure moves the call to the next provider
+                error = exc
+                if p is not self.providers[-1]:
+                    _cooldown_until[p.name] = time.monotonic() + COOLDOWN_SECONDS
+                log.warning("llm_provider_failed", provider=p.name, model=p.model, error=str(exc)[:200])
+        assert error is not None
+        raise error
+
+    def structured(self, **kw: Any) -> LLMResult:
+        return self._call("structured", **kw)
+
+    def chat_tools(self, **kw: Any) -> LLMResult:
+        return self._call("chat_tools", **kw)
+
+    def tool_result_message(self, results: list[tuple[str, str]]) -> list[dict]:
+        return OpenAICompatibleProvider.tool_result_message(results)
+
+
+Provider = AnthropicProvider | OpenAICompatibleProvider | FallbackChain
+
+
+def get_llm(org_id: uuid.UUID | str | None = None) -> Provider | None:
+    """The model for this business, or None (offline). With OPENAI_PLATFORM_API_KEY the paid primary
+    (OPENAI_PLATFORM_MODEL) comes first and the configured provider is its fallback. A business that used its paid
+    budget for the day continues on the free fallback; one that also used its shared budget gets the offline path.
+    Budgets are checked on every call, never cached."""
+    primary, fallback = _platform_llm(), _configured_llm()
+    if org_id is not None:
+        from app.services import ai_budget
+
+        if primary is not None and not ai_budget.allowed(org_id, "paid"):
+            log.info("ai_paid_budget_exhausted", org_id=str(org_id))
+            primary = None
+        if fallback is not None and not ai_budget.allowed(org_id, ai_budget.bucket_for(fallback.name)):
+            log.info("ai_budget_exhausted", org_id=str(org_id))
+            fallback = None
+    if primary is not None and isinstance(fallback, OpenAICompatibleProvider):
+        return FallbackChain([primary, fallback])
+    return primary or fallback
+
+
+@lru_cache
+def _platform_llm() -> OpenAICompatibleProvider | None:
+    """The official OpenAI API, when OPENAI_PLATFORM_API_KEY is set (fails fast: the chain has a fallback)."""
+    s = get_settings()
+    key = s.openai_platform_api_key.get_secret_value() if s.openai_platform_api_key else ""
+    if not key or s.llm_provider == "offline":
         return None
-    return llm
+    return OpenAICompatibleProvider(s.openai_platform_model, api_key=key, base_url=OFFICIAL_OPENAI_URL, use_settings=False,
+                                    max_retries=1)
 
 
 @lru_cache

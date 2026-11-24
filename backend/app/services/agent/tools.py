@@ -86,6 +86,10 @@ class EmptyIn(BaseModel):
     pass
 
 
+class PayablesIn(BaseModel):
+    limit: int | None = Field(None, ge=1, le=50, description="only the N suppliers owed the most, e.g. 3 for 'top 3'")
+
+
 class InvoiceSearchIn(BaseModel):
     text: str | None = Field(None, max_length=120, description="invoice number, supplier name or PO number, partial")
     sort: str = Field("newest", pattern="^(newest|oldest|largest)$")
@@ -252,7 +256,28 @@ def _search(ctx: ToolContext, inp: SearchIn, doc_types: list[str]) -> dict:
                           "text": h.chunk.text, "score": round(h.score, 4)} for h in hits]}
 
 
+SUPPLIER_SUFFIXES = {"ltd", "ltd.", "inc", "inc.", "limited", "בע\"מ", "בע״מ", "בעמ"}
+
+
+def _supplier_named_in(ctx: ToolContext, query: str) -> str | None:
+    """The one supplier a question names ("the BlueWave agreement"), so the search stays within its agreements.
+    Matches the first distinctive word of the supplier's Hebrew or English name; ambiguous or no match returns None."""
+    q = query.casefold()
+    hits = set()
+    for sid, name, name_en in ctx.session.execute(select(Supplier.id, Supplier.name, Supplier.name_en)
+                                                  .where(Supplier.organization_id == ctx.org_id)).all():
+        for full in (name, name_en):
+            words = [w for w in (full or "").replace(",", " ").split() if w.casefold() not in SUPPLIER_SUFFIXES]
+            if words and len(words[0]) >= 3 and words[0].casefold() in q:
+                hits.add(str(sid))
+    return hits.pop() if len(hits) == 1 else None
+
+
 def search_supplier_agreements(ctx: ToolContext, inp: SearchIn) -> dict:
+    if not inp.supplier_id:
+        named = _supplier_named_in(ctx, inp.query)
+        if named:
+            inp = SearchIn(query=inp.query, supplier_id=named)
     return _search(ctx, inp, ["supplier_agreement"])
 
 
@@ -480,22 +505,40 @@ def supplier_spend(ctx: ToolContext, inp: SpendIn) -> dict:
             "note": "Ranked by the base currency; amounts in other currencies are listed separately, never converted."}
 
 
-def open_payables(ctx: ToolContext, inp: EmptyIn) -> dict:
-    """What is owed per supplier and currency: approved for payment, awaiting approval, still in review."""
+def open_payables(ctx: ToolContext, inp: PayablesIn) -> dict:
+    """What is owed per supplier and currency (approved for payment, awaiting approval, still in review), ranked by
+    the total owed. Totals stay per currency; the shekel equivalent is given only to rank suppliers across currencies."""
     from decimal import Decimal
+
+    from app.services import fx
 
     stage = {"approved": "approved_for_payment", "reconciled": "awaiting_approval", "needs_review": "in_review",
              "exception": "in_review", "on_hold": "in_review"}
     agg: dict = {}
     for sid, name, name_en, cur, status, n, total in _by_supplier(ctx, tuple(stage), unpaid_only=True):
-        row = agg.setdefault(str(sid), {"supplier_id": str(sid), "name": name, "name_en": name_en, "by_stage": {}})
+        row = agg.setdefault(str(sid), {"supplier_id": str(sid), "name": name, "name_en": name_en, "by_stage": {}, "total": {}})
+        key = cur or "unknown"
         cell = row["by_stage"].setdefault(stage[status], {})
-        cell[cur or "unknown"] = cell.get(cur or "unknown", Decimal(0)) + Decimal(total)
-    rows = sorted(agg.values(), key=lambda r: ("approved_for_payment" not in r["by_stage"], r["name"]))
-    return {"suppliers": [{**r, "by_stage": {s: {c: f"{v:.2f}" for c, v in cells.items()} for s, cells in r["by_stage"].items()}}
+        cell[key] = cell.get(key, Decimal(0)) + Decimal(total)
+        row["total"][key] = row["total"].get(key, Decimal(0)) + Decimal(total)
+    rates = fx.current_rates()
+    for row in agg.values():
+        converted = [fx.to_base(v, c, rates) for c, v in row["total"].items()]
+        row["_rank"] = sum((v for v in converted if v is not None), Decimal(0))
+        row["total_in_ils_for_ranking"] = f"{row['_rank']:.2f}" if all(v is not None for v in converted) else None
+    rows = sorted(agg.values(), key=lambda r: (-r["_rank"], r["name"]))
+    if inp.limit:
+        rows = rows[: inp.limit]
+    return {"suppliers": [{"supplier_id": r["supplier_id"], "name": r["name"], "name_en": r["name_en"],
+                           "total_owed": {c: f"{v:.2f}" for c, v in r["total"].items()},
+                           "total_in_ils_for_ranking": r["total_in_ils_for_ranking"],
+                           "by_stage": {s: {c: f"{v:.2f}" for c, v in cells.items()} for s, cells in r["by_stage"].items()}}
                           for r in rows],
+            "ranked_by": "total owed, highest first (shekel equivalent at the Bank of Israel rate for ranking only)",
+            "fx_as_of": rates.as_of.isoformat() if rates and rates.as_of else None,
             "note": "Recorded payments are excluded. 'approved_for_payment' means approved and due to be paid outside "
-                    "the system. The other stages are awaiting approval or review. Currencies are never added together."}
+                    "the system. The other stages are awaiting approval or review. Report total_owed per currency; "
+                    "never add different currencies together."}
 
 
 def findings_by_type(ctx: ToolContext, inp: FindingsIn) -> dict:
@@ -728,8 +771,8 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
          "priority, matching, roles, shortcuts.", HelpIn, Perm.INVOICE_READ, app_help),
     Tool("supplier_spend", "Invoiced amounts per supplier and currency, ranked; optional invoice-date range.", SpendIn,
          Perm.INVOICE_READ, supplier_spend),
-    Tool("open_payables", "What is owed per supplier and currency: approved for payment, awaiting approval, in review.",
-         EmptyIn, Perm.INVOICE_READ, open_payables),
+    Tool("open_payables", "What is owed per supplier and currency (approved for payment, awaiting approval, in review), "
+         "ranked by total owed; limit=N for the top N suppliers.", PayablesIn, Perm.INVOICE_READ, open_payables),
     Tool("create_exception_draft", "Attach an advisory investigation summary to the invoice's review case.", DraftIn,
          Perm.EXCEPTION_COMMENT, create_exception_draft, llm_visible=False),
 ]}

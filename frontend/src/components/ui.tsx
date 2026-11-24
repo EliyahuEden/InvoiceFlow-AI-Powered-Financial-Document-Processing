@@ -13,21 +13,21 @@ export function cx(...v: ClassValue[]) {
 
 /* ---------------------------------------------------------------- Button */
 const buttonStyles = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold select-none " +
-  "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out active:translate-y-px " +
-  "disabled:pointer-events-none disabled:opacity-45",
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium select-none " +
+  "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out active:scale-[.98] " +
+  "disabled:pointer-events-none disabled:opacity-45 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        // the single primary action of a screen: a charcoal pill
-        primary: "bg-primary text-primary-ink ring-1 ring-inset ring-primary-line hover:bg-primary-hover shadow-raise",
-        secondary: "bg-surface text-ink ring-1 ring-inset ring-line-strong/70 hover:bg-sunken",
-        ghost: "text-ink-2 hover:bg-surface/70 hover:text-ink",
-        danger: "bg-surface text-danger ring-1 ring-inset ring-danger/40 hover:bg-danger-soft",
+        // the single primary action of a screen: the accent fill
+        primary: "bg-primary text-primary-ink shadow-[inset_0_1px_0_rgb(255_255_255/.14),0_1px_2px_rgb(0_0_0/.25)] hover:bg-primary-hover",
+        secondary: "border border-line bg-raised text-ink hover:border-line-strong/70 hover:bg-sunken",
+        ghost: "text-ink-2 hover:bg-ink/[.06] hover:text-ink",
+        danger: "border border-danger/35 bg-raised text-danger hover:bg-danger-soft",
         // AI actions look like any other action: no special colour or sparkle; their results are labelled AI
-        ai: "bg-surface text-ink ring-1 ring-inset ring-line-strong/70 hover:bg-sunken",
+        ai: "border border-line bg-raised text-ink hover:border-line-strong/70 hover:bg-sunken",
       },
-      size: { sm: "h-8 px-3.5 text-sm", md: "h-10 px-4 text-base", lg: "h-12 px-6 text-md", icon: "h-9 w-9" },
+      size: { sm: "h-7 px-2.5 text-sm", md: "h-8 px-3 text-base", lg: "h-10 px-4 text-md", icon: "h-8 w-8" },
     },
     defaultVariants: { variant: "secondary", size: "md" },
   },
@@ -41,7 +41,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <Comp ref={ref} className={cx(buttonStyles({ variant, size }), className)} disabled={disabled || loading} {...props}>
-        {asChild ? children : (<>{loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}{children}</>)}
+        {asChild ? children : (<>{loading && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}{children}</>)}
       </Comp>
     );
   },
@@ -61,10 +61,10 @@ export function PanelHeader({ title, sub, actions, className }: {
   title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode; className?: string;
 }) {
   return (
-    <header className={cx("flex flex-wrap items-start justify-between gap-3 border-b border-line/70 px-5 py-4", className)}>
+    <header className={cx("flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3", className)}>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight text-ink">{title}</h2>
-        {sub && <p className="mt-0.5 text-sm text-ink-2">{sub}</p>}
+        <h2 className="text-md font-medium tracking-tight text-ink">{title}</h2>
+        {sub && <p className="mt-0.5 text-sm text-ink-3">{sub}</p>}
       </div>
       {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
     </header>
@@ -72,45 +72,24 @@ export function PanelHeader({ title, sub, actions, className }: {
 }
 
 /* ---------------------------------------------------------------- Inputs */
+const field =
+  "w-full rounded-md border border-line bg-bg/60 text-base text-ink placeholder:text-ink-3 shadow-[inset_0_1px_0_rgb(0_0_0/.12)] " +
+  "transition-[border-color,box-shadow] hover:border-line-strong/60 focus:border-accent/70 focus:outline-none focus:ring-[3px] focus:ring-accent/20 " +
+  "disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger/60";
+
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...p }, ref) => (
-    <input
-      ref={ref}
-      className={cx(
-        "h-10 w-full rounded-full border border-line bg-surface px-4 text-base text-ink placeholder:text-ink-3",
-        "transition-colors focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15 disabled:bg-sunken",
-        className,
-      )}
-      {...p}
-    />
-  ),
+  ({ className, ...p }, ref) => <input ref={ref} className={cx(field, "h-9 px-3", className)} {...p} />,
 );
 Input.displayName = "Input";
 
 export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  ({ className, ...p }, ref) => (
-    <textarea
-      ref={ref}
-      className={cx(
-        "min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-3",
-        "focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15",
-        className,
-      )}
-      {...p}
-    />
-  ),
+  ({ className, ...p }, ref) => <textarea ref={ref} className={cx(field, "min-h-20 px-3 py-2", className)} {...p} />,
 );
 Textarea.displayName = "Textarea";
 
 export function Select({ className, children, ...p }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select
-      className={cx(
-        "h-10 rounded-full border border-line bg-surface pe-8 ps-4 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15",
-        className,
-      )}
-      {...p}
-    >
+    <select className={cx(field, "h-9 w-auto pe-8 ps-3", className)} {...p}>
       {children}
     </select>
   );
@@ -135,9 +114,9 @@ export function EmptyState({ icon, title, body, action }: {
   icon?: React.ReactNode; title: string; body?: string; action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      {icon && <div className="mb-3 text-ink-3">{icon}</div>}
-      <p className="text-md font-medium text-ink">{title}</p>
+    <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+      {icon && <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg border border-line bg-raised text-ink-3 [&_svg]:h-5 [&_svg]:w-5">{icon}</div>}
+      <p className="text-base font-medium text-ink">{title}</p>
       {body && <p className="mt-1 max-w-md text-sm text-ink-3">{body}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -146,7 +125,7 @@ export function EmptyState({ icon, title, body, action }: {
 
 export function ErrorState({ message, onRetry, retryLabel = "Retry" }: { message: string; onRetry?: () => void; retryLabel?: string }) {
   return (
-    <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+    <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger-soft px-4 py-2.5 text-sm text-danger">
       <span>{message}</span>
       {onRetry && <Button size="sm" variant="danger" onClick={onRetry}>{retryLabel}</Button>}
     </div>
@@ -163,13 +142,13 @@ export function Table({ className, children }: { className?: string; children: R
 }
 export function Th({ className, children, ...p }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th className={cx("sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-sunken px-4 py-2.5 text-start text-xs font-semibold text-ink-2", className)} {...p}>
+    <th className={cx("sticky top-0 z-[1] h-9 whitespace-nowrap border-b border-line bg-surface px-4 text-start text-xs font-medium text-ink-3", className)} {...p}>
       {children}
     </th>
   );
 }
 export function Td({ className, children, ...p }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cx("border-b border-line/80 px-4 py-3 align-middle", className)} {...p}>{children}</td>;
+  return <td className={cx("h-11 border-b border-line px-4 py-2 align-middle", className)} {...p}>{children}</td>;
 }
 
 /* ---------------------------------------------------------------- Key/value */

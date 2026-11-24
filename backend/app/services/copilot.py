@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from datetime import date
 import uuid
 from typing import Any, Literal
 
@@ -25,7 +26,7 @@ from app.services.agent.tools import TOOLS, ToolContext, call_tool
 from app.services.llm.provider import get_llm
 from app.services.llm.telemetry import record_call
 
-PROMPT_VERSION = "copilot-v3"
+PROMPT_VERSION = "copilot-v4"
 MAX_ROUNDS = 4
 MAX_TOOL_CALLS = 8
 COPILOT_TOOLS = ["review_queue", "queue_summary", "search_invoices", "get_invoice", "invoice_case", "get_exception",
@@ -41,6 +42,15 @@ HREF = {"invoice": "/invoices/{id}", "exception": "/exceptions/{id}", "supplier"
 SYSTEM = """You are the accounts-payable copilot inside InvoiceFlow. You help finance and procurement staff
 understand their review queue, invoices, suppliers, purchase orders and policies.
 - Use the tools to look things up; never guess figures, statuses or dates.
+- Today's date is given in <today>. Resolve "this month", "this week", "today" and similar from it, never from
+  your own sense of the date: "this month" is date_from = the first day of the current month.
+- For what is urgent or most important, use review_queue (it is ranked by risk); queue_summary only gives counts.
+- For supplier agreements and policies, put the topic in the query, not just the supplier: for example
+  search_supplier_agreements with query "BlueWave payment terms".
+- For overdue cases use review_queue with overdue=true; for cases due soon use review_queue with due_within_days.
+- For which supplier has the most problems or open cases, use list_suppliers with sort=open_cases.
+- For how much we owe, or which suppliers we owe the most, use open_payables (ranked; limit=N for the top N).
+- For duplicates, price differences and other finding types, use findings_by_type.
 - For a known PO number, use po_status. Use find_purchase_orders to look up unknown PO numbers.
 - For what happened to a known invoice or its timeline, use invoice_history. Use invoice_case for its current state.
 - For invoices ready for approval use search_invoices with status=reconciled. Preserve requested filters when retrying a tool.
@@ -58,7 +68,8 @@ ANSWER_SYSTEM = """Write the final answer for the reviewer from the tool results
 - Cite the records you rely on in "citations" with their kind and id exactly as the tools returned them.
 - For documents, cite the knowledge_document_id.
 - If the tools did not return enough to answer, say so plainly and suggest where to look.
-- If a filtered search is empty, say which filter had no matches. Keep that conclusion scoped to the filter.
+- If a filtered search is empty, say so plainly in the first words, naming what was searched: "No cases have been
+  escalated.", "No invoices came in this month.", "No activity recorded in the last 7 days." Keep it scoped to the filter.
 - For invoice history, summarize recorded events. For a purchase order status, include the supplier when available.
 - For payables, distinguish approved-for-payment amounts from items awaiting approval or in review. Include their currencies.
 - Never claim an action was taken: you are read-only. If asked to approve, reject or pay, say a person must do
@@ -80,6 +91,27 @@ class CopilotAnswer(BaseModel):
 UUID = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.IGNORECASE)
 APPROVAL_AMOUNT = re.compile(r"(?:\binvoice (?:of|for)|חשבונית (?:של|על סך|בסך))\s*(?:₪\s*|ILS\s+)?"
                              r"(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(?![\w.,])", re.IGNORECASE)
+
+
+CITATION_KINDS = {"invoice", "exception", "supplier", "purchase_order", "document"}
+KIND_ALIASES = {"case": "exception", "exception_case": "exception", "po": "purchase_order", "purchase-order": "purchase_order",
+                "knowledge_document": "document", "agreement": "document", "policy": "document"}
+
+
+def _clean_answer(data: Any) -> Any:
+    """Keep a usable answer when the model mislabels a citation: map common aliases and drop citations that are
+    still unknown, instead of discarding the whole answer (citations are only links; the facts are checked separately)."""
+    if not isinstance(data, dict) or not isinstance(data.get("citations"), list):
+        return data
+    kept = []
+    for c in data["citations"]:
+        if not isinstance(c, dict) or not isinstance(c.get("id"), str):
+            continue
+        kind = KIND_ALIASES.get(str(c.get("kind", "")).lower(), str(c.get("kind", "")).lower())
+        if kind in CITATION_KINDS:
+            kept.append({"kind": kind, "id": c["id"]})
+    follow = data.get("follow_ups")
+    return {**data, "citations": kept, "follow_ups": follow[:3] if isinstance(follow, list) else []}
 
 
 def answer_problems(answer: str, outputs: list[dict], lang: str, question: str = "") -> list[str]:
@@ -156,7 +188,8 @@ def _with_model(ctx: ToolContext, llm, question: str, lang: str, history: list[d
     if context.get("exception_id"):
         ctx_note += f"The reviewer is looking at exception_id {context['exception_id']}. "
     messages: list[Any] = [{"role": m["role"], "content": m["content"]} for m in history[-6:]]
-    messages.append({"role": "user", "content": (f"<page_context>{ctx_note}</page_context>\n" if ctx_note else "") + question})
+    today = f"<today>{date.today().isoformat()}</today>\n"
+    messages.append({"role": "user", "content": today + (f"<page_context>{ctx_note}</page_context>\n" if ctx_note else "") + question})
     outputs: list[dict] = []
     calls = 0
     for _ in range(MAX_ROUNDS):
@@ -207,12 +240,15 @@ def _with_model(ctx: ToolContext, llm, question: str, lang: str, history: list[d
         try:
             res = llm.structured(system=ANSWER_SYSTEM.format(language=language), content=prompt,
                                  schema_name="copilot_answer", schema=CopilotAnswer.model_json_schema(), max_tokens=1500)
-            ans = CopilotAnswer.model_validate(res.data)
+            ans = CopilotAnswer.model_validate(_clean_answer(res.data))
         except Exception as exc:  # noqa: BLE001
             record_call(ctx.session, org_id=ctx.org_id, kind="copilot", workflow="copilot.answer",
                         prompt_version=PROMPT_VERSION, provider=llm.name, model=llm.model, status="error", error=str(exc))
             return _offline(ctx, question, lang, context)
-        violations = answer_problems(ans.answer, outputs, lang, question)
+        today = date.today()  # dates the model was given may appear in the answer too
+        checked = outputs + [{"tool": "context", "output": {"today": today.isoformat(),
+                                                            "month_start": today.replace(day=1).isoformat()}}]
+        violations = answer_problems(ans.answer, checked, lang, question)
         record_call(ctx.session, org_id=ctx.org_id, kind="copilot", workflow="copilot.answer", prompt_version=PROMPT_VERSION,
                     result=res, status="unfaithful" if violations else "ok",
                     meta={"attempt": attempt, "violations": violations[:10]})

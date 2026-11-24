@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { StatusPill } from "@/components/domain";
+import { StationLine } from "@/components/station-line";
 import { useSession } from "@/components/session";
 import { Button, cx, ErrorState, Skeleton } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -47,16 +48,16 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div>
-      <header className="command-hero mb-5 space-y-4">
+      <header className="mb-5 space-y-4 border-b border-line">
         <div className="flex min-w-0 items-center gap-2 text-sm text-ink-2">
-          <Link href="/invoices" className="inline-flex items-center gap-1 font-medium hover:text-accent"><ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />{t.nav.inbox}</Link>
+          <Link href="/invoices" className="inline-flex items-center gap-1 text-ink-3 hover:text-ink"><ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden />{t.nav.inbox}</Link>
           {inv && <><ChevronRight className="h-3 w-3 rtl:rotate-180" aria-hidden /><bdi className="truncate">{inv.invoice_number ?? inv.filename}</bdi></>}
         </div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
             {!inv ? <Skeleton className="h-8 w-64" /> : (
               <>
-                <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+                <h1 className="flex flex-wrap items-center gap-2.5 text-2xl font-semibold tracking-tight text-ink">
                   <bdi className="min-w-0 break-words">{path.endsWith("/review") ? t.invoice.verifyTitle : inv.invoice_number ?? inv.filename}</bdi>
                   <StatusPill status={inv.status} />
                 </h1>
@@ -65,7 +66,7 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
                   <span className="text-line-strong" aria-hidden>|</span>
                   <span>{date(inv.invoice_date, locale)}</span>
                   <span className="text-line-strong" aria-hidden>|</span>
-                  <span className="ltr font-semibold text-ink">{money(inv.total, inv.currency)}</span>
+                  <span className="ltr font-medium text-ink num">{money(inv.total, inv.currency)}</span>
                   {inv.purchase_order && (<><span className="text-line-strong" aria-hidden>|</span>
                     <Link href={`/purchase-orders/${inv.purchase_order.id}`} className="ltr font-mono text-sm hover:text-accent">{inv.purchase_order.po_number}</Link></>)}
                 </p>
@@ -81,16 +82,17 @@ export default function InvoiceLayout({ children }: { children: React.ReactNode 
             )}
           </div>
         </div>
-      <nav className="flex max-w-full flex-wrap items-center gap-1.5 border-t border-line pt-3" aria-label={t.invoice.sections}>
+      {inv && <div className="pt-1"><StationLine invoice={inv} /></div>}
+      <nav className="-mb-px flex max-w-full items-center gap-4 overflow-x-auto" aria-label={t.invoice.sections}>
         {tabs.map((tab) => {
           const active = path === tab.href;
           return (
             <Link key={tab.href} href={tab.href} aria-current={active ? "page" : undefined}
-              className={cx("inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm font-medium transition-colors",
-                active ? "border-line-strong bg-surface text-ink shadow-raise" : "border-transparent text-ink-2 hover:border-line hover:bg-surface")}>
+              className={cx("inline-flex h-9 items-center gap-1.5 whitespace-nowrap border-b-2 text-base transition-colors",
+                active ? "border-accent font-medium text-ink" : "border-transparent text-ink-3 hover:text-ink")}>
               {tab.label}
-              {tab.ai && <span className="rounded bg-ai-soft px-1 text-2xs font-semibold text-ai">AI</span>}
-              {!!tab.badge && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-danger-soft px-1 text-2xs font-semibold text-danger num">{tab.badge}</span>}
+              {tab.ai && <span className="rounded border border-line px-1 text-2xs font-medium text-ai">AI</span>}
+              {!!tab.badge && <span className="grid h-4 min-w-4 place-items-center rounded bg-danger-soft px-1 text-2xs font-medium text-danger num">{tab.badge}</span>}
             </Link>
           );
         })}

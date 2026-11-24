@@ -29,6 +29,8 @@ os.environ.update({
     "EMAIL_BACKEND": "console",  # tests never send mail; email tests switch to the in-memory outbox
     "JWT_SECRET": "test-secret-0123456789abcdef0123456789abcdef",
     "RATE_LIMIT_LOGIN_PER_MINUTE": "1000",
+    "RATE_LIMIT_AI_PER_DAY": "1000",
+    "OPENAI_PLATFORM_API_KEY": "",
     "RATE_LIMIT_UPLOAD_PER_MINUTE": "1000",
 })
 

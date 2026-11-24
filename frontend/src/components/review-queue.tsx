@@ -15,8 +15,8 @@ const stagger = (index: number): React.CSSProperties => ({ animationDelay: `${Ma
 
 function Rank({ priority }: Pick<ReviewQueueItem, "priority">) {
   const { t } = useI18n();
-  return <span className={cx("inline-grid h-8 min-w-8 shrink-0 place-items-center rounded-full px-1.5 text-sm font-semibold num",
-    priority.level === "critical" ? "bg-danger-soft text-danger" : priority.level === "high" ? "bg-warn-soft text-warn" : "bg-sunken text-ink-2")}>
+  return <span className={cx("inline-grid h-6 min-w-6 shrink-0 place-items-center rounded-md border px-1 text-xs font-medium num",
+    priority.level === "critical" ? "border-danger/25 bg-danger-soft text-danger" : priority.level === "high" ? "border-warn/25 bg-warn-soft text-warn" : "border-line bg-ink/[.04] text-ink-2")}>
     <span className="sr-only">{t.review.rank} </span>{priority.rank}
   </span>;
 }
@@ -51,17 +51,19 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
   }));
 
   if (compact) return <ol className="divide-y divide-line">
-    {rows.map(({ item, href, done, current: active, supplier, amount, amountTitle }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
-      <Link href={href} aria-current={active || undefined} className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-4 py-4 hover:bg-sunken/70 sm:px-5">
+    {rows.map(({ item, href, done, current: active, supplier, amount, amountTitle, due }, index) => <li key={item.exception_id} style={stagger(index)} className="animate-rise [animation-fill-mode:both]">
+      <Link href={href} aria-current={active || undefined}
+        className={cx("group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 transition-colors hover:bg-ink/[.03] sm:grid-cols-[auto_minmax(0,1.1fr)_minmax(0,1.4fr)_auto_auto]",
+          active && "bg-accent-soft/40")}>
         <Rank priority={item.priority} />
-        <div className="min-w-0 space-y-1.5">
-          <p dir="auto" className="break-words font-semibold leading-snug text-ink">{supplier}</p>
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2"><bdi className={done ? "line-through" : undefined}>{item.invoice_number ?? "—"}</bdi><PriorityBadge level={item.priority.level} /></p>
-          {item.priority.reasons[0] && <p className="text-sm text-ink-2"><ReasonText reason={item.priority.reasons[0]} currency={item.currency} /></p>}
-          <p className="text-xs text-ink-3">{t.review.atRisk} <bdi className="ms-1 font-semibold text-ink num" title={amountTitle}>{amount}</bdi></p>
-          {(done || active) && <div className="flex flex-wrap gap-2"><SessionState done={done} current={active} /></div>}
+        <div className="min-w-0">
+          <p dir="auto" className="truncate text-base font-medium text-ink">{supplier}</p>
+          <p className="flex items-center gap-1.5 text-sm text-ink-3"><bdi className={cx("font-mono text-xs", done && "line-through")}>{item.invoice_number ?? "—"}</bdi>
+            <span aria-hidden>·</span><bdi>{due}</bdi><SessionState done={done} current={active} /></p>
         </div>
-        <ChevronRight className="mt-1 h-4 w-4 text-ink-3 group-hover:text-ink rtl:rotate-180" aria-hidden />
+        <p className="col-start-2 truncate text-sm text-ink-2 sm:col-start-auto">{item.priority.reasons[0] ? <ReasonText reason={item.priority.reasons[0]} currency={item.currency} /> : null}</p>
+        <bdi className="row-start-1 col-start-3 whitespace-nowrap text-end text-base font-medium text-ink num ltr sm:col-start-auto sm:row-start-auto" title={amountTitle}>{amount}</bdi>
+        <ChevronRight className="hidden h-3.5 w-3.5 text-ink-3 group-hover:text-ink rtl:rotate-180 sm:block" aria-hidden />
       </Link>
     </li>)}
   </ol>;
@@ -72,13 +74,13 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
         className="animate-rise space-y-3 p-4 [animation-fill-mode:both]" aria-current={active || undefined}>
         <div className="flex items-start gap-3">
           <Rank priority={item.priority} />
-          <div className="min-w-0 flex-1"><p dir="auto" className="break-words font-semibold text-ink">{supplier}</p>
+          <div className="min-w-0 flex-1"><p dir="auto" className="break-words font-medium text-ink">{supplier}</p>
             <Link href={href} className={cx("text-sm text-accent hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></Link></div>
           <PriorityBadge level={item.priority.level} />
         </div>
         <ul className="space-y-1 text-sm text-ink-2">{item.priority.reasons.map((reason, index) =>
           <li key={`${reason.code}-${index}`}><ReasonText reason={reason} currency={item.currency} /></li>)}</ul>
-        <dl className="grid grid-cols-2 gap-3 rounded-md bg-sunken px-3 py-2 text-sm">
+        <dl className="grid grid-cols-2 gap-3 rounded-md border border-line bg-ink/[.03] px-3 py-2 text-sm">
           <div><dt className="text-xs text-ink-3">{t.review.atRisk}</dt><dd className="mt-0.5 break-words font-semibold num"><bdi title={amountTitle}>{amount}</bdi></dd></div>
           <div><dt className="text-xs text-ink-3">{t.review.due}</dt><dd className="mt-0.5"><bdi>{due}</bdi></dd></div>
         </dl>
@@ -92,16 +94,16 @@ export function ReviewQueue({ items, compact = false }: { items: ReviewQueueItem
       <thead><tr><Th>{t.review.rank}</Th><Th>{t.review.priority}</Th><Th>{t.common.supplier} / {t.recon.invoice}</Th>
         <Th>{t.review.reason}</Th><Th className="text-end">{t.review.atRisk}</Th><Th>{t.review.due}</Th><Th>{t.common.status}</Th><Th>{t.review.nextAction}</Th></tr></thead>
       <tbody>{rows.map(({ item, href, done, current: active, supplier, amount, amountTitle, due, action }, index) => <tr key={item.exception_id} style={stagger(index)}
-        className={cx("animate-rise [animation-fill-mode:both]", active ? "bg-accent-soft/50" : "hover:bg-sunken/60")} aria-current={active || undefined}>
+        className={cx("animate-rise [animation-fill-mode:both]", active && "bg-accent-soft/40")} aria-current={active || undefined}>
         <Td><Rank priority={item.priority} /></Td>
         <Td><PriorityBadge level={item.priority.level} /></Td>
-        <Td><div className="min-w-24 space-y-1"><p dir="auto" className="break-words font-semibold leading-snug">{supplier}</p>
-          <Link href={href} className={cx("block text-sm text-accent underline-offset-4 hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></Link>
+        <Td><div className="min-w-24 space-y-0.5"><p dir="auto" className="break-words font-medium leading-snug">{supplier}</p>
+          <Link href={href} className={cx("block font-mono text-xs text-accent underline-offset-4 hover:underline", done && "line-through")}><bdi>{item.invoice_number ?? "—"}</bdi></Link>
           {(done || active) && <div className="flex flex-wrap gap-1"><SessionState done={done} current={active} /></div>}
         </div></Td>
         <Td><ul className="min-w-28 space-y-1 text-sm leading-snug text-ink-2">{item.priority.reasons.map((reason, index) =>
           <li key={`${reason.code}-${index}`}><ReasonText reason={reason} currency={item.currency} /></li>)}</ul></Td>
-        <Td className="whitespace-nowrap text-end font-semibold num"><bdi title={amountTitle}>{amount}</bdi></Td>
+        <Td className="whitespace-nowrap text-end font-medium num"><bdi className="ltr" title={amountTitle}>{amount}</bdi></Td>
         <Td className={cx("text-sm", item.due_in_days !== null && item.due_in_days < 0 ? "text-warn" : "text-ink-2")}><bdi>{due}</bdi></Td>
         <Td><StatusPill status={item.status} /></Td>
         <Td><Button variant="secondary" size="sm" asChild><Link href={href}>{action}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden /></Link></Button></Td>

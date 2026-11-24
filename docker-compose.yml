@@ -18,11 +18,16 @@ x-backend-env: &backend-env
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.groq.com/openai/v1}
+  # Optional paid primary: the official OpenAI API (gpt-4.1-mini), with Groq above as its fallback, then offline
+  OPENAI_PLATFORM_API_KEY: ${OPENAI_PLATFORM_API_KEY:-}
+  OPENAI_PLATFORM_MODEL: ${OPENAI_PLATFORM_MODEL:-gpt-4.1-mini}
+  AI_PAID_DAILY_TOKEN_BUDGET: ${AI_PAID_DAILY_TOKEN_BUDGET:-300000}   # per business per day on the paid primary
   EXTRACTION_MODE: ${EXTRACTION_MODE:-rules_first}
   LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-8000}
   LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
   AI_DAILY_TOKEN_BUDGET: ${AI_DAILY_TOKEN_BUDGET:-100000}   # per business per day, then offline; 0 = unlimited
   RATE_LIMIT_AI_PER_MINUTE: ${RATE_LIMIT_AI_PER_MINUTE:-20}
+  RATE_LIMIT_AI_PER_DAY: ${RATE_LIMIT_AI_PER_DAY:-40}   # AI questions per visitor address per day
   # Email: the local Mailpit inbox (http://localhost:8025) by default. For real delivery set SMTP_HOST, SMTP_PORT,
   # SMTP_USERNAME, SMTP_PASSWORD, SMTP_SECURITY (starttls|ssl) and EMAIL_FROM in .env.
   EMAIL_BACKEND: ${EMAIL_BACKEND:-auto}

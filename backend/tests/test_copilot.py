@@ -275,3 +275,24 @@ def test_supplier_tools_are_available_to_the_model():
     from app.services.copilot import COPILOT_TOOLS
 
     assert {"list_suppliers", "supplier_spend", "open_payables"} <= set(COPILOT_TOOLS)
+
+
+def test_a_mislabelled_citation_keeps_the_answer():
+    """A model that cites a record as "case" or with an unknown kind must not lose its whole answer."""
+    from app.services.copilot import CopilotAnswer, _clean_answer
+
+    raw = {"answer": "One case is overdue.", "citations": [{"kind": "case", "id": "a"}, {"kind": "review_queue", "id": "b"},
+                                                          {"kind": "invoice", "id": "c"}, "junk"], "follow_ups": ["x"] * 5}
+    ans = CopilotAnswer.model_validate(_clean_answer(raw))
+    assert [(c.kind, c.id) for c in ans.citations] == [("exception", "a"), ("invoice", "c")]
+    assert ans.answer == "One case is overdue." and len(ans.follow_ups) == 3
+
+
+
+def test_offline_top_n_questions_get_a_ranked_limited_answer():
+    from app.services.copilot_offline import top_n
+
+    assert top_n("show me the 3 companies that we owe the most money to") == {"limit": 3}
+    assert top_n("Which three suppliers do we owe the most?") == {"limit": 3}
+    assert top_n("למי שלושת הספקים שאנחנו חייבים להם הכי הרבה?") == {"limit": 3}
+    assert top_n("How much do we owe each supplier?") == {}

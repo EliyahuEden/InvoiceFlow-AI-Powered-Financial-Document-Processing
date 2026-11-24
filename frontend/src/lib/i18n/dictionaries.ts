@@ -92,7 +92,7 @@ const en = {
     correct_extraction: "Correct extraction",
   },
   login: {
-    heroTitle: "Supplier invoices, reconciled and explained", evidence: { title: "Tax invoice HC-8870", supplier: "Hermon Coffee Roasters", item1: "Espresso beans 1 kg", item2: "Paper cups 8oz", subtotal: "Subtotal", vat: "VAT 18%", total: "Total due", tag: "Read from page 1 · matches PO-2026-1011" }, pointRead: "Reads Hebrew and English invoices, scans and photos",
+    heroTitle: "Supplier invoices, reconciled and explained", evidence: { title: "Tax invoice HC-8870", supplier: "Hermon Coffee Roasters", item1: "Espresso beans 1 kg", item2: "Paper cups 8oz", subtotal: "Subtotal", vat: "VAT 18%", total: "Total due", tag: "Synthetic example · checked against PO-2026-1011 and its goods receipt" }, pointRead: "Reads Hebrew and English invoices, scans and photos",
     pointMatch: "Matches every line against purchase orders and goods receipts", pointExplain: "Explains each exception with cited evidence, and people decide",
     synthetic: "Demo environment with synthetic data.",
     title: "Sign in to InvoiceFlow", email: "Work email", password: "Password", submit: "Sign in", failed: "Email or password is incorrect.",
@@ -111,7 +111,7 @@ const en = {
     staleRevision: "Someone else saved this invoice since you opened it. Reload to see their changes, then apply yours again.",
     conflict: "Another reviewer already decided this item. Your draft was saved.", alreadyDecided: "Another reviewer already decided this item. Your draft was saved.",
     decisionRecorded: "Decision recorded", escalate: "Escalate", target: "Send request to", procurement: "Procurement", supplier: "Supplier",
-    escalationRestricted: "Only another administrator can decide an escalated item.", document: "Source document", discrepancyTable: "Invoice against records", invoice: "Invoice", purchaseOrder: "Purchase order", received: "Received (qty)", difference: "Difference",
+    escalationRestricted: "Only another administrator can decide an escalated item.", document: "Source document", discrepancyTable: "Invoice against records", invoice: "Invoice", purchaseOrder: "Purchase order", received: "Received (qty)", difference: "Difference", threeWay: "Invoice, purchase order and goods receipt compared",
     noDocument: "No source document is available.", noDiscrepancies: "No open discrepancies.", savedDraft: "Draft restored", position: "Position", of: "of", correctedFields: "Correct extraction", correction: "Correct extraction",
     processing: "Invoices processing", openQueue: "Open full queue", reviewedThisSession: "Reviewed this session", current: "Current item", nextAction: "Next action", investigate: "Investigate", viewDecision: "View decision", allStatuses: "All statuses", filterFinding: "Finding type", filterSupplier: "Supplier", clearFilters: "Clear filters", escalated: "Escalated", pendingApprovals: "Awaiting payment approval", plusCurrencies: "+{n} other currencies, not converted", amountNote: "Totals are reported in each invoice currency; currencies are not converted.",
     reasons: { blocking: "Blocked: {finding}", amount_at_risk: "{amount} could not be confirmed", unconfirmed_delivery: "Delivery has not been confirmed", suspicious_content: "Suspicious instructions in the document", overdue: "Overdue by {days} days", due_soon: "Due in {days} days", escalated: "An administrator must review", review_needed: "Reviewer judgment needed" },
@@ -140,7 +140,7 @@ const en = {
     trackingUnavailable: "Processing status is temporarily unavailable. Retrying automatically.",
     pipeline: ["Validate file", "Store securely", "Text layer or OCR", "Extract fields", "Verify against document", "Reconcile"],
   },
-  invoice: {
+  invoice: { journey: { title: "Invoice progress", uploaded: "Uploaded", read: "Read", matched: "Matched", reviewed: "Reviewed", approved: "Approved", paid: "Paid", done: "done", current: "current step", todo: "not yet", stopped: "stopped" }, 
     "corrected": "Corrected", "unsaved": "Unsaved change", "recorded": "Saved value", "addLine": "Add line", "removeLine": "Remove line", "sections": "Invoice sections", "notFound": "Invoice not found", "verifyTitle": "Verify extracted invoice data", "auditRestricted": "Your role cannot read the audit trail.",
 
     tabs: { overview: "Document", review: "Extraction review", reconciliation: "Reconciliation", investigation: "AI investigation", audit: "History" },
@@ -390,7 +390,7 @@ const he: Dict = {
     correct_extraction: "תיקון החילוץ",
   },
   login: {
-    heroTitle: "חשבוניות ספקים, מותאמות ומוסברות", evidence: { title: "חשבונית מס HC-8870", supplier: "חרמון קלייה בע\"מ", item1: "פולי קפה אספרסו 1 ק\"ג", item2: "כוסות נייר 8oz", subtotal: "סה\"כ לפני מע\"מ", vat: "מע\"מ 18%", total: "סה\"כ לתשלום", tag: "נקרא מעמוד 1 · תואם להזמנה PO-2026-1011" }, pointRead: "קוראת חשבוניות בעברית ובאנגלית, סריקות וצילומים",
+    heroTitle: "חשבוניות ספקים, מותאמות ומוסברות", evidence: { title: "חשבונית מס HC-8870", supplier: "חרמון קלייה בע\"מ", item1: "פולי קפה אספרסו 1 ק\"ג", item2: "כוסות נייר 8oz", subtotal: "סה\"כ לפני מע\"מ", vat: "מע\"מ 18%", total: "סה\"כ לתשלום", tag: "דוגמה סינתטית · נבדקה מול PO-2026-1011 ותעודת הקבלה" }, pointRead: "קוראת חשבוניות בעברית ובאנגלית, סריקות וצילומים",
     pointMatch: "מתאימה כל שורה מול הזמנות רכש ותעודות קבלת טובין", pointExplain: "מסבירה כל חריגה עם ראיות מצוטטות, והאדם מחליט",
     synthetic: "סביבת הדגמה עם נתונים סינתטיים.",
     title: "כניסה ל-InvoiceFlow", email: "דוא\"ל עבודה", password: "סיסמה", submit: "כניסה", failed: "הדוא\"ל או הסיסמה שגויים.",
@@ -409,7 +409,7 @@ const he: Dict = {
     staleRevision: "מישהו אחר שמר את החשבונית מאז שפתחת אותה. יש לטעון מחדש כדי לראות את השינויים, ואז להחיל את שלך שוב.",
     conflict: "סוקר אחר כבר הכריע בפריט. הטיוטה שלך נשמרה.", alreadyDecided: "סוקר אחר כבר הכריע בפריט. הטיוטה שלך נשמרה.",
     decisionRecorded: "ההחלטה נרשמה", escalate: "העברה למנהל", target: "שליחת הבקשה אל", procurement: "רכש", supplier: "ספק",
-    escalationRestricted: "רק מנהל אחר יכול להכריע בחריגה שהועברה למנהל.", document: "מסמך מקור", discrepancyTable: "חשבונית מול הרשומות", invoice: "חשבונית", purchaseOrder: "הזמנת רכש", received: "התקבל (כמות)", difference: "הפרש",
+    escalationRestricted: "רק מנהל אחר יכול להכריע בחריגה שהועברה למנהל.", document: "מסמך מקור", discrepancyTable: "חשבונית מול הרשומות", invoice: "חשבונית", purchaseOrder: "הזמנת רכש", received: "התקבל (כמות)", difference: "הפרש", threeWay: "השוואת חשבונית, הזמנת רכש ותעודת קבלה",
     noDocument: "אין מסמך מקור זמין.", noDiscrepancies: "אין פערים פתוחים.", savedDraft: "הטיוטה שוחזרה", position: "מיקום", of: "מתוך", correctedFields: "תיקון חילוץ", correction: "תיקון חילוץ",
     processing: "חשבוניות בעיבוד", openQueue: "לכל התור", reviewedThisSession: "נבדקו בביקור הנוכחי", current: "הפריט הנוכחי", nextAction: "הפעולה הבאה", investigate: "בדיקה", viewDecision: "צפייה בהחלטה", allStatuses: "כל המצבים", filterFinding: "סוג ממצא", filterSupplier: "ספק", clearFilters: "ניקוי מסננים", escalated: "הועברו למנהל", pendingApprovals: "ממתינות לאישור תשלום", plusCurrencies: "+{n} מטבעות נוספים, ללא המרה", amountNote: "הסכומים מוצגים במטבע החשבונית; לא מתבצעת המרת מטבע.",
     reasons: { blocking: "חסימה: {finding}", amount_at_risk: "לא אומת סכום של {amount}", unconfirmed_delivery: "האספקה טרם אושרה", suspicious_content: "הוראות חשודות במסמך", overdue: "באיחור של {days} ימים", due_soon: "לתשלום בעוד {days} ימים", escalated: "נדרשת בדיקת מנהל", review_needed: "נדרש שיקול דעת של סוקר" },
@@ -438,7 +438,7 @@ const he: Dict = {
     trackingUnavailable: "לא ניתן לקבל כרגע את מצב העיבוד. ייעשה ניסיון נוסף באופן אוטומטי.",
     pipeline: ["בדיקת הקובץ", "אחסון מאובטח", "שכבת טקסט או OCR", "חילוץ שדות", "אימות מול המסמך", "התאמה"],
   },
-  invoice: {
+  invoice: { journey: { title: "התקדמות החשבונית", uploaded: "הועלתה", read: "נקראה", matched: "הותאמה", reviewed: "נבדקה", approved: "אושרה", paid: "שולמה", done: "הושלם", current: "השלב הנוכחי", todo: "טרם", stopped: "נעצר" }, 
     "corrected": "תוקן", "unsaved": "שינוי שטרם נשמר", "recorded": "ערך שמור", "addLine": "הוספת שורה", "removeLine": "הסרת שורה", "sections": "אזורי החשבונית", "notFound": "החשבונית לא נמצאה", "verifyTitle": "אימות הנתונים שחולצו מהחשבונית", "auditRestricted": "אין לתפקיד שלך הרשאה לצפות ביומן הביקורת.",
 
     tabs: { overview: "מסמך", review: "בדיקת חילוץ", reconciliation: "התאמה", investigation: "חקירת AI", audit: "היסטוריה" },

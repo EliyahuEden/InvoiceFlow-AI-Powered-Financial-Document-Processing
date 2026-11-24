@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from app.models import KnowledgeChunk, KnowledgeDocument, Supplier
 from app.services.documents.validation import UploadRejected
 from app.services.processing import DuplicateUpload
 from app.services.rag import service as rag
-from app.services.ratelimit import check_rate_limit
+from app.services.ratelimit import check_daily_ai_limit, check_rate_limit
 from app.services.rbac import Perm
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
@@ -99,6 +99,7 @@ def search(body: SearchIn, p: Principal = Depends(require(Perm.KNOWLEDGE_READ)),
 
 
 @router.post("/ask")
-def ask(body: SearchIn, p: Principal = Depends(require(Perm.KNOWLEDGE_READ)), db: Session = Depends(get_db)) -> dict:
+def ask(body: SearchIn, request: Request, p: Principal = Depends(require(Perm.KNOWLEDGE_READ)), db: Session = Depends(get_db)) -> dict:
     check_rate_limit(f"ai:{p.user.id}", get_settings().rate_limit_ai_per_minute)  # a model call per question
+    check_daily_ai_limit(request)
     return rag.ask(db, p.org_id, body.query, supplier_id=body.supplier_id, mode=body.mode, k=body.k, as_of=body.as_of)

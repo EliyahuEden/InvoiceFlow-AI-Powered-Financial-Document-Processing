@@ -30,8 +30,12 @@ coding agent (or person) can pick up from here.
     justification; payment approval stays with finance (`services/rbac.py`).
   - **Browser tests for accounts:** `frontend/tests/e2e/accounts.spec.ts` (sign-up, reset, invitation, two-factor,
     admin reset), on the throwaway stack `docker-compose.e2e.yml`.
-- **AI:** Groq (`openai/gpt-oss-120b`) by default, offline fallback without a key; per-business daily token budget
-  and per-user rate limits on model-backed endpoints.
+- **AI (2026-11-24):** a fallback chain: OpenAI `gpt-4.1-mini` (paid, `OPENAI_PLATFORM_API_KEY`, 32/32 Copilot and
+  35/35 policy answers), then Groq `gpt-oss-120b` (free, `OPENAI_API_KEY`), then the offline path. A failing provider
+  hands the call to the next and is skipped for 2 minutes (`FallbackChain` in `services/llm/provider.py`). Two daily
+  token budgets per business: `AI_PAID_DAILY_TOKEN_BUDGET` (300k, about $0.20 at most) for the paid model, then
+  `AI_DAILY_TOKEN_BUDGET` for the shared free fallback. `RATE_LIMIT_AI_PER_DAY` (40) caps AI questions per visitor
+  address on top of the per-minute limit per user. Calls are recorded as provider `openai` or `groq`.
 - **Operations:** Caddy front door with automatic HTTPS (`docker-compose.prod.yml`), production refuses unsafe or
   development secrets, nightly database backups with offsite copy and a restore drill, `/health/alerts` for an
   uptime monitor. Go-live runbook: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
@@ -76,8 +80,18 @@ B. **Model comparison** on the same evaluations: Groq (`gpt-oss-120b`), Claude, 
    | --- | --- | --- | --- |
    | Groq Free, GPT-OSS 120B | 27/32 on v2; 20/21 evaluated on v3, 14.1 s median in the partial run. [v2](eval/results/copilot_v2_120b_latest.json) · [v3](eval/results/copilot_v3_120b_20261124_latest.json) | 32/35 passed, 10/10 expected refusals, 92.6% citation accuracy. [Results](eval/results/rag_v4_120b_latest.json) | 92.5% field accuracy, 12/73 sent to the model, 51 ms median per document. [Results](eval/results/extraction_latest.json) |
    | Ollama, Qwen2.5 1.5B | 23/32 overall. Six of 13 model responses passed; 19 responses used the offline path. 10.5 s median overall. [Results](eval/results/copilot_qwen25_local_20261124_latest.json) | 13/35 passed, 9/10 expected refusals and 21 abstentions on answerable questions. All six issued citations matched. 17.0 s median. [Results](eval/results/rag_qwen25_local_20261124_latest.json) | 92.3% field accuracy, 12/73 sent to the model, 68 ms median per document. [Results](eval/results/extraction_qwen25_local_20261124_latest.json) |
+   | OpenAI, **gpt-4.1-mini** (copilot-v4, rag-answer-v5) | **32/32**, 31 model-written, 4.3 s median, about $0.08 per 32-question run. [Results](eval/results/copilot_gpt41mini_v4_latest.json) | **35/35**, 100% correct, 100% citation accuracy, 10/10 refusals, 6.0 s median (one repair retry). [Results](eval/results/rag_gpt41mini_v2_latest.json) | not run |
+   | OpenAI, gpt-4o-mini (same prompts) | 30/32, 5.2 s median, about $0.03 per run. [Results](eval/results/copilot_gpt4omini_v4_latest.json) | 33/35, 92% correct, 100% citations, 2 answerable refused, 5.3 s. [Results](eval/results/rag_gpt4omini_v2_latest.json) | not run |
+   | OpenAI, gpt-5-nano (same prompts) | 31/32, 9.5 s median, about $0.02 per run. [Results](eval/results/copilot_gpt5nano_v4_latest.json) | 29/35, 84% correct, 92.6% citations, 8.4 s. [Results](eval/results/rag_gpt5nano_v2_latest.json) | not run |
+   | First OpenAI round, before the fixes (copilot-v3, rag-answer-v4) | gpt-5-mini 29/32, gpt-4.1-mini 27/32 | gpt-5-mini 28/35, gpt-4.1-mini 30/35 | |
 
-   Both providers were run without paid API calls. Paid unit pricing and the cost of local compute remain unmeasured.
+   Both providers were run without paid API calls. Paid unit pricing and the cost of local compute remain unmeasured. The OpenAI runs used the official API through `OPENAI_PLATFORM_API_KEY` (`--provider openai`); costs are estimates from list prices ($0.25/$2.00 and $0.40/$1.60 per million input/output tokens), the policy runs were not priced, and the OpenAI usage page is the authority. `gpt-5.4-mini` and `gpt-5.4-nano` are available on the account but were not benchmarked (prices unknown). The jump to 100% came from system fixes, not a bigger model (2026-11-24): the Copilot gets today's date and sharper
+   tool guidance, a mislabelled citation no longer discards the whole answer (it caused most offline fallbacks), agreement
+   search stays within the supplier a question names, policy answers ignore passage markers and accept the question's own
+   figures, quote marks are normalised, and a failed quote check gets one repair retry. The eval database must be seeded
+   inside Docker (`docker compose exec api python -m app.cli seed --reset` with `DATABASE_URL` pointing at the
+   `*_copilot_eval` database), because scanned invoices need Tesseract. `gpt-4.1-nano` is retired by OpenAI (404). Each
+   result is a single run; repeat runs vary by a question or two. The offline router alone scored 29/32 on the Copilot set.
 C. **Deskewing verified.** In the [24-scan benchmark](eval/results/scan_stress_deskew_latest.json), field accuracy on tilted
    pages rose from 45.5% to 77.3%. Invoice numbers stayed at 5/6 correct. Photos, stamped pages, and low-contrast pages each
    scored 80.3%. Two separate tilted invoice fixtures verify total extraction and source highlight placement on the original
@@ -97,8 +111,8 @@ E. **Payment controls:** Supplier banking, dual control and payment tracking are
 1. **Buy a domain and a server** (4 vCPU, 8–16 GB RAM, Israeli region for data residency), then follow the
    10-step runbook in `docs/DEPLOYMENT.md`. Keep `JWT_SECRET` stable once live: two-factor secrets are encrypted
    with a key derived from it.
-2. **AI plan for customers.** Groq's paid tier (about $1–2 a month per typical business; the per-business budget caps
-   it) or a self-hosted model server (`OPENAI_BASE_URL` to Ollama/vLLM, no key needed).
+2. **AI plan for customers.** Done for the portfolio demo: OpenAI `gpt-4.1-mini` with Groq and offline fallbacks (see
+   Current state). Keep auto-recharge off in the OpenAI account; the paid budget caps daily spend per business.
 3. **Legal.** Privacy policy, terms of use, Israel's data-security regulations, data-processing agreements with the
    AI and email providers.
 4. **Brevo domain verification** (SPF, DKIM, DMARC) once there is a domain.
@@ -196,6 +210,9 @@ E. **Payment controls:** Supplier banking, dual control and payment tracking are
   `DESIGN.md`, API client `lib/api.ts` (`downloadFile` for file downloads)
 
 ## Known gotchas
+- **OpenAI SDK and `OPENAI_BASE_URL`:** with `base_url=None` the SDK reads the `OPENAI_BASE_URL` environment variable
+  (Groq's address in Docker), which once sent the OpenAI key to Groq. Every provider passes an explicit address
+  (`OFFICIAL_OPENAI_URL`); `tests/test_llm_fallback.py` guards it.
 - **401 means "signed out" to the frontend:** `lib/api.ts` answers any 401 by refreshing the session and sending the
   user to the login page. A wrong password or code inside a signed-in form must return 403 (or 422), never 401.
 - **Migrations:** new columns on `users` need no RLS (users are not tenant data); tenant tables need RLS policies

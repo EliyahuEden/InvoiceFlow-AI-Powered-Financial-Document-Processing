@@ -322,7 +322,8 @@ def evaluate_answers(questions: list, idx: ChunkIndex, mode: str, reranker, chun
                                  "model_returned": model_result is not None,
                                  "latency_ms": latency_ms,
                                  "estimated_cost_usd": model_result.cost_usd if model_result else None,
-                                 "abstained": ans["abstained"], "answer": ans["answer"], "citations": ans["citations"]})
+                                 "abstained": ans["abstained"], "answer": ans["answer"], "citations": ans["citations"],
+                                 "diagnostics": ans.get("diagnostics")})
             print(f"{len(per_question):2d}/{len(questions)} {'pass' if passed else 'fail'}  {q['id']}", flush=True)
     abst = prf(abst_tp, abst_fp, abst_fn)
     return {

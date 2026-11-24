@@ -24,50 +24,74 @@ import { label } from "@/lib/i18n/label";
 const CommandPalette = dynamic(() => import("./command-palette").then((m) => m.CommandPalette), { ssr: false });
 const ShortcutsDialog = dynamic(() => import("./shortcuts").then((m) => m.ShortcutsDialog), { ssr: false });
 
-/** Narrow icon rail for wide screens. Every icon has an accessible name and a tooltip;
- *  "All destinations" opens the labelled drawer, so no page is hidden behind an icon. */
-function Rail({ onOpenAll }: { onOpenAll: () => void }) {
+/** Labelled sidebar for wide screens: the business, every permitted destination by group, and the signed-in user. */
+function Sidebar() {
   const nav = useNav();
   const path = usePathname();
-  const { t, dir } = useI18n();
-  const side = dir === "rtl" ? "left" : "right";
+  const { t } = useI18n();
+  const { me } = useSession();
+  const logout = async () => {
+    await api.post("/api/auth/logout");
+    window.location.href = "/login";
+  };
   return (
-    <nav aria-label={t.nav.navigation} className="flex h-full flex-col items-center gap-1 py-5">
-      <Link href="/" aria-label={t.app.name} className="mb-4 grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-ink shadow-raise">
-        <FileStack className="h-5 w-5" aria-hidden />
-      </Link>
-      <div className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex h-full flex-col border-e border-line bg-rail">
+      <div className="flex h-12 items-center gap-2.5 px-3">
+        <Link href="/" aria-label={t.app.name} className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-primary-ink shadow-[inset_0_1px_0_rgb(255_255_255/.18)]">
+          <FileStack className="h-4 w-4" aria-hidden />
+        </Link>
+        {me && (me.organizations?.length ?? 0) > 1 ? (
+          <select aria-label={t.common.organization} value={me.organization.id} dir="auto"
+            onChange={async (e) => {
+              await api.post("/api/auth/switch-organization", { organization_id: e.target.value });
+              window.location.assign("/");  // a full reload: no data or drafts carry over between businesses
+            }}
+            className="h-8 min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1.5 text-base font-medium text-rail-ink hover:border-line focus:border-accent/70 focus:outline-none">
+            {me.organizations.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        ) : (
+          <span className="min-w-0 truncate text-base font-medium text-rail-ink" dir="auto">{me?.organization.name ?? t.app.name}</span>
+        )}
+      </div>
+      <nav aria-label={t.nav.navigation} className="flex-1 overflow-y-auto px-2 pb-3 pt-1">
         {nav.map((g, gi) => (
-          <div key={g.group} className={cx("flex flex-col items-center gap-1", gi > 0 && "mt-2 border-t border-rail-line pt-3")}>
-            {g.items.map((item) => {
-              const active = isActive(path, item.href);
-              const Icon = item.icon;
-              return (
-                <Tooltip.Root key={item.href} delayDuration={250}>
-                  <Tooltip.Trigger asChild>
-                    <Link href={item.href} aria-label={item.label} aria-current={active ? "page" : undefined}
-                      className={cx("command-nav-link grid h-11 w-11 place-items-center rounded-2xl",
-                        active ? "bg-rail-active text-rail-ink shadow-raise" : "text-rail-ink-2 hover:bg-rail-active/70 hover:text-rail-ink")}>
-                      <Icon className="h-5 w-5" aria-hidden />
+          <div key={g.group} className={cx(gi > 0 && "mt-4")}>
+            <p className="px-2 pb-1 text-2xs font-medium text-rail-ink-2">{g.group}</p>
+            <ul className="space-y-px">
+              {g.items.map((item) => {
+                const active = isActive(path, item.href);
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link href={item.href} aria-current={active ? "page" : undefined}
+                      className={cx("command-nav-link group flex h-8 items-center gap-2.5 rounded-md px-2 text-base",
+                        active ? "bg-rail-active font-medium text-rail-ink" : "text-rail-ink-2 hover:bg-rail-active/60 hover:text-rail-ink")}>
+                      <Icon className={cx("h-4 w-4 shrink-0", active ? "text-accent" : "text-rail-ink-2 group-hover:text-rail-ink")} aria-hidden />
+                      <span className="truncate">{item.label}</span>
+                      {item.key && <kbd className="ms-auto hidden font-mono text-2xs text-rail-ink-2/70 group-hover:inline" aria-hidden>G {item.key.toUpperCase()}</kbd>}
                     </Link>
-                  </Tooltip.Trigger>
-                  <Tooltip.Portal>
-                    <Tooltip.Content side={side} sideOffset={10}
-                      className="z-50 rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-primary-ink shadow-pop">
-                      {item.label}
-                    </Tooltip.Content>
-                  </Tooltip.Portal>
-                </Tooltip.Root>
-              );
-            })}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ))}
-      </div>
-      <button type="button" onClick={onOpenAll} aria-label={t.nav.allDestinations} title={t.nav.allDestinations}
-        className="command-nav-link mt-2 grid h-11 w-11 place-items-center rounded-2xl text-rail-ink-2 hover:bg-rail-active/70 hover:text-rail-ink">
-        <LayoutGrid className="h-5 w-5" aria-hidden />
-      </button>
-    </nav>
+      </nav>
+      {me && (
+        <div className="flex items-center gap-2.5 border-t border-line px-3 py-2.5">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-rail-active text-2xs font-medium text-rail-ink" aria-hidden>
+            {me.user.full_name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+          </span>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-sm font-medium text-rail-ink">{me.user.full_name}</span>
+            <span className="block truncate text-2xs text-rail-ink-2">{label(t.roles, me.role)}</span>
+          </span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={logout} aria-label={t.common.logout} title={t.common.logout}>
+            <LogOut className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -84,24 +108,24 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
   }, []);
   return (
     <div className="fixed inset-0 z-40" onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
-      <div className="absolute inset-0 bg-ink/25 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
       <div ref={ref} role="dialog" aria-modal="true" aria-label={t.nav.allDestinations}
         onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } }}
-        className="absolute inset-y-3 start-3 flex w-[min(20rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-pop">
-        <div className="flex items-center justify-between gap-2 border-b border-line px-5 py-4">
+        className="absolute inset-y-2 start-2 flex w-[min(18rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-line bg-rail shadow-pop animate-rise">
+        <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
           <span className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-ink"><FileStack className="h-[18px] w-[18px]" aria-hidden /></span>
+            <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-ink"><FileStack className="h-4 w-4" aria-hidden /></span>
             <span className="leading-tight">
-              <span className="block text-md font-semibold text-ink">{t.app.name}</span>
+              <span className="block text-base font-medium text-ink">{t.app.name}</span>
               <span className="block text-xs text-ink-3">{t.app.tagline}</span>
             </span>
           </span>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label={t.common.close}><X className="h-5 w-5" /></Button>
         </div>
-        <div className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
           {nav.map((g) => (
             <div key={g.group}>
-              <p className="px-3 pb-1.5 text-xs font-semibold text-ink-3">{g.group}</p>
+              <p className="px-2 pb-1 text-2xs font-medium text-ink-3">{g.group}</p>
               <ul className="space-y-0.5">
                 {g.items.map((item) => {
                   const active = isActive(path, item.href);
@@ -109,9 +133,9 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
                   return (
                     <li key={item.href}>
                       <Link href={item.href} onClick={onClose} aria-current={active ? "page" : undefined}
-                        className={cx("command-nav-link flex h-10 items-center gap-3 rounded-2xl px-3 text-base",
-                          active ? "bg-sunken font-semibold text-ink" : "text-ink-2 hover:bg-sunken/70 hover:text-ink")}>
-                        <Icon className={cx("h-[18px] w-[18px] shrink-0", active ? "text-ink" : "text-ink-3")} aria-hidden />
+                        className={cx("command-nav-link flex h-9 items-center gap-2.5 rounded-md px-2 text-base",
+                          active ? "bg-rail-active font-medium text-ink" : "text-ink-2 hover:bg-rail-active/60 hover:text-ink")}>
+                        <Icon className={cx("h-4 w-4 shrink-0", active ? "text-accent" : "text-ink-3")} aria-hidden />
                         {item.label}
                       </Link>
                     </li>
@@ -133,9 +157,9 @@ function AiModeBadge() {
   const offline = me.ai_mode.startsWith("offline");
   return (
     <span title={offline ? t.ai.offlineHint : undefined}
-      className={cx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset sm:max-w-none",
-        offline ? "bg-warn-soft text-warn ring-warn/25" : "bg-ai-soft text-ai ring-ai-line")}>
-      <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", offline ? "bg-warn" : "bg-ai")} aria-hidden />
+      className={cx("inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-xs font-medium",
+        offline ? "border-warn/25 bg-warn-soft text-warn" : "border-line bg-raised text-ink-2")}>
+      <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", offline ? "bg-warn" : "bg-ok shadow-[0_0_0_3px_rgb(var(--ok)/.18)]")} aria-hidden />
       {offline ? <><span className="sm:hidden">{t.ai.offlineShort}</span><span className="hidden sm:inline">{t.ai.offlineMode}</span></>
         : <span className="truncate">{`${t.ai.liveMode}: ${me.ai_mode.replace("llm:", "")}`}</span>}
     </span>
@@ -154,11 +178,11 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
   const { t, locale, setLocale } = useI18n();
   const current = useCurrentLabel();
   const path = usePathname();
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [mod, setMod] = useState("Ctrl");
   useEffect(() => {
-    let saved: Theme = "light";
-    try { saved = (localStorage.getItem("if_theme") as Theme) ?? "light"; } catch { /* storage unavailable */ }
+    let saved: Theme = "dark";
+    try { saved = (localStorage.getItem("if_theme") as Theme) ?? "dark"; } catch { /* storage unavailable */ }
     setTheme(saved);
     document.documentElement.dataset.theme = saved;
     if (/Mac|iPhone|iPad/.test(navigator.platform)) setMod("⌘");
@@ -172,19 +196,19 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
     window.location.href = "/login";
   };
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-bg/70 px-4 backdrop-blur-md sm:gap-3 lg:px-8">
+    <header className="sticky top-0 z-20 flex h-12 items-center gap-1.5 border-b border-line bg-bg/80 px-3 backdrop-blur-xl backdrop-saturate-150 sm:gap-2 lg:px-6">
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu} aria-label={t.nav.allDestinations}>
         <LayoutGrid className="h-5 w-5" />
       </Button>
       <div className="flex min-w-0 flex-1 items-baseline gap-2 truncate">
-        <span className="hidden text-lg font-semibold tracking-tight text-ink sm:inline">{t.app.name}</span>
-        {current && <><span className="hidden text-ink-3 sm:inline" aria-hidden>/</span>
-          <span className="truncate text-base text-ink-2">{current}</span></>}
+        <span className="hidden text-base text-ink-3 sm:inline lg:hidden">{t.app.name}</span>
+        {current && <><span className="hidden text-ink-3 sm:inline lg:hidden" aria-hidden>/</span>
+          <span className="truncate text-base font-medium text-ink">{current}</span></>}
       </div>
       {/* named by its visible text (including the shortcut), so speech control can activate what it shows */}
       <button type="button" onClick={onSearch}
-        className="hidden h-10 min-w-[15rem] items-center gap-2.5 rounded-full border border-line bg-surface/80 pe-2 ps-4 text-sm text-ink-3 shadow-raise transition-colors hover:text-ink-2 md:flex">
-        <Search className="h-4 w-4" aria-hidden />
+        className="hidden h-8 min-w-[14rem] items-center gap-2 rounded-md border border-line bg-raised pe-1.5 ps-2.5 text-sm text-ink-3 transition-colors hover:border-line-strong/60 hover:text-ink-2 md:flex">
+        <Search className="h-3.5 w-3.5" aria-hidden />
         <span className="flex-1 text-start">{t.palette.trigger}</span>
         <span className="flex gap-1" dir="ltr"><Kbd>{mod}</Kbd><Kbd>K</Kbd></span>
       </button>
@@ -203,28 +227,7 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
       <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t.common.theme}>
         {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
       </Button>
-      {me && (
-        <div className="hidden items-center gap-2 ps-1 xl:flex">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-surface text-xs font-semibold text-ink shadow-raise" aria-hidden>
-            {me.user.full_name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
-          </span>
-          <span className="leading-tight">
-            <span className="block text-sm font-semibold text-ink">{me.user.full_name}</span>
-            <span className="block text-2xs text-ink-3">{label(t.roles, me.role)}</span>
-          </span>
-        </div>
-      )}
-      {me && (me.organizations?.length ?? 0) > 1 && (
-        <select aria-label={t.common.organization} value={me.organization.id} dir="auto"
-          onChange={async (e) => {
-            await api.post("/api/auth/switch-organization", { organization_id: e.target.value });
-            window.location.assign("/");  // a full reload: no data or drafts carry over between businesses
-          }}
-          className="h-9 max-w-[12rem] truncate rounded-full border border-line bg-surface px-3 text-sm text-ink">
-          {me.organizations.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-        </select>
-      )}
-      <Button variant="ghost" size="icon" onClick={logout} aria-label={t.common.logout} title={t.common.logout}>
+      <Button variant="ghost" size="icon" className="lg:hidden" onClick={logout} aria-label={t.common.logout} title={t.common.logout}>
         <LogOut className="h-4 w-4" />
       </Button>
     </header>
@@ -280,8 +283,8 @@ function KeyedShell({ children, open, setOpen }: { children: React.ReactNode; op
   }, []);
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 hidden h-screen w-[84px] shrink-0 lg:block">
-        <Rail onOpenAll={() => setOpen(true)} />
+      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 lg:block">
+        <Sidebar />
       </aside>
       {open && <NavDrawer onClose={() => setOpen(false)} />}
       {palette && <CommandPalette open onOpenChange={setPalette} onAskCopilot={() => setCopilot(true)} />}
@@ -306,7 +309,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LiveEvents />
         <a href="#main" className="command-skip">{t.nav.skipContent}</a>
         <KeyedShell open={open} setOpen={setOpen}>
-          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1560px] flex-1 px-4 pb-10 pt-2 focus:outline-none sm:px-6 lg:px-8">{children}</main>
+          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1480px] flex-1 px-4 pb-12 pt-5 focus:outline-none sm:px-6 lg:px-8">{children}</main>
         </KeyedShell>
       </Tooltip.Provider>
     </SessionProvider>
@@ -317,15 +320,15 @@ export function PageHeader({ title, sub, actions, back }: {
   title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode; back?: { href: string; label: string };
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         {back && (
-          <Link href={back.href} className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 hover:text-ink">
-            <ArrowLeft className="h-4 w-4 ltr:rotate-180" aria-hidden /> {back.label}
+          <Link href={back.href} className="mb-2 inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink">
+            <ArrowLeft className="h-3.5 w-3.5 ltr:rotate-180" aria-hidden /> {back.label}
           </Link>
         )}
-        <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{title}</h1>
-        {sub && <p className="mt-1.5 text-md text-ink-2">{sub}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        {sub && <p className="mt-1 text-base text-ink-3">{sub}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

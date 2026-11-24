@@ -1,0 +1,246 @@
+{
+  "generated_at": "2026-11-24T07:34:03+00:00",
+  "git_rev": "76bfa6b",
+  "python": "3.13.0",
+  "dataset": "eval/datasets/rag/questions_heldout.jsonl",
+  "questions": 35,
+  "model": "gpt-4.1-nano",
+  "provider": "openai",
+  "prompt_version": "rag-answer-v5",
+  "embedding": "intfloat/multilingual-e5-large",
+  "retrieval": "hybrid_rerank",
+  "reranker": "jinaai/jina-reranker-v2-base-multilingual",
+  "inference_batch_size_override": 4,
+  "inference_threads": 4,
+  "retrieval_note": null,
+  "answer_correctness": 0.0,
+  "citation_accuracy": null,
+  "abstention": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 10,
+    "precision": null,
+    "recall": 0.0,
+    "f1": null,
+    "note": "positive class = question should be refused"
+  },
+  "injection_parroting": "0/0",
+  "passed": 0,
+  "per_question": [
+    {
+      "id": "ho-he-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-03",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-04",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-05",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-06",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-07",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-08",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-09",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-he-10",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-03",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-04",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-05",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-06",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-en-07",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-mx-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-mx-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-cl-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-cl-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-md-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-md-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-cf-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-cf-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-01",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-02",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-03",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-04",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-05",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-06",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-07",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-08",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-09",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    },
+    {
+      "id": "ho-un-10",
+      "passed": false,
+      "error": "NotFoundError",
+      "detail": "Error code: 404 - {'error': {'message': 'The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations', 'type': 'invalid_request_error', 'param': None, "
+    }
+  ],
+  "evaluated_questions": 35,
+  "stopped": null,
+  "model_answer_count": 0,
+  "latency_ms_p50": null,
+  "failure_examples": []
+}

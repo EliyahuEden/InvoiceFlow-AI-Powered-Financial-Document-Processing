@@ -34,7 +34,11 @@ for offsite backups, and an SMTP provider (see Email below).
    - `S3_ENDPOINT_URL` (empty for AWS), `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_SSE=AES256`
    - `BACKUP_S3_URI=s3://<backups-bucket>/invoiceflow`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`,
      `BACKUP_S3_ENDPOINT` (for R2 or B2), `BACKUP_S3_REGION`
-   - `SMTP_*` and `EMAIL_FROM`, and your AI key (`OPENAI_API_KEY` for Groq)
+   - `SMTP_*` and `EMAIL_FROM`, and your AI keys: `OPENAI_PLATFORM_API_KEY` (OpenAI, the primary model
+     `OPENAI_PLATFORM_MODEL=gpt-4.1-mini`) and `OPENAI_API_KEY` for Groq, the free fallback. Either alone works; with
+     neither, AI features run offline. Turn off auto-recharge in the OpenAI account and keep
+     `AI_PAID_DAILY_TOKEN_BUDGET` (tokens per business per day) and `RATE_LIMIT_AI_PER_DAY` (questions per visitor per day)
+     at values you can afford for a public demo
    The production override refuses to start without them, and the API refuses development passwords.
 5. **Start.**
    ```bash

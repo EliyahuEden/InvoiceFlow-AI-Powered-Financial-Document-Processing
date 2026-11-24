@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BadgeCheck, CircleDot, FileSearch, FileText, ShieldAlert } from "lucide-react";
+import { AlertTriangle, BadgeCheck, FileSearch, FileText, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { pickLang, useI18n } from "@/lib/i18n";
 import { priorityReasonText } from "@/lib/review";
@@ -10,13 +10,13 @@ import { label as labelOf } from "@/lib/i18n/label";
 
 type Tone = "neutral" | "ok" | "warn" | "danger" | "info" | "accent" | "ai";
 const TONE: Record<Tone, string> = {
-  neutral: "bg-sunken text-ink-2 ring-line-strong/60",
-  ok: "bg-ok-soft text-ok ring-ok/20",
-  warn: "bg-warn-soft text-warn ring-warn/25",
-  danger: "bg-danger-soft text-danger ring-danger/20",
-  info: "bg-info-soft text-info ring-info/20",
-  accent: "bg-accent-soft text-accent-ink ring-accent/20",
-  ai: "bg-ai-soft text-ai ring-ai-line",
+  neutral: "bg-ink/[.05] text-ink-2 border-line",
+  ok: "bg-ok-soft text-ok border-ok/20",
+  warn: "bg-warn-soft text-warn border-warn/25",
+  danger: "bg-danger-soft text-danger border-danger/25",
+  info: "bg-info-soft text-info border-info/20",
+  accent: "bg-accent-soft text-accent-ink border-accent/20",
+  ai: "bg-ai-soft text-ai border-ai-line",
 };
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -43,7 +43,7 @@ export function Pill({ tone = "neutral", children, className, icon }: {
   tone?: Tone; children: React.ReactNode; className?: string; icon?: React.ReactNode;
 }) {
   return (
-    <span className={cx("inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full px-2 text-xs font-medium ring-1 ring-inset", TONE[tone], className)}>
+    <span className={cx("inline-flex h-5 items-center gap-1 whitespace-nowrap rounded-[5px] border px-1.5 text-xs font-medium", TONE[tone], className)}>
       {icon}
       {children}
     </span>
@@ -54,7 +54,7 @@ export function StatusPill({ status }: { status: string }) {
   const { t } = useI18n();
   const label = labelOf(t.status, status);
   return (
-    <Pill tone={STATUS_TONE[status] ?? "neutral"} icon={<CircleDot className="h-3 w-3" aria-hidden />}>
+    <Pill tone={STATUS_TONE[status] ?? "neutral"} icon={<span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />}>
       {label}
     </Pill>
   );

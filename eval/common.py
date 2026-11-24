@@ -26,7 +26,7 @@ def git_rev() -> str | None:
 
 
 def add_model_options(parser: ArgumentParser) -> None:
-    parser.add_argument("--provider", choices=("groq", "anthropic", "ollama"),
+    parser.add_argument("--provider", choices=("groq", "openai", "anthropic", "ollama"),
                         help="override the configured provider for this run")
     parser.add_argument("--model", help="override the configured model for this run")
 
@@ -36,11 +36,20 @@ def configure_model(parser: ArgumentParser, args: Namespace) -> None:
     from urllib.parse import urlparse
 
     settings = get_settings()
+    from app.services.llm import provider as llm_provider
+
     if args.provider:
         settings.llm_provider = "anthropic" if args.provider == "anthropic" else "openai"
         settings.llm_model = None
     if args.provider == "groq":
         settings.openai_base_url = GROQ_BASE_URL
+    if args.provider == "openai":  # the official API, with its own key (OPENAI_PLATFORM_API_KEY)
+        if settings.openai_platform_api_key is None or not settings.openai_platform_api_key.get_secret_value():
+            parser.error("--provider openai requires OPENAI_PLATFORM_API_KEY in .env")
+        if not args.model:
+            parser.error("--provider openai requires --model")
+        settings.openai_api_key = settings.openai_platform_api_key
+        settings.openai_base_url = "https://api.openai.com/v1"  # explicit: never the OPENAI_BASE_URL variable
     if args.provider == "ollama":
         if not args.model:
             parser.error("--provider ollama requires --model")
@@ -49,6 +58,11 @@ def configure_model(parser: ArgumentParser, args: Namespace) -> None:
         settings.openai_api_key = None
     if args.model:
         settings.llm_model = args.model
+    if args.provider:
+        # an explicit provider is benchmarked alone: never through the paid primary of the fallback chain
+        settings.openai_platform_api_key = None
+    llm_provider._platform_llm.cache_clear()
+    llm_provider._configured_llm.cache_clear()
 
 
 def daily_quota_exhausted(message: str) -> bool:

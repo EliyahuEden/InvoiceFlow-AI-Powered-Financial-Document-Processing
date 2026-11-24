@@ -55,8 +55,12 @@ class Settings(BaseSettings):
     allow_signup: bool | None = None
     # Tokens per business per UTC day across all model calls; then that business runs offline. 0 = unlimited.
     ai_daily_token_budget: int = 100_000
+    # Daily tokens per business on the paid primary (OPENAI_PLATFORM_API_KEY). When used up, the business continues
+    # on the free fallback (Groq), which keeps its own ai_daily_token_budget; 0 = unlimited.
+    ai_paid_daily_token_budget: int = 300_000
     # Model-backed requests (policy answers, Copilot, investigations) per user per minute.
     rate_limit_ai_per_minute: int = 20
+    rate_limit_ai_per_day: int = 40  # AI questions per visitor address per day (0 = no daily cap)
     rate_limit_signup_per_hour: int = 10
     rate_limit_password_reset_per_hour: int = 5
     rate_limit_mfa_per_5min: int = 6  # wrong-code tries per user; a 6-digit code cannot be guessed at this rate
@@ -107,6 +111,13 @@ class Settings(BaseSettings):
     llm_reasoning_effort: str | None = None
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
+    # A key for the official OpenAI API, kept apart from OPENAI_API_KEY (which usually holds the Groq key), so both
+    # providers can be configured at once: used by `eval/ --provider openai` and the provider fallback chain.
+    openai_platform_api_key: SecretStr | None = None
+    # The primary model on the official OpenAI API when OPENAI_PLATFORM_API_KEY is set; the configured provider
+    # (usually Groq) becomes its fallback, then the offline path. gpt-4.1-mini scored 32/32 Copilot and 35/35 policy
+    # answers (eval/results/*_gpt41mini_*), the cheapest model at full score.
+    openai_platform_model: str = "gpt-4.1-mini"
     openai_base_url: str | None = GROQ_BASE_URL  # empty = api.openai.com; http://localhost:11434/v1 for Ollama
     # rules_first: the free rule-based extractor reads every invoice and the LLM is asked only for
     # fields that are missing or do not add up. llm_first: every invoice goes to the LLM, rules as backup.

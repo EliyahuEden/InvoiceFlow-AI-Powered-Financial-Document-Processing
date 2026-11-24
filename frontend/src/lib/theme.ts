@@ -3,8 +3,8 @@
 export type Theme = "light" | "dark";
 
 export function currentTheme(): Theme {
-  if (typeof document === "undefined") return "light";
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
 /** Apply and remember the theme, and tell every listener (top bar icon, palette). */

@@ -50,5 +50,5 @@ def record_call(
     if result is not None and (result.input_tokens or result.output_tokens):
         from app.services import ai_budget
 
-        ai_budget.charge(org_id, (result.input_tokens or 0) + (result.output_tokens or 0))
+        ai_budget.charge(org_id, (result.input_tokens or 0) + (result.output_tokens or 0), ai_budget.bucket_for(result.provider))
     return call
