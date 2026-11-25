@@ -129,8 +129,11 @@ E. **Payment controls:** Supplier banking, dual control and payment tracking are
 ## To do, in priority order
 
 ### P0: going live, awaiting an authorized hosting target
-0. **Free option:** [docs/DEPLOY_FREE.md](docs/DEPLOY_FREE.md) runs the whole stack at no cost (Oracle Cloud Always Free
-   in Jerusalem, DuckDNS, Backblaze B2, Brevo, Groq).
+0. **Live since 2026-11-25:** <https://invoiceflow-demo.duckdns.org>, following [docs/DEPLOY_FREE.md](docs/DEPLOY_FREE.md):
+   Oracle Cloud Always Free (Jerusalem, ARM 4 CPU / 24 GB), DuckDNS, Let's Encrypt via Caddy, Backblaze B2 (documents
+   `invoiceflow-docs-abab`, backups `invoiceflow-docs-cdcd`), Brevo email, gpt-4.1-mini with Groq fallback. Demo seeded
+   and template locked. SSH: `ssh -i ~/.ssh/invoiceflow ubuntu@129.159.147.146`; update with
+   `git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 1. **Buy a domain and a server** (4 vCPU, 8–16 GB RAM, Israeli region for data residency), then follow the
    10-step runbook in `docs/DEPLOYMENT.md`. Keep `JWT_SECRET` stable once live: two-factor secrets are encrypted
    with a key derived from it.

@@ -69,9 +69,12 @@ Oracle blocks traffic in two places.
    then on the server:
 
    ```bash
-   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   # the rules must come before Oracle's catch-all REJECT rule, so insert them at its position
+   pos=$(sudo iptables -L INPUT --line-numbers -n | awk '/REJECT/ {print $1; exit}')
+   sudo iptables -I INPUT "$pos" -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   sudo iptables -I INPUT "$pos" -m state --state NEW -p tcp --dport 80 -j ACCEPT
    sudo netfilter-persistent save
+   sudo iptables -L INPUT -n --line-numbers   # 80 and 443 must appear above REJECT
    ```
 
 ## 5. Get a free web address

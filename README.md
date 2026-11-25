@@ -6,6 +6,10 @@ InvoiceFlow reads supplier invoices (native PDFs, scans, phone photos; Hebrew, E
 
 ## Demo
 
+**Live:** <https://invoiceflow-demo.duckdns.org>. Click **כניסה לדמו / Enter the demo** for your own private copy of the demo company (deleted after 24 hours), or create a real account.
+
+Locally:
+
 1. Sign in to the quick-start stack as `finance@kinneret.example`. On **Upload**, choose `upload_tavor_correct_he` and open **Reconciliation** to see the clean three-way match.
 2. Upload `upload_hermon_price_mismatch_he`. Open **Reconciliation** to compare the invoiced unit price of ₪124 with the PO price of ₪118.
 3. In **AI investigation**, open a citation to see the relevant clause in the source PDF. Open the exception, write a reviewer note and approve the proposed resolution.
