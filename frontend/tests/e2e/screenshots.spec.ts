@@ -9,8 +9,8 @@ const PASSWORD = process.env.DEMO_PASSWORD ?? "InvoiceFlow!2026";
 async function login(page: Page, email = "finance@kinneret.example") {
   await page.goto("/login");
   await page.getByLabel(/דוא"ל|Work email/).fill(email);
-  await page.getByLabel(/סיסמה|Password/).fill(PASSWORD);
-  await page.getByRole("button", { name: /כניסה|Sign in/ }).click();
+  await page.locator("#password").fill(PASSWORD);
+  await page.getByRole("button", { name: /^(התחברות|Sign in)$/ }).click();
   await expect(page).toHaveURL(/\/$/);
 }
 

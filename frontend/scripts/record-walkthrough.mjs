@@ -49,9 +49,9 @@ await step("sign-in", async () => {
   await page.goto(`${base}/login`);
   await pause(2500);
   await page.getByLabel(/דוא"ל|Work email/).pressSequentially("finance@kinneret.example", { delay: 25 });
-  await page.getByLabel(/סיסמה|Password/).fill(password);
+  await page.locator("#password").fill(password);
   await pause(400);
-  await page.getByRole("button", { name: /כניסה|Sign in/ }).click();
+  await page.getByRole("button", { name: /^(התחברות|Sign in)$/ }).click();
   await page.waitForURL(/\/$/);
 });
 

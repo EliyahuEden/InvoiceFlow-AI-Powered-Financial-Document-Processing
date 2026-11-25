@@ -1,83 +1,48 @@
 "use client";
 
-import { Check, Languages } from "lucide-react";
-import { InvoiceStack } from "./invoice-stack";
+import { Languages } from "lucide-react";
+import Link from "next/link";
 import { LegalFooter } from "./legal-footer";
+import { LoginScene } from "./login-scene";
 import { LogoMark } from "./logo";
 import { useI18n } from "@/lib/i18n";
-import { MatchStack } from "./match-stack";
-import { Button } from "./ui";
+import { Button, cx } from "./ui";
 
-/** The product's mechanism, shown before sign-in: one invoice line checked against its order and receipt (synthetic). */
-function MatchPreview() {
-  const { t } = useI18n();
-  const e = t.login.evidence;
-  return (
-    <figure className="w-full max-w-md" aria-hidden>
-      <div className="rounded-2xl border border-line bg-surface shadow-pop">
-        <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-2.5">
-          <span className="text-sm font-medium text-ink">{e.title}</span>
-          <span dir="auto" className="text-sm text-ink-3">{e.supplier}</span>
-        </div>
-        <div className="space-y-3 p-4">
-          <p dir="auto" className="flex items-center justify-between gap-3 text-base font-medium text-ink">
-            {e.item1}
-            <span className="rounded-[5px] border border-danger/25 bg-danger-soft px-1.5 text-xs font-medium text-danger">{t.finding.QUANTITY_EXCEEDS_RECEIVED}</span>
-          </p>
-          <MatchStack invoice={{ quantity: "60", unit_price: "118" }} order={{ quantity: "60", unit_price: "118" }}
-            receivedQty="50" currency="ILS" mismatch="quantity" difference="10" severity="critical" />
-        </div>
-      </div>
-      <figcaption className="mt-3 flex items-center gap-2 text-sm text-ink-3">
-        <span className="h-px w-5 bg-accent" />
-        <bdi>{e.tag}</bdi>
-      </figcaption>
-    </figure>
-  );
-}
-
-/** Split screen shared by sign-in and sign-up: the brand panel on wide screens, the form beside it. */
-export function AuthShell({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * The entrance shared by sign-in, sign-up, password reset and invitations.
+ *
+ * Desktop: the form (42%) on the reading-start side and the invoice scene (58%) beside it, so Hebrew puts the form on
+ * the right and English on the left. Phones: brand, a compact still scene (about a fifth of the screen), then the form,
+ * so the fields and the main action are reached without scrolling. The form never waits for the scene: the scene is
+ * decorative CSS that paints with the page.
+ */
+export function AuthShell({ title, sub, eyebrow, children, leaving = false }: {
+  title: string; sub?: string; eyebrow?: string; children: React.ReactNode; leaving?: boolean;
+}) {
   const { t, locale, setLocale } = useI18n();
+  const enter = (i: number) => ({ className: "login-enter", style: { animationDelay: `${80 + i * 60}ms` } });
   return (
-    <main className="grid min-h-svh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      <section className="brand-panel relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:gap-10 lg:p-12" aria-label={t.app.name}>
-        <span className="flex items-center gap-2.5 text-2xl font-extrabold tracking-tight text-ink">
-          <LogoMark className="h-9 w-9" />{t.app.name}
-        </span>
-        <InvoiceStack label={t.review.invoiceEmblem} className="absolute end-12 top-10 hidden h-[190px] w-[168px] xl:block" />
-        <div className="max-w-xl space-y-10">
-          <div>
-            <h2 className="text-[2.75rem] font-extrabold leading-[1.08] tracking-[-0.03em] text-ink xl:text-[3.25rem]">{t.login.heroTitle}</h2>
-            <ul className="mt-6 space-y-2.5">
-              {[t.login.pointRead, t.login.pointMatch, t.login.pointExplain].map((point) => (
-                <li key={point} className="flex items-start gap-2.5 text-lg text-ink-2">
-                  <Check className="mt-1 h-4 w-4 shrink-0 text-accent" aria-hidden />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <MatchPreview />
-        </div>
-        <p className="text-sm text-ink-3">{t.login.synthetic}</p>
-      </section>
-      <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-6 px-4 py-8 sm:px-6">
-        <header className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-2 text-xl font-extrabold lg:invisible">
-            <LogoMark className="h-8 w-8" />{t.app.name}
-          </span>
+    <main className={cx("grid min-h-svh lg:grid-cols-[minmax(0,42fr)_minmax(0,58fr)]", leaving && "login-leaving")}>
+      <div className="login-panel flex min-h-svh flex-col">
+        <header className="flex items-center justify-between gap-4 px-5 pt-5 sm:px-8 lg:px-12 lg:pt-8">
+          <Link href="/login" className="flex items-center gap-2.5 text-xl font-extrabold tracking-tight text-ink lg:text-2xl">
+            <LogoMark className="h-8 w-8 lg:h-9 lg:w-9" />{t.app.name}
+          </Link>
           <Button variant="ghost" size="sm" onClick={() => setLocale(locale === "he" ? "en" : "he")}>
-            <Languages className="h-3.5 w-3.5" aria-hidden /> {locale === "he" ? "English" : "עברית"}
+            <Languages className="h-4 w-4" aria-hidden /> {locale === "he" ? "English" : "עברית"}
           </Button>
         </header>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
-          <p className="mt-1 text-base text-ink-3 lg:hidden">{t.app.tagline}</p>
+        {/* phones and tablets: the scene, compact and still */}
+        <LoginScene compact className="mx-4 mt-4 h-[clamp(9.5rem,22svh,13rem)] rounded-[22px] sm:mx-8 lg:hidden" />
+        <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center px-5 py-7 sm:px-0 lg:py-10">
+          {eyebrow && <p {...enter(0)}><span className="inline-flex rounded-full bg-accent-soft px-3.5 py-1 text-sm font-semibold text-accent-ink">{eyebrow}</span></p>}
+          <h1 className={cx(enter(1).className, "mt-3 text-[2rem] font-extrabold leading-tight tracking-[-0.025em] text-ink sm:text-[2.6rem]")} style={enter(1).style}>{title}</h1>
+          {sub && <p className={cx(enter(2).className, "mt-1.5 text-lg text-ink-3")} style={enter(2).style}>{sub}</p>}
+          <div className={cx(enter(3).className, "mt-7")} style={enter(3).style}>{children}</div>
         </div>
-        {children}
-        <LegalFooter className="px-0 py-2 text-xs" />
+        <LegalFooter className="w-full max-w-none px-5 pb-5 pt-2 text-xs sm:px-8 lg:px-12" />
       </div>
+      <LoginScene className="sticky top-0 hidden h-svh lg:flex" />
     </main>
   );
 }

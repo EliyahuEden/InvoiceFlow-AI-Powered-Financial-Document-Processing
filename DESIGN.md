@@ -268,6 +268,14 @@ In the workspace, three source cards compare the invoice subtotal, the ordered v
 ### Invoice Emblem and Extraction Scene
 These are CSS-3D frosted invoice sheets (no 3D library), aria-hidden. They enter once (`stack-in`) and then stay still. The upload scan line runs only while a real job is processing. Field cards show real extracted values or empty placeholders, never sample data.
 
+### Sign-in Scene
+The entrance (`components/auth-shell.tsx`, `components/login-scene.tsx`) splits 42/58: the form on pearl lavender on the
+reading-start side, a midnight-plum scene beside it (#1A0B3B to #221247, violet #8580F7 and ice-blue #67C7EA light). The
+scene is CSS 3D sized in container units: one synthetic invoice (HC-8870) in layered glass sheets, a scan line that
+lights the values it reads, extracted-field cards, and the order and receipt it is matched against (receipt passes,
+order is flagged for price, as the product would report). Pointer parallax on fine pointers only; phones get a compact,
+still banner of about a fifth of the screen. Reduced motion stops every loop.
+
 ### Copilot Panel
 This is a floating 24px-radius panel with an atmosphere header and a violet gradient tile. Each answer is a white card headed by a "verified against the records" or "unverified" line plus an AI/offline badge. Sources are listed as linked rows with their kind.
 
