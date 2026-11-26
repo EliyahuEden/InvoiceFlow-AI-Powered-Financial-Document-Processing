@@ -84,7 +84,7 @@ export default function SuppliersPage() {
         <ImportDialog kinds={["suppliers"]} onDone={() => mutate()} />
         <Button variant="primary" aria-expanded={adding} onClick={() => setAdding((a) => !a)}><Plus className="h-4 w-4" aria-hidden />{t.suppliers.new}</Button></>)} />
 
-      <div className="grid min-w-0 items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_27rem]">
+      <div className="grid min-w-0 gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_27rem]">
         <Panel className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 pt-4">
             <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">{t.suppliers.title}{data && <CountBadge>{data.total}</CountBadge>}</h2>
@@ -147,7 +147,7 @@ export default function SuppliersPage() {
           {data && data.items.length === 0 && <EmptyState icon={<Building2 className="h-8 w-8" />} title={q || status ? t.common.noResults : t.suppliers.empty} />}
           {data && <Pager page={data.page} pages={data.pages} total={data.total} onPage={setPage} />}
         </Panel>
-        {wide && selected && <aside className="min-w-0 min-[1440px]:sticky min-[1440px]:top-20"><SupplierPanel supplier={selected} primary={names(selected).primary} secondary={names(selected).secondary} /></aside>}
+        {wide && selected && <aside className="flex min-w-0 flex-col [&>*]:flex-1"><SupplierPanel supplier={selected} primary={names(selected).primary} secondary={names(selected).secondary} /></aside>}
       </div>
     </div>
   );

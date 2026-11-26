@@ -122,7 +122,7 @@ export default function ObservabilityPage() {
         </Table></div>
       </Panel>}
 
-      <div className={cx("grid min-w-0 items-start gap-4", wide && selected && "min-[1440px]:grid-cols-[minmax(0,1fr)_22rem]")}>
+      <div className={cx("grid min-w-0 gap-4", wide && selected && "min-[1440px]:grid-cols-[minmax(0,1fr)_22rem]")}>
         <Panel className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 pt-4">
             <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">{t.observability.recent}{calls && <CountBadge>{calls.total}</CountBadge>}</h2>
@@ -161,7 +161,7 @@ export default function ObservabilityPage() {
             </>}
           {calls && calls.items.length > 0 && <Pager page={calls.page} pages={calls.pages} total={calls.total} onPage={setPage} />}
         </Panel>
-        {wide && selected && <aside className="min-w-0 min-[1440px]:sticky min-[1440px]:top-20"><CallPanel call={selected} /></aside>}
+        {wide && selected && <aside className="flex min-w-0 flex-col [&>*]:flex-1"><CallPanel call={selected} /></aside>}
       </div>
     </div>
   );

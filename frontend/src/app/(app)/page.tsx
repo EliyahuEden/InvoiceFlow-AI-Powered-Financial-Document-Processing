@@ -175,13 +175,13 @@ export default function OverviewPage() {
         sub={data && <>{data.processing} {t.review.processing}</>} />
     </div>
 
-    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <Panel className="min-w-0">
         <PanelHeader title={<span className="inline-flex items-center gap-2"><Layers className="h-5 w-5 text-ink-3" aria-hidden />{t.review.queue}</span>} sub={t.review.highestFirst}
           actions={<Button size="sm" asChild><Link href="/exceptions">{t.review.openQueue}<ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden /></Link></Button>} />
         {data ? <ReviewQueue items={data.top.slice(0, 6)} compact /> : <div className="p-4"><Skeleton className="h-64 w-full" /></div>}
       </Panel>
-      <aside className="command-aside min-w-0 space-y-4">
+      <aside className="flex min-w-0 flex-col gap-4 [&>*:last-child]:flex-1">
         <PaymentReminders />
         {data && (data.totals_by_currency?.length ?? 0) > 1 && (
           <Panel>

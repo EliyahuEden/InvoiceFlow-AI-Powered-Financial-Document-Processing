@@ -113,9 +113,9 @@ function InvoiceInbox() {
             const n = count(s.key);
             const failed = s.key.startsWith("processing") ? counts.failed ?? 0 : 0;
             const tone = s.key.startsWith("exception") && n > 0 ? "bg-warn-soft text-warn" : s.key === "approved" && n > 0 ? "bg-ok-soft text-ok" : s.key === "reconciled" && n > 0 ? "bg-accent-soft text-accent" : "bg-sunken text-ink-3";
-            return <li key={s.key} className="relative min-w-0">
+            return <li key={s.key} className="relative flex min-w-0">
               <button type="button" aria-pressed={active} onClick={() => setParam("status", active ? "" : s.key)}
-                className={cx("flex w-full min-w-0 items-center gap-3 rounded-[14px] px-3.5 py-3 text-start transition-colors hover:bg-sunken", active && "bg-accent-soft/60 hover:bg-accent-soft/80")}>
+                className={cx("flex w-full min-w-0 items-center gap-3 self-stretch rounded-[14px] px-3.5 py-3 text-start transition-colors hover:bg-sunken", active && "bg-accent-soft/60 hover:bg-accent-soft/80")}>
                 <span className={cx("grid h-10 w-10 shrink-0 place-items-center rounded-xl", tone)} aria-hidden><s.icon className="h-[18px] w-[18px]" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2"><span className="truncate text-sm font-bold text-ink">{t.inbox[s.title]}</span></span>

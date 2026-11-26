@@ -160,6 +160,8 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
+const PROVIDER_NAME: Record<string, string> = { openai: "OpenAI", groq: "Groq", anthropic: "Anthropic" };
+
 function AiModeBadge() {
   const { me } = useSession();
   const { t } = useI18n();
@@ -171,7 +173,7 @@ function AiModeBadge() {
         offline ? "border-warn/25 bg-warn-soft text-warn" : "border-line bg-surface/80 text-ink-2")}>
       <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", offline ? "bg-warn" : "bg-ok shadow-[0_0_0_3px_rgb(var(--ok)/.18)]")} aria-hidden />
       {offline ? <><span className="sm:hidden">{t.ai.offlineShort}</span><span className="hidden sm:inline">{t.ai.offlineMode}</span></>
-        : <span className="truncate">{`${t.ai.liveMode}: ${me.ai_mode.replace("llm:", "")}`}</span>}
+        : <span className="truncate">{`${t.ai.liveMode}: ${PROVIDER_NAME[me.ai_provider ?? ""] ?? "AI"}`}</span>}
     </span>
   );
 }

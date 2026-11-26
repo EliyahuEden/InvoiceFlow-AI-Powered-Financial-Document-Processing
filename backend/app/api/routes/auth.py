@@ -17,7 +17,7 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.models import AuthSession, Membership, Organization, Role, User
 from app.services import audit, auth_sessions, auth_tokens, mfa
 from app.services import email as mail
-from app.services.llm.provider import mode_label
+from app.services.llm.provider import mode_label, provider_label
 from app.services.ratelimit import check_rate_limit
 from app.services.rbac import permissions_for
 
@@ -86,7 +86,7 @@ def _me_payload(user: User, org: Organization, role: str, orgs: list[dict]) -> d
         "role": role, "permissions": [] if locked else permissions_for(role), "organizations": orgs,
         "mfa_enrollment_required": enrollment_required, "two_factor": user.totp_enabled_at is not None,
         "email_verification_required": verification_required,
-        "ai_mode": mode_label(),
+        "ai_mode": mode_label(), "ai_provider": provider_label(),
         # a private "Try the demo" workspace and when it is deleted (null for real businesses)
         "sandbox": ({"expires_at": org.settings["sandbox"].get("expires_at")} if org.settings.get("sandbox") else None),
     }

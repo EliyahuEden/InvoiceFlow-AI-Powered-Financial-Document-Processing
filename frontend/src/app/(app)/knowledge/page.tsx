@@ -131,8 +131,8 @@ export default function KnowledgePage() {
       </Panel>
 
       {/* the result: the answer (AI, advisory, cited) beside the ranked passages it could draw on */}
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <section aria-label={t.knowledge.answerTitle} aria-busy={asking} className="min-w-0">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <section aria-label={t.knowledge.answerTitle} aria-busy={asking} className="flex min-w-0 flex-col [&>*]:flex-1">
           {asking ? <Panel className="space-y-3 p-5"><Skeleton className="h-5 w-1/3" /><Skeleton /><Skeleton className="w-11/12" /><Skeleton className="w-3/4" /></Panel>
             : failed ? <ErrorState message={t.knowledge.askFailed} onRetry={() => ask()} retryLabel={t.common.retry} />
             : answer ? <AiBlock mode={answer.mode} className="knowledge-answer" title={t.knowledge.answerTitle}>

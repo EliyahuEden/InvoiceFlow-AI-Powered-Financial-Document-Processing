@@ -339,6 +339,17 @@ def _configured_llm() -> AnthropicProvider | OpenAICompatibleProvider | None:
     return None
 
 
+def provider_label() -> str:
+    """Who answers first, for people: "openai", "groq", "anthropic" or "offline". The exact model stays in
+    telemetry. With the paid OpenAI primary and a Groq fallback this is "openai", the provider asked first."""
+    llm = get_llm()
+    if llm is None:
+        return "offline"
+    if get_settings().llm_provider == "anthropic" and not isinstance(llm, (OpenAICompatibleProvider, FallbackChain)):
+        return "anthropic"
+    return "groq" if getattr(llm, "name", "") == "groq" else "openai"
+
+
 def mode_label() -> str:
     llm = get_llm()
     return f"llm:{llm.model}" if llm else "offline-deterministic"
