@@ -54,7 +54,7 @@ test("an administrator confirms and deletes their workspace from Settings", asyn
   await signIn(page, email, PASSWORD);
   await expect(page).toHaveURL(/\/$/);
   const user = await (await page.request.get("/api/auth/me")).json();
-  await page.goto("/settings");
+  await page.goto("/settings#data");
   await page.getByText("Delete workspace permanently", { exact: true }).first().click();
   const confirm = page.getByRole("button", { name: "Delete workspace permanently" });
   await fill(page.getByLabel("Type the workspace identifier"), user.organization.slug);
@@ -158,7 +158,7 @@ test("an administrator invites a teammate, who chooses a password from the email
   const email = unique("invite");
   await signIn(page, "admin@kinneret.example", DEMO_PASSWORD);
   await expect(page).toHaveURL(/\/$/);
-  await page.goto("/settings");
+  await page.goto("/settings#team");
   await page.getByRole("button", { name: "Add user" }).click();
   await fill(page.locator("#tm-name"), "Invited Teammate");
   await fill(page.locator("#tm-email"), email);
@@ -176,7 +176,7 @@ test("an administrator invites a teammate, who chooses a password from the email
 
   await signIn(page, email, PASSWORD);
   await expect(page).toHaveURL(/\/$/);
-  await page.goto("/settings");
+  await page.goto("/settings#team");
   await expect(page.getByText("Finance reviewer").first()).toBeVisible();
 });
 
@@ -186,7 +186,7 @@ test("two-factor sign-in: set up with the app, then the password alone is not en
   await signIn(page, email, PASSWORD);
   await expect(page).toHaveURL(/\/$/);
 
-  await page.goto("/settings");
+  await page.goto("/settings#security");
   await page.getByRole("button", { name: "Set up", exact: true }).click();
   await expect(page.getByRole("img", { name: "QR code for your authenticator app" })).toBeVisible();
   const secret = (await page.locator("code.ltr").textContent()) ?? "";
@@ -215,7 +215,7 @@ test("two-factor sign-in: set up with the app, then the password alone is not en
   await fill(page.locator("#code"), codes[0]!);
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await page.goto("/settings");
+  await page.goto("/settings#security");
   await expect(page.getByText("9 recovery codes left")).toBeVisible();
 });
 
@@ -238,7 +238,7 @@ test("an administrator resets two-factor for a teammate who lost their phone", a
   const { secret } = await (await theirs.post("/api/auth/2fa/setup")).json();
   expect((await theirs.post("/api/auth/2fa/enable", { data: { code: totp(secret) } })).ok()).toBe(true);
 
-  await page.goto("/settings");
+  await page.goto("/settings#team");
   const row = page.getByRole("row", { name: /Lost Phone/ });
   await expect(row.getByText("On", { exact: true })).toBeVisible();
   await row.getByRole("button", { name: "Reset two-factor · Lost Phone" }).click();
@@ -274,7 +274,7 @@ test("a team member must enroll before opening a workspace that requires two-fac
   expect(setup.ok()).toBe(true);
   const enabled = await page.request.post("/api/auth/2fa/enable", { headers, data: { code: totp((await setup.json()).secret) } });
   expect(enabled.ok()).toBe(true);
-  await page.goto("/settings");
+  await page.goto("/settings#security");
   await page.getByRole("checkbox", { name: "Require two-factor sign-in for everyone" }).check();
   const saved = page.waitForResponse((response) => response.url().endsWith("/api/org/settings") && response.request().method() === "PATCH");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();

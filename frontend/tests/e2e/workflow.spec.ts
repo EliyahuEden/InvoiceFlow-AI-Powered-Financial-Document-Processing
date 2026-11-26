@@ -77,7 +77,8 @@ test("upload a Hebrew invoice → discrepancy → cited AI explanation → decis
 
   // audit trail records the decision
   await page.goto("/audit");
-  await expect(page.getByText(/exception\.(approve|created)/).first()).toBeVisible();
+  // rows show readable event names (the raw code is in the selected event's details)
+  await expect(page.getByText(/^(Exception approved|Exception opened|החריגה אושרה|נפתחה חריגה)$/).first()).toBeVisible();
 });
 
 test("evaluation dashboard shows measured benchmark results", async ({ page }) => {
@@ -85,5 +86,6 @@ test("evaluation dashboard shows measured benchmark results", async ({ page }) =
   await page.goto("/evaluation");
   await expect(page.getByText("Field accuracy")).toBeVisible();
   await expect(page.getByText(/hybrid_rerank/).first()).toBeVisible();
+  await page.getByRole("button", { name: /^(Reconciliation|התאמה)$/ }).click(); // one report per tab
   await expect(page.getByText("Exact finding-set match")).toBeVisible();
 });

@@ -94,10 +94,10 @@ export function AiBlock({ mode, children, className, title }: {
           <FileSearch className="h-4 w-4" aria-hidden />
           {title ?? t.ai.generated}
         </span>
-        <span className="text-xs text-ai/80">{offline ? t.ai.template : `${t.ai.liveMode}: ${mode?.replace("llm:", "")}`}</span>
+        <span className="text-xs text-ai">{offline ? t.ai.template : `${t.ai.liveMode}: ${mode?.replace("llm:", "")}`}</span>
       </div>
       <div className="px-4 py-3">{children}</div>
-      <p className="border-t border-ai-line/70 px-4 py-2 text-xs text-ai/90">{t.ai.advisory}</p>
+      <p className="border-t border-ai-line/70 px-4 py-2 text-xs text-ai">{t.ai.advisory}</p>
     </div>
   );
 }

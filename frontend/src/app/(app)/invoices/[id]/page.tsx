@@ -66,7 +66,7 @@ export default function InvoiceOverview() {
         <Panel className="command-panel">
           <PanelHeader title={t.invoice.fields}
             sub={<span className="flex flex-wrap items-center gap-2">{t.invoice.hoverHint}</span>}
-            actions={<span className="text-xs text-ink-3">{t.invoice.method}: <span className="font-mono">{inv.extraction_method ?? "—"}</span></span>} />
+            actions={<span className="text-xs text-ink-3">{t.invoice.method}: <span>{!inv.extraction_method ? "—" : inv.extraction_method.startsWith("rules+llm") ? `${t.inbox.methodRulesAi} (${inv.extraction_method.split(":")[1] ?? ""})` : inv.extraction_method === "rule_based" ? t.inbox.methodRules : inv.extraction_method}</span></span>} />
           <FieldList inv={inv} onHover={setHover} />
           {inv.missing_fields.length > 0 && (
             <p className="border-t border-line px-4 py-2 text-sm text-warn">{t.invoice.missing}: {inv.missing_fields.join(", ")}</p>
@@ -87,9 +87,9 @@ export default function InvoiceOverview() {
                     onMouseEnter={() => setHover(`l:${ln.line_no}`)} onMouseLeave={() => setHover(null)}
                     className={flagged.length ? "bg-danger-soft/40" : "hover:bg-hl/10"}>
                     <Td className="text-ink-3 num">{ln.line_no}</Td>
-                    <Td><span className="ltr font-mono text-xs">{ln.sku ?? "—"}</span></Td>
+                    <Td><span className="ltr whitespace-nowrap font-mono text-xs">{ln.sku ?? "—"}</span></Td>
                     <Td className="max-w-[18rem]">
-                      <span dir="auto" className="block min-w-28">{ln.description}</span>
+                      <span className="block min-w-28"><bdi>{ln.description}</bdi></span>
                       {ln.source?.corrected_by && <SourceTags source={ln.source} corrected />}
                       {flagged.map((d) => <span key={d.id} className="me-1 mt-1 inline-block"><FindingTag type={d.type} severity={d.severity} /></span>)}
                     </Td>

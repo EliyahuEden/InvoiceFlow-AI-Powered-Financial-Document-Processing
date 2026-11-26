@@ -129,19 +129,42 @@ def comment(exception_id: uuid.UUID, body: CommentIn, p: Principal = Depends(req
 
 
 @router.get("/agent/runs")
-def list_runs(invoice_id: uuid.UUID | None = None, pg=Depends(page_params),
-              p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = Depends(get_db)) -> dict:
+def list_runs(invoice_id: uuid.UUID | None = None, status: str | None = None, q: str | None = None,
+              pg=Depends(page_params), p: Principal = Depends(require(Perm.INVOICE_READ)),
+              db: Session = Depends(get_db)) -> dict:
+    """Investigation runs, newest first. Each row carries what the list shows: the supplier, the report's own
+    headline and evidence count (as stored; nothing is computed here), and the findings it covered."""
     page, size = pg
-    stmt = (select(AgentRun, Invoice).join(Invoice, Invoice.id == AgentRun.invoice_id)
+    stmt = (select(AgentRun, Invoice, Supplier).join(Invoice, Invoice.id == AgentRun.invoice_id)
+            .outerjoin(Supplier, Supplier.id == Invoice.supplier_id)
             .where(AgentRun.organization_id == p.org_id))
     if invoice_id:
         stmt = stmt.where(AgentRun.invoice_id == invoice_id)
+    if status:
+        stmt = stmt.where(AgentRun.status.in_(status.split(",")))
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(or_(Invoice.invoice_number.ilike(like), Invoice.supplier_name_raw.ilike(like),
+                              Supplier.name.ilike(like), Supplier.name_en.ilike(like)))
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = db.execute(stmt.order_by(AgentRun.created_at.desc()).offset((page - 1) * size).limit(size)).all()
-    return paginated([{"id": str(r.id), "status": r.status, "mode": r.mode, "prompt_version": r.prompt_version,
-                       "invoice_id": str(i.id), "invoice_number": i.invoice_number, "tool_calls": len(r.steps or []),
-                       "proposed_action": (r.result or {}).get("proposed_action"),
-                       "created_at": r.created_at.isoformat()} for r, i in rows], total, page, size)
+    status_counts = dict(db.execute(select(AgentRun.status, func.count()).where(AgentRun.organization_id == p.org_id)
+                                    .group_by(AgentRun.status)).all())
+
+    def row(r: AgentRun, i: Invoice, s: Supplier | None) -> dict:
+        report = (r.result or {}).get("report") or {}
+        return {"id": str(r.id), "status": r.status, "mode": r.mode, "prompt_version": r.prompt_version,
+                "invoice_id": str(i.id), "invoice_number": i.invoice_number, "tool_calls": len(r.steps or []),
+                "supplier_name": s.name if s else i.supplier_name_raw, "supplier_name_en": s.name_en if s else None,
+                "proposed_action": (r.result or {}).get("proposed_action"),
+                "headline": report.get("headline") or None, "evidence_count": report.get("evidence_count"),
+                "finding_types": [f.get("type") for f in report.get("findings") or [] if f.get("type")],
+                "report_mode": report.get("mode"),
+                "created_at": r.created_at.isoformat(), "updated_at": r.updated_at.isoformat()}
+
+    out = paginated([row(r, i, s) for r, i, s in rows], total, page, size)
+    out["status_counts"] = status_counts
+    return out
 
 
 @router.get("/agent/runs/{run_id}")
@@ -167,8 +190,9 @@ def audit_log(entity_type: str | None = None, entity_id: uuid.UUID | None = None
     if entity_id:
         # include events about the invoice's exception / agent runs via meta
         stmt = stmt.where(or_(AuditLog.entity_id == entity_id, AuditLog.meta["invoice_id"].astext == str(entity_id)))
-    if action:
-        stmt = stmt.where(AuditLog.action.ilike(f"{action}%"))
+    if action:  # one or more prefixes, comma-separated ("invoice." or "exception.,approval.")
+        prefixes = [a.strip() for a in action.split(",") if a.strip()]
+        stmt = stmt.where(or_(*(AuditLog.action.ilike(f"{a}%") for a in prefixes)))
     if actor_type:
         stmt = stmt.where(AuditLog.actor_type == actor_type)
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))

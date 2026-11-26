@@ -24,3 +24,12 @@ export function markReviewed(id: string): void {
   try { sessionStorage.setItem(REVIEWED_KEY, JSON.stringify([...new Set([...reviewedIds(), id])])); }
   catch { /* Session progress is optional when browser storage is unavailable. */ }
 }
+
+/** How soon a case is due, in words, and how loudly to say it. Null means the invoice states no due date. */
+export function dueRelative(t: Dictionary, dueInDays: number | null): { text: string; tone: "danger" | "warn" | "quiet" } | null {
+  if (dueInDays === null) return null;
+  if (dueInDays < 0) return { text: dueInDays === -1 ? t.review.dueOverdue1 : t.review.dueOverdue.replace("{n}", String(-dueInDays)), tone: "danger" };
+  if (dueInDays === 0) return { text: t.review.dueToday, tone: "warn" };
+  const text = dueInDays === 1 ? t.review.dueIn1 : t.review.dueIn.replace("{n}", String(dueInDays));
+  return { text, tone: dueInDays <= 3 ? "warn" : "quiet" };
+}

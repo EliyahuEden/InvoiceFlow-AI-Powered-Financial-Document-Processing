@@ -335,10 +335,10 @@ export function PageHeader({ title, sub, actions, back }: {
       <div className="min-w-0">
         {back && (
           <Link href={back.href} className="mb-2 inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink">
-            <ArrowLeft className="h-3.5 w-3.5 ltr:rotate-180" aria-hidden /> {back.label}
+            <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden /> {back.label}
           </Link>
         )}
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-[2.125rem] font-extrabold leading-tight tracking-[-0.02em] text-ink">{title}</h1>
         {sub && <p className="mt-1 text-md text-ink-3">{sub}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

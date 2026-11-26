@@ -198,8 +198,30 @@ def list_pos(q: str | None = None, status: str | None = None, supplier_id: uuid.
     rows = db.scalars(stmt.order_by(PurchaseOrder.order_date.desc(), PurchaseOrder.po_number.desc())
                       .options(selectinload(PurchaseOrder.lines), selectinload(PurchaseOrder.supplier))
                       .offset((page - 1) * size).limit(size)).all()
-    return paginated([{**po_summary(po), "supplier_name": po.supplier.name, "supplier_name_en": po.supplier.name_en}
-                      for po in rows], total, page, size)
+    # Receipt progress from the goods receipts themselves, never from the status. Lines are counted rather than
+    # quantities added up, because one order can mix units (kg, boxes, hours); the received value is at order prices.
+    line_ids = [ln.id for po in rows for ln in po.lines]
+    received: dict[uuid.UUID, Decimal] = dict(db.execute(
+        select(GRLine.po_line_id, func.sum(GRLine.quantity_received)).where(GRLine.po_line_id.in_(line_ids))
+        .group_by(GRLine.po_line_id)).all()) if line_ids else {}
+
+    def progress(po: PurchaseOrder) -> dict:
+        full = partial = over = 0
+        value = Decimal(0)
+        for ln in po.lines:
+            got = received.get(ln.id, Decimal(0))
+            full += got >= ln.quantity
+            partial += Decimal(0) < got < ln.quantity
+            over += got > ln.quantity
+            value += min(got, ln.quantity) * ln.unit_price
+        return {"lines_received": full, "lines_partial": partial, "lines_over_received": over, "received_value": money(value)}
+
+    status_counts = dict(db.execute(select(PurchaseOrder.status, func.count())
+                                    .where(PurchaseOrder.organization_id == p.org_id).group_by(PurchaseOrder.status)).all())
+    out = paginated([{**po_summary(po), **progress(po), "supplier_name": po.supplier.name, "supplier_name_en": po.supplier.name_en}
+                     for po in rows], total, page, size)
+    out["status_counts"] = status_counts
+    return out
 
 
 @router.get("/purchase-orders/{po_id}")
@@ -248,7 +270,7 @@ def get_po(po_id: uuid.UUID, p: Principal = Depends(require(Perm.MASTERDATA_READ
                                 "lines": [{"po_line_id": str(gl.po_line_id), "quantity_received": dec(gl.quantity_received)}
                                           for gl in g.lines]} for g in grs],
             "invoices": [{"id": str(i.id), "invoice_number": i.invoice_number, "status": i.status,
-                          "total": money(i.total)} for i in invs]}
+                          "total": money(i.total), "currency": i.currency} for i in invs]}
 
 
 @router.post("/purchase-orders", status_code=201)

@@ -55,7 +55,7 @@ test("capture screenshots", async ({ page }) => {
   await page.goto("/knowledge");
   await page.getByPlaceholder(/למשל/).fill("מהי סטיית המחיר המותרת בין החשבונית להזמנת הרכש?");
   await page.getByRole("button", { name: "שאלה" }).click();
-  await expect(page.getByText("קטעים שאוחזרו")).toBeVisible({ timeout: 120_000 });
+  await expect(page.locator(".knowledge-answer")).toBeVisible({ timeout: 120_000 }); // the passages panel shows before asking; wait for the answer
   await page.screenshot({ path: `${OUT}/06-knowledge-ask.png` });
 
   await page.goto("/evaluation");
@@ -68,7 +68,8 @@ test("capture screenshots", async ({ page }) => {
   await page.screenshot({ path: `${OUT}/08-observability.png` });
 
   await page.goto("/investigations");
-  await page.getByRole("link", { name: "HC-8841" }).first().click();
+  await page.getByRole("button", { name: "HC-8841" }).first().click(); // wide screens: select the run, then open it
+  await page.getByRole("link", { name: /^(פתיחת החקירה|Open investigation)$/ }).click();
   await expect(page.getByText("load_context")).toBeVisible();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${OUT}/09-agent-trace.png` });
@@ -96,9 +97,10 @@ test("capture import, export and account settings", async ({ page, baseURL }) =>
   await expect(page.getByRole("menu").getByText("Approved for payment, for accounting")).toBeVisible();
   await page.screenshot({ path: `${OUT}/12-export.png`, animations: "disabled" });
 
-  await page.goto("/settings");
-  await expect(page.getByRole("button", { name: "Add user" })).toBeVisible();
-  for (const [heading, file] of [["Two-factor sign-in", "13-two-factor"], ["Team", "14-team"]] as const) {
+  // settings are split into sections; each screenshot opens its own
+  for (const [heading, file, part] of [["Two-factor sign-in", "13-two-factor", "security"], ["Team", "14-team", "team"]] as const) {
+    await page.goto(`/settings#${part}`);
+    if (part === "team") await expect(page.getByRole("button", { name: "Add user" })).toBeVisible();
     const section = page.getByRole("heading", { name: heading, exact: true });
     await expect(section).toBeVisible();
     await section.evaluate((element) => element.scrollIntoView({ block: "center" }));

@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowDown, BookOpenCheck, ChevronDown, FileCheck2, FlaskConical, ListOrdered, Search, Terminal, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { BookOpenCheck, ChevronDown, FileCheck2, FlaskConical, ListOrdered, Search, Terminal, type LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { BarList } from "@/components/bar-list";
 import { Pill } from "@/components/domain";
 import { RulesFirstReport } from "@/components/rules-first";
 import { Segmented } from "@/components/list";
-import { PageHeader } from "@/components/shell";
+import { PageHeader, Segments } from "@/components/page-kit";
 import { cx, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
@@ -22,7 +22,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   return (
     <div className="px-4 py-3">
       <p className="text-sm text-ink-2">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-ink num">{value}</p>
+      <p className="mt-1 text-xl font-semibold text-ink num"><bdi dir="ltr">{value}</bdi></p>
       {hint && <p className="mt-0.5 text-xs text-ink-3">{hint}</p>}
     </div>
   );
@@ -59,7 +59,7 @@ function Extraction({ r }: { r: ExtractionResult }) {
   const groups = Object.entries(sys.groups);
   const pick = (prefix: string) => groups.filter(([k]) => k.startsWith(prefix)).map(([k, v]) => ({ label: `${k.split(":")[1]} (n=${v.n})`, value: v.field_accuracy }));
   return (
-    <Panel id="report-extraction" className="scroll-mt-24">
+    <Panel>
       <PanelHeader title={t.evaluation.extraction} sub={`${r.dataset.evaluated}/${r.dataset.documents} documents · ${r.dataset.ocr} · system: rule-based baseline`}
         actions={<Pill tone="neutral">LLM (every invoice): {r.systems.llm?.skipped ? "not run" : "run"}</Pill>} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
@@ -104,7 +104,7 @@ function Rag({ r }: { r: RagResult }) {
   const rows = r.configs.filter((c) => c.chunking === strategy);
   const cats = ["he", "en", "mixed", "cross_lingual", "multi_doc", "conflicting"];
   return (
-    <Panel id="report-rag" className="scroll-mt-24">
+    <Panel>
       <PanelHeader title={t.evaluation.rag}
         sub={`${r.dataset.questions} hand-written questions (${r.dataset.answerable} answerable) · ${r.dataset.documents} documents · ${r.models.embedding}${r.models.reranker ? ` + ${r.models.reranker}` : ""}`}
         actions={<Segmented value={strategy} onChange={setStrategy} options={strategies.map((s) => ({ value: s, label: s }))} />} />
@@ -175,7 +175,7 @@ function Recon({ r }: { r: ReconResult }) {
   const c = r.controlled;
   const e = r.end_to_end;
   return (
-    <Panel id="report-reconciliation" className="scroll-mt-24">
+    <Panel>
       <PanelHeader title={t.evaluation.reconciliation} sub={`${c.cases} controlled cases · engine ${r.engine_version}`} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
         <Stat label="Exact finding-set match" value={pct(c.exact_finding_set_match)} />
@@ -206,18 +206,19 @@ function Recon({ r }: { r: ReconResult }) {
 }
 
 
-function Metric({ icon: Icon, label, value, hint, href }: {
-  icon: LucideIcon; label: React.ReactNode; value: string; hint: React.ReactNode; href: string;
+function Metric({ icon: Icon, label, value, hint, onClick, active }: {
+  icon: LucideIcon; label: React.ReactNode; value: string; hint: React.ReactNode; onClick: () => void; active: boolean;
 }) {
   return (
-    <a href={href} className="command-metric flex min-w-0 items-start gap-3 p-4 text-ink hover:border-line-strong">
-      <Icon className="mt-1 h-5 w-5 shrink-0 text-accent" aria-hidden />
-      <div className="min-w-0">
-        <p className="text-3xl font-semibold tracking-tight num"><bdi>{value}</bdi></p>
-        <p className="mt-1 font-medium">{label}</p>
-        <p className="mt-1 text-xs text-ink-2">{hint}</p>
-      </div>
-    </a>
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={cx("command-metric flex min-w-0 items-start gap-3 p-4 text-start text-ink transition-shadow hover:shadow-pop", active && "ring-2 ring-accent/30")}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden><Icon className="h-[18px] w-[18px]" /></span>
+      <span className="min-w-0">
+        <span className="block text-[1.75rem] font-extrabold leading-tight tracking-tight num"><bdi>{value}</bdi></span>
+        <span className="mt-0.5 block font-semibold">{label}</span>
+        <span className="mt-1 block text-xs text-ink-3">{hint}</span>
+      </span>
+    </button>
   );
 }
 
@@ -249,69 +250,99 @@ function InputChart({ groups }: { groups: Record<string, { n: number; field_accu
   );
 }
 
+type Tab = "extraction" | "rag" | "reconciliation";
+const TAB_ICON = { extraction: FileCheck2, rag: Search, reconciliation: BookOpenCheck } as const;
+
 export default function EvaluationPage() {
   const { t, locale } = useI18n();
   const { data, error, mutate } = useApi<EvaluationResults>("/api/evaluation/results");
+  const [tab, setTab] = useState<Tab | null>(null);
+  // a link to a report (#report-rag) opens its tab
+  useEffect(() => {
+    const fromHash = () => { const m = window.location.hash.match(/^#report-(extraction|rag|reconciliation)$/); if (m) setTab(m[1] as Tab); };
+    fromHash();
+    window.addEventListener("hashchange", fromHash);
+    return () => window.removeEventListener("hashchange", fromHash);
+  }, []);
   if (error) return <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
-  if (!data) return <Skeleton className="h-96 w-full" />;
+  if (!data) return <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-96 w-full" /></div>;
   const a = data.available;
   const clauseRows = a.rag?.configs.filter((c) => c.chunking === "clause") ?? [];
   const rerank = clauseRows.find((c) => c.name === "hybrid_rerank");
   const bm25 = clauseRows.find((c) => c.name === "bm25_plain");
   const endToEnd = a.reconciliation?.end_to_end;
   const retrievalSample = a.rag && `${a.rag.dataset.answerable} ${t.evaluation.answerable}`;
-  type Report = { key: string; name: string; sample: string; source?: string; generatedAt: string };
+  type Report = { key: Tab; name: string; sample: string; source?: string; generatedAt: string };
   const reports: Report[] = [];
   if (a.extraction) reports.push({ key: "extraction", name: t.evaluation.extraction, sample: `${a.extraction.dataset.evaluated} ${t.evaluation.documents}`, source: a.extraction.dataset.source, generatedAt: a.extraction.generated_at });
   if (a.rag) reports.push({ key: "rag", name: t.evaluation.rag, sample: `${a.rag.dataset.questions} ${t.evaluation.questions}`, source: a.rag.dataset.source, generatedAt: a.rag.generated_at });
   if (a.reconciliation) reports.push({ key: "reconciliation", name: t.evaluation.reconciliation, sample: `${a.reconciliation.controlled.cases} ${t.evaluation.controlled}`, source: a.reconciliation.engine_version, generatedAt: a.reconciliation.generated_at });
+  const active: Tab | undefined = tab && reports.some((r) => r.key === tab) ? tab : reports[0]?.key;
+  const open = (key: Tab) => setTab(key);
+
   return (
-    <div className="space-y-5">
-      <PageHeader title={t.evaluation.hero} sub={t.evaluation.subtitle}
-        actions={reports.length > 0 && <a className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium hover:bg-sunken" href="#benchmark-reports">
-          <FlaskConical className="h-4 w-4" aria-hidden />{t.evaluation.methodology}<ArrowDown className="h-4 w-4" aria-hidden />
-        </a>} />
+    <div className="min-w-0 space-y-5">
+      <PageHeader title={t.evaluation.hero} sub={t.evaluation.subtitle} />
+      {reports.length === 0 && <Panel><EmptyState title={t.evaluation.notRun} body="python eval/run_rag_eval.py · run_extraction_eval.py · run_reconciliation_eval.py" /></Panel>}
       {reports.length > 0 && <>
+        {/* the headline figures, each with its exact metric, sample and basis; each opens its report */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {a.extraction && <Metric icon={FileCheck2} href="#report-extraction"
+          {a.extraction && <Metric icon={FileCheck2} onClick={() => open("extraction")} active={active === "extraction"}
             label={<>{t.evaluation.fieldAccuracy}{locale === "he" && <small className="ms-1 text-xs text-ink-2" lang="en">Field accuracy</small>}</>}
             value={pct(a.extraction.systems.rule_based.overall_field_accuracy)}
             hint={<>{a.extraction.dataset.evaluated} {t.evaluation.documents} × {a.extraction.fields.length} {t.invoice.fields.toLocaleLowerCase()}</>} />}
-          {rerank && <Metric icon={Search} href="#report-rag" label="Recall@5" value={pct(rerank["recall@5"])}
+          {rerank && <Metric icon={Search} onClick={() => open("rag")} active={active === "rag"} label="Recall@5" value={pct(rerank["recall@5"])}
             hint={<><bdi>{rerank.chunking}/{rerank.name}</bdi> · {retrievalSample}</>} />}
-          {bm25 && <Metric icon={ListOrdered} href="#report-rag" label="MRR · BM25" value={fixed(bm25.mrr, 3)}
+          {bm25 && <Metric icon={ListOrdered} onClick={() => open("rag")} active={active === "rag"} label="MRR · BM25" value={fixed(bm25.mrr, 3)}
             hint={<><bdi>{bm25.chunking}/{bm25.name}</bdi> · {retrievalSample}</>} />}
-          {endToEnd && <Metric icon={BookOpenCheck} href="#report-reconciliation" label={t.evaluation.precision} value={pct(endToEnd.precision)}
+          {endToEnd && <Metric icon={BookOpenCheck} onClick={() => open("reconciliation")} active={active === "reconciliation"} label={t.evaluation.precision} value={pct(endToEnd.precision)}
             hint={<>{endToEnd.tp} / {endToEnd.tp + endToEnd.fp} {t.evaluation.findings} · {endToEnd.documents} {t.evaluation.documents}</>} />}
         </div>
-        <div className="grid items-stretch gap-4 lg:grid-cols-2">
-          {a.extraction && <InputChart groups={a.extraction.systems.rule_based.groups} />}
-          {clauseRows.length > 0 && <Panel>
-            <PanelHeader title={t.evaluation.retrievalComparison} sub={<><bdi>Recall@5 · clause</bdi> · {retrievalSample}</>} />
-            <div className="p-5"><BarList max={1} items={clauseRows.flatMap((c) => (typeof c["recall@5"] === "number" ? [{ label: c.name, value: c["recall@5"] }] : []))} format={pct} /></div>
-          </Panel>}
-        </div>
-        <div id="benchmark-reports" className="grid scroll-mt-24 items-start gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <Panel><PanelHeader title={t.evaluation.runs} />
-            <Table><thead><tr><Th>{t.evaluation.report}</Th><Th>{t.evaluation.sample}</Th><Th>{t.evaluation.generated}</Th></tr></thead>
-              <tbody>{reports.map((r) => <tr key={r.key}><Td><a className="font-medium text-accent hover:underline" href={`#report-${r.key}`}>{r.name}</a></Td>
-                <Td>{r.sample}</Td><Td><time dateTime={r.generatedAt}>{new Date(r.generatedAt).toLocaleString(locale === "he" ? "he-IL" : "en-GB", {dateStyle: "medium", timeStyle: "short"})}</time></Td></tr>)}</tbody>
-            </Table>
-          </Panel>
-          <Panel><PanelHeader title={t.evaluation.methodology} />
-            <div className="space-y-2 px-5 py-4 text-sm text-ink-2">
-              <p>{t.evaluation.dataset} · {t.evaluation.baseline}</p>
-              {a.extraction?.systems.llm?.skipped && String(a.rag?.llm_answers).startsWith("not run") && <p>{t.evaluation.paidLimit}</p>}
-              {reports.map((r) => <p key={r.key} className="break-words"><a href={`#report-${r.key}`} className="underline underline-offset-2">{r.name}</a> · <bdi>{r.source}</bdi></p>)}
-            </div>
-          </Panel>
+
+        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0 space-y-4">
+            <Segments label={t.evaluation.runs} value={active ?? "extraction"} onChange={open}
+              options={reports.map((r) => ({ value: r.key, label: r.name, icon: TAB_ICON[r.key] }))} />
+            {/* one report at a time; extraction, retrieval and end-to-end results are never shown as one comparable scale */}
+            {active === "extraction" && a.extraction && <div className="space-y-4">
+              <InputChart groups={a.extraction.systems.rule_based.groups} />
+              <Extraction r={a.extraction} />
+              <RulesFirstReport r={a.extraction} />
+            </div>}
+            {active === "rag" && a.rag && <div className="space-y-4">
+              {clauseRows.length > 0 && <Panel>
+                <PanelHeader title={t.evaluation.retrievalComparison} sub={<><bdi>Recall@5 · clause</bdi> · {retrievalSample}</>} />
+                <div className="p-5"><BarList max={1} items={clauseRows.flatMap((c) => (typeof c["recall@5"] === "number" ? [{ label: c.name, value: c["recall@5"] }] : []))} format={pct} /></div>
+              </Panel>}
+              <Rag r={a.rag} />
+            </div>}
+            {active === "reconciliation" && a.reconciliation && <Recon r={a.reconciliation} />}
+          </div>
+
+          {/* the basis for every number: which report, what sample, when, and the method's limits */}
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-20">
+            <Panel><PanelHeader title={t.evaluation.runs} />
+              <ul className="divide-y divide-line">{reports.map((r) => <li key={r.key}>
+                <button type="button" onClick={() => open(r.key)} aria-pressed={active === r.key}
+                  className={cx("flex w-full items-start gap-3 px-5 py-3 text-start transition-colors hover:bg-sunken", active === r.key && "bg-accent/[.06]")}>
+                  {(() => { const Icon = TAB_ICON[r.key]; return <Icon className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />; })()}
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-ink">{r.name}</span>
+                    <span className="block text-xs text-ink-3">{r.sample}</span>
+                    <time className="block text-xs text-ink-3" dateTime={r.generatedAt}>{new Date(r.generatedAt).toLocaleString(locale === "he" ? "he-IL" : "en-GB", { dateStyle: "medium", timeStyle: "short" })}</time>
+                  </span>
+                </button></li>)}</ul>
+            </Panel>
+            <Panel><PanelHeader title={t.evaluation.methodology} />
+              <div className="space-y-2.5 px-5 py-4 text-sm leading-relaxed text-ink-2">
+                <p className="flex gap-2"><FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />{t.evaluation.dataset} · {t.evaluation.baseline}</p>
+                {a.extraction?.systems.llm?.skipped && String(a.rag?.llm_answers).startsWith("not run") && <p>{t.evaluation.paidLimit}</p>}
+                {reports.map((r) => <p key={r.key} className="break-words text-xs"><span className="font-semibold text-ink">{r.name}</span> · <bdi className="font-mono">{r.source}</bdi></p>)}
+              </div>
+            </Panel>
+          </aside>
         </div>
       </>}
-      {Object.keys(a).length === 0 && <Panel><EmptyState title={t.evaluation.notRun} body="python eval/run_rag_eval.py · run_extraction_eval.py · run_reconciliation_eval.py" /></Panel>}
-      {a.extraction && <Extraction r={a.extraction} />}
-      {a.extraction && <RulesFirstReport r={a.extraction} />}
-      {a.rag && <Rag r={a.rag} />}
-      {a.reconciliation && <Recon r={a.reconciliation} />}
     </div>
   );
 }

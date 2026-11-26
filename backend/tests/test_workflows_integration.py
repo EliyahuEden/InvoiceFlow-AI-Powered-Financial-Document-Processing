@@ -61,6 +61,12 @@ def test_discrepancy_agent_and_human_decision_flow(client, as_user):
     assert cites and all(c["page"] >= 1 and c["quote"] for c in cites)
     run = client.get(f"/api/agent/runs/{exc['agent_run']['id']}", headers=fin).json()
     assert run["status"] == "awaiting_approval"
+    # the run list carries the report's own headline, evidence count and findings, and filters by status and search
+    listed = client.get(f"/api/agent/runs?q={d['invoice_number']}&status=awaiting_approval", headers=fin).json()
+    row = next(r for r in listed["items"] if r["id"] == exc["agent_run"]["id"])
+    assert row["supplier_name"] and row["headline"]["en"] and row["evidence_count"] == s["evidence_count"]
+    assert row["finding_types"] == [f["type"] for f in s["findings"]] and listed["status_counts"]["awaiting_approval"] >= 1
+    assert client.get("/api/agent/runs?status=failed&q=no-such-invoice", headers=fin).json()["total"] == 0
     assert {st["tool"] for st in run["steps"]} >= {"get_invoice", "run_reconciliation", "search_supplier_agreements",
                                                    "retrieve_policy", "create_exception_draft"}
     # a read-only user can neither decide nor request information

@@ -299,3 +299,16 @@ def test_procurement_decides_cases_but_never_approves_payment(client, as_user):
     assert "exception:decide" in me["permissions"] and "approval:decide" not in me["permissions"]
     other = upload_invoice(client, fin, "01_correct_tavor_he.pdf")                # uploaded by finance, reconciled
     assert client.post(f"/api/invoices/{other['invoice_id']}/approvals", headers=proc, json={"decision": "approve"}).status_code == 403
+
+
+def test_audit_filters_by_several_action_prefixes(client, as_user):
+    """The audit page's event-type filter asks for a group of prefixes at once; sign-ins stay out of it."""
+    from tests.conftest import upload_invoice
+
+    fin = as_user("finance@kinneret.example")
+    upload_invoice(client, fin, "02_qty_mismatch_hermon_he.pdf")
+    rows = client.get("/api/audit?action=invoice.,exception.&page_size=100", headers=fin).json()["items"]
+    assert rows and all(r["action"].startswith(("invoice.", "exception.")) for r in rows)
+    assert {r["action"].split(".")[0] for r in rows} >= {"invoice"}
+    single = client.get("/api/audit?action=invoice.uploaded", headers=fin).json()["items"]
+    assert single and {r["action"] for r in single} == {"invoice.uploaded"}

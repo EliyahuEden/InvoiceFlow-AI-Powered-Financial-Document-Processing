@@ -96,6 +96,32 @@ def record(
     return log
 
 
+def chain_payload(row: dict) -> dict:
+    """The fields an entry's hash covers, exactly as ``verify_chain`` reads them back from a stored row."""
+    return {
+        "id": str(row["id"]),
+        "organization_id": str(row["organization_id"]),
+        "created_at": row["created_at"].astimezone(UTC).isoformat(),
+        "actor_type": row["actor_type"],
+        "actor_id": str(row["actor_id"]) if row["actor_id"] else None,
+        "action": row["action"],
+        "entity_type": row["entity_type"],
+        "entity_id": str(row["entity_id"]) if row["entity_id"] else None,
+        "before": row["before"],
+        "after": row["after"],
+        "meta": row["meta"],
+    }
+
+
+def rechain(rows: list[dict]) -> list[dict]:
+    """Give already-ordered entries a fresh chain from genesis (a copied workspace's history). Sets prev_hash and hash."""
+    prev: str | None = None
+    for row in rows:
+        row["prev_hash"] = prev
+        row["hash"] = prev = _entry_hash(prev, chain_payload(row))
+    return rows
+
+
 def verify_chain(session: Session, org_id: uuid.UUID) -> dict:
     rows = session.execute(
         select(AuditLog).where(AuditLog.organization_id == org_id).order_by(AuditLog.created_at, AuditLog.id)
@@ -103,19 +129,8 @@ def verify_chain(session: Session, org_id: uuid.UUID) -> dict:
     prev: str | None = None
     count = 0
     for row in rows:
-        payload = {
-            "id": str(row.id),
-            "organization_id": str(row.organization_id),
-            "created_at": row.created_at.astimezone(UTC).isoformat(),
-            "actor_type": row.actor_type,
-            "actor_id": str(row.actor_id) if row.actor_id else None,
-            "action": row.action,
-            "entity_type": row.entity_type,
-            "entity_id": str(row.entity_id) if row.entity_id else None,
-            "before": row.before,
-            "after": row.after,
-            "meta": row.meta,
-        }
+        payload = chain_payload({c: getattr(row, c) for c in ("id", "organization_id", "created_at", "actor_type", "actor_id",
+                                                               "action", "entity_type", "entity_id", "before", "after", "meta")})
         if row.prev_hash != prev or row.hash != _entry_hash(prev, payload):
             return {"valid": False, "checked": count, "broken_at": str(row.id)}
         prev = row.hash

@@ -58,7 +58,8 @@ export default {
       },
       keyframes: {
         shimmer: { "0%": { backgroundPosition: "-400px 0" }, "100%": { backgroundPosition: "400px 0" } },
-        rise: { from: { opacity: "0", transform: "translateY(3px)" }, to: { opacity: "1", transform: "none" } },
+        // starts visible: if the animation never runs (a background tab, a throttled frame) the row still shows
+        rise: { from: { transform: "translateY(3px)" }, to: { transform: "none" } },
       },
       animation: {
         shimmer: "shimmer 1.4s linear infinite",

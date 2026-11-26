@@ -28,6 +28,11 @@ export function SessionsPanel() {
   const st = t.sessions;
   const { data, mutate } = useApi<{ items: Row[] }>("/api/auth/sessions");
   const [busy, setBusy] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
+  // this device first, then the most recently used; a long history folds behind "show all"
+  const rows = [...(data?.items ?? [])].sort((a, b) => Number(b.current) - Number(a.current)
+    || (b.last_used_at ?? b.created_at).localeCompare(a.last_used_at ?? a.created_at));
+  const shown = all ? rows : rows.slice(0, 5);
   const signOut = async (id: string) => {
     setBusy(id);
     try { await api.del(`/api/auth/sessions/${id}`); toast.success(st.signedOut); mutate(); }
@@ -37,7 +42,7 @@ export function SessionsPanel() {
     <Panel>
       <PanelHeader title={st.title} sub={st.sub} />
       <ul className="divide-y divide-line">
-        {data?.items.map((s) => {
+        {shown.map((s) => {
           const d = deviceLabel(s.user_agent, st.unknownDevice, st.on);
           const Icon = d.mobile ? Smartphone : Laptop;
           return (
@@ -60,6 +65,9 @@ export function SessionsPanel() {
           );
         })}
       </ul>
+      {rows.length > 5 && <div className="border-t border-line px-4 py-2.5">
+        <Button variant="ghost" size="sm" aria-expanded={all} onClick={() => setAll(!all)}>{all ? st.showFewer : st.showAll.replace("{n}", String(rows.length))}</Button>
+      </div>}
     </Panel>
   );
 }

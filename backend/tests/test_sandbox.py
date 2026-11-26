@@ -97,3 +97,28 @@ def test_locking_the_template_keeps_the_demo_working(client, as_user):
     r = client.post("/api/auth/login", json={"email": "finance@kinneret.example", "password": DEMO_PASSWORD})
     assert r.status_code == 401                                           # the published password no longer works
     assert client.get("/api/invoices", headers=headers(try_demo(client))).json()["items"]  # visitors still get data
+
+
+def test_a_copy_carries_the_demo_history_with_a_valid_chain(client, as_user):
+    """The visitor sees how the demo invoices were processed: the business events and the AI call records come along,
+    re-keyed to the copy, while the template's sign-ins stay behind. The copied chain verifies on its own."""
+    finance = as_user("finance@kinneret.example")
+    upload_invoice(client, finance, "02_qty_mismatch_hermon_he.pdf")
+    template_events = client.get("/api/audit?page_size=200", headers=finance).json()["items"]
+    template_calls = sum(r["calls"] for r in client.get("/api/observability/summary", headers=finance).json()["by_model"])
+
+    visitor = try_demo(client)
+    h, email = headers(visitor), visitor["_body"]["user"]["email"]
+    events = client.get("/api/audit?page_size=200", headers=h).json()["items"]
+    copied = [e for e in events if e["action"] != "sandbox.created" and e["actor_label"] != email]
+    assert copied and all(e["action"].startswith(("invoice.", "exception.", "approval.", "agent.", "purchase_order.",
+                                                    "goods_receipt.", "supplier.", "knowledge.")) for e in copied)
+    assert not any(e["action"].startswith("auth.") for e in copied)              # the template's sign-ins stay behind
+    assert {e["id"] for e in events}.isdisjoint({e["id"] for e in template_events})
+    invoices = {i["id"] for i in client.get("/api/invoices?page_size=100", headers=h).json()["items"]}
+    uploaded = [e for e in copied if e["action"] == "invoice.uploaded"]
+    assert uploaded and all(e["entity_id"] in invoices for e in uploaded)       # events point at the copy's own records
+    chain = client.get("/api/audit/verify", headers=h).json()
+    assert chain["valid"] is True and chain["checked"] == len(events)
+    calls = sum(r["calls"] for r in client.get("/api/observability/summary", headers=h).json()["by_model"])
+    assert template_calls > 0 and calls == template_calls                       # the AI call records came along

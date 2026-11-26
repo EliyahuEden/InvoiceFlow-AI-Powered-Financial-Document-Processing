@@ -26,9 +26,13 @@ from app.services.storage import get_storage
 
 log = get_logger("sandbox")
 
-#: per-visitor or ephemeral data that a copy must not carry: work queues, usage counters, sessions, the template's
-#: team and its audit history (each sandbox starts its own hash chain)
-SKIP_TABLES = {"jobs", "ai_calls", "audit_logs", "auth_sessions", "auth_tokens", "memberships"}
+#: per-visitor or ephemeral data that a copy must not carry: work queues, sessions and the template's team
+SKIP_TABLES = {"jobs", "auth_sessions", "auth_tokens", "memberships"}
+#: the audit history is copied on its own: business events only, re-chained from genesis for the new workspace
+AUDIT_TABLE = "audit_logs"
+#: which events a copy carries. The template's sign-ins, member changes and exports are its staff's own activity
+#: (with IP addresses and session ids); the visitor's workspace shows how the demo invoices were processed and decided.
+AUDIT_COPIED = ("invoice.", "exception.", "approval.", "agent.", "purchase_order.", "goods_receipt.", "supplier.", "knowledge.")
 VISITOR_DOMAIN = "sandbox.invalid"  # a reserved domain: nothing is ever delivered there
 VISITOR_ROLE = Role.FINANCE_REVIEWER  # upload, review, decide and ask the AI; no team, settings or invitations
 UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
@@ -43,7 +47,7 @@ def is_sandbox(settings: dict | None) -> bool:
 
 
 def _tables():
-    return [t for t in Base.metadata.sorted_tables if "organization_id" in t.c and t.name not in SKIP_TABLES]
+    return [t for t in Base.metadata.sorted_tables if "organization_id" in t.c and t.name not in SKIP_TABLES | {AUDIT_TABLE}]
 
 
 def _remap(value, ids: dict[str, str]):  # noqa: ANN001, ANN202 - JSON-shaped values of any type
@@ -74,12 +78,18 @@ def create(locale: str = "he") -> tuple[User, Organization]:
     with session_scope(template_id) as s:
         for table in _tables():
             rows[table.name] = [dict(r) for r in s.execute(select(table).where(table.c.organization_id == template_id)).mappings()]
+        audit_table = Base.metadata.tables[AUDIT_TABLE]
+        history = [dict(r) for r in s.execute(select(audit_table).where(audit_table.c.organization_id == template_id)
+                                               .order_by(audit_table.c.created_at, audit_table.c.id)).mappings()
+                   if r["action"].startswith(AUDIT_COPIED)]
     new_org_id = uuid.uuid4()
     ids = {str(template_id): str(new_org_id)}
     for table in _tables():
         if "id" in table.c:
             for r in rows[table.name]:
                 ids[str(r["id"])] = str(uuid.uuid4())
+    for r in history:
+        ids[str(r["id"])] = str(uuid.uuid4())
 
     # 2. copy the original files to the new workspace's keys (before the rows that point at them)
     storage = get_storage()
@@ -127,6 +137,9 @@ def create(locale: str = "he") -> tuple[User, Organization]:
                 s.execute(insert(table), batch)
                 for row_id, col, target in later:
                     s.execute(update(table).where(table.c.id == row_id).values({col: target}))
+            if history:  # the copied history, in its original order, chained afresh so "Verify chain" holds in the copy
+                copied_history = [{**{k: _remap(v, ids) for k, v in r.items()}, "organization_id": new_org_id} for r in history]
+                s.execute(insert(audit_table), audit.rechain(copied_history))
             audit.record(s, org_id=new_org_id, action="sandbox.created", entity_type="organization", entity_id=new_org_id,
                          actor_id=user.id, actor_label=user.email,
                          meta={"template": s_cfg.demo_sandbox_template, "expires_at": expires.isoformat()})

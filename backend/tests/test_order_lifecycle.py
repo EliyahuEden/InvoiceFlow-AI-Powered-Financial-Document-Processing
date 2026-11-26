@@ -26,6 +26,25 @@ def test_purchase_order_lifecycle_preserves_linked_evidence(client, as_user, wor
     assert client.post(f"{path}/transition", json={"action": "cancel", "reason": "Ordered twice"}, headers=proc).json()["status"] == "cancelled"
 
 
+def test_order_list_reports_receipt_progress_from_goods_receipts(client, as_user, world):
+    proc = as_user("procurement@kinneret.example")
+    payload = {"supplier_id": str(world["suppliers"]["tavor"]), "po_number": "PO-PROGRESS-1", "order_date": "2026-11-02",
+               "lines": [{"sku": "A", "description": "Paper", "quantity": 10, "unit_price": 5},
+                         {"sku": "B", "description": "Toner", "quantity": 4, "unit": "box", "unit_price": 30}]}
+    po = client.post("/api/purchase-orders", json=payload, headers=proc).json()
+    row = lambda: next(r for r in client.get("/api/purchase-orders?q=PO-PROGRESS-1", headers=proc).json()["items"])  # noqa: E731
+    assert (row()["lines_received"], row()["lines_partial"], row()["received_value"]) == (0, 0, "0.00")
+    lines = client.get(f"/api/purchase-orders/{po['id']}", headers=proc).json()["lines"]
+    receipt = {"gr_number": "GR-PROGRESS-1", "received_date": "2026-11-04",
+               "lines": [{"po_line_id": lines[0]["id"], "quantity_received": 10}, {"po_line_id": lines[1]["id"], "quantity_received": 1}]}
+    assert client.post(f"/api/purchase-orders/{po['id']}/goods-receipts", json=receipt, headers=proc).status_code == 201
+    r = row()
+    assert (r["lines_received"], r["lines_partial"], r["lines_over_received"]) == (1, 1, 0)
+    assert r["received_value"] == "80.00" and r["line_count"] == 2  # 10 × 5 + 1 × 30, at order prices
+    counts = client.get("/api/purchase-orders", headers=proc).json()["status_counts"]
+    assert counts.get(r["status"], 0) >= 1
+
+
 def test_void_and_archive_keep_invoice_evidence_available(client, as_user):
     proc = as_user("procurement@kinneret.example")
     fin = as_user("finance@kinneret.example")

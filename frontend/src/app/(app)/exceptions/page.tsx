@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowDownWideNarrow, CalendarClock, CheckCheck, ChevronRight, Layers, SlidersHorizontal, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowDownWideNarrow, ArrowRight, CalendarClock, CheckCheck, ChevronRight, FileText, Layers, Wallet } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useState } from "react";
-import { ReviewQueue } from "@/components/review-queue";
+import { AtRisk, DueCell, ReviewQueue } from "@/components/review-queue";
 import { ReviewNextButton } from "@/components/review-next";
 import { Pager, SearchBox, type Page } from "@/components/list";
+import { CountBadge, DetailPanel, DetailSection, FilterBar, FilterSelect, PageHeader, StatTile } from "@/components/page-kit";
+import { ActionLabel, FindingTag, PriorityBadge, ReasonText, StatusPill } from "@/components/domain";
+import { TransitionLink } from "@/components/transition-link";
 import { useSession } from "@/components/session";
-import { Button, cx, ErrorState, Field, Panel, PanelHeader, Select, Skeleton } from "@/components/ui";
+import { Button, cx, ErrorState, Panel, PanelHeader, Skeleton } from "@/components/ui";
 import { qs, useApi } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -29,11 +32,14 @@ function QueuePage() {
   const pathname = usePathname();
   const filters = { level: params.get("level") ?? "", type: params.get("type") ?? "", supplier_id: params.get("supplier_id") ?? "", due: params.get("due") ?? "", status: params.get("status") ?? "", q: params.get("q") ?? "", page: Math.max(1, Number(params.get("page")) || 1), page_size: 20 };
   const activeFilterCount = [filters.level, filters.type, filters.supplier_id, filters.due, filters.status].filter(Boolean).length;
-  const [showFilters, setShowFilters] = useState(false);
   const { data, error, mutate } = useApi<Page<ReviewQueueItem>>(`/api/review/queue${qs(filters)}`, { refreshInterval: 30_000 });
   const { data: summary, error: summaryError, mutate: retrySummary } = useApi<ReviewSummary>("/api/review/summary", { refreshInterval: 30_000 });
   const { data: suppliers } = useApi<Page<{ id: string; name: string; name_en: string | null }>>("/api/suppliers?page_size=100");
   const { data: approvals, error: approvalError, mutate: retryApprovals } = useApi<{ pending_approvals: PendingApproval[] }>("/api/exceptions?page_size=1", { refreshInterval: 30_000 });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // the selection follows the list: a filtered-out case falls back to the top of what is shown
+  const selected = data?.items.find((i) => i.exception_id === selectedId) ?? data?.items[0] ?? null;
+
   const update = useCallback((key: string, value: string) => {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value); else next.delete(key);
@@ -41,82 +47,145 @@ function QueuePage() {
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
   }, [params, pathname, router]);
   const onSearch = useCallback((value: string) => update("q", value), [update]);
-  const metrics = [
-    { label: t.review.needsReview, value: summary?.needs_review, icon: Layers, tone: "bg-sunken text-ink-3" },
-    { label: t.review.critical, value: summary?.by_level.critical, icon: AlertTriangle, tone: "bg-danger-soft text-danger" },
-    { label: t.review.valueUnderReview, value: summary && money(summary.value_under_review, summary.currency), icon: Wallet, tone: "bg-sunken text-ink-3" },
-  ];
-  // value_under_review is the base-currency figure; other currencies are never converted or added in
-  const otherCurrencies = summary ? (summary.totals_by_currency ?? []).filter((c) => c.currency !== summary.currency).length : 0;
-  const health = [
-    { label: t.review.overdue, value: summary?.overdue, href: "/exceptions?due=overdue", icon: AlertTriangle, tone: "bg-danger-soft text-danger" },
-    { label: t.review.dueSoon, value: summary?.due_soon, href: "/exceptions?due=soon", icon: CalendarClock, tone: "bg-warn-soft text-warn" },
-    { label: t.review.readyForApproval, value: summary?.ready_for_approval, href: "/invoices?status=reconciled", icon: CheckCheck, tone: "bg-sunken text-ink-3" },
-  ];
+
+  // value_under_review is the base-currency figure; the other currencies are listed as they are, never converted or added
+  const otherCurrencies = summary ? (summary.totals_by_currency ?? []).filter((c) => c.currency && c.currency !== summary.currency) : [];
+  const n = (v: number | undefined) => (v === undefined ? <Skeleton className="h-7 w-10" /> : <bdi>{v}</bdi>);
 
   return <div className="min-w-0 space-y-5">
-    <header className="command-hero grid min-w-0 items-center gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.65fr)]">
-      <div><h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t.review.queue}</h1><p className="mt-1.5 text-base text-ink-2">{t.review.subtitle}</p></div>
-      <dl className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
-        {metrics.map(({ label, value, icon: Icon, tone }, index) => <div key={label} className={cx("command-metric grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 px-3 py-2.5 sm:py-4", index === 2 && "col-span-2 sm:col-span-1")}>
-          <span className={cx("row-span-2 grid h-8 w-8 shrink-0 place-items-center rounded-xl sm:h-10 sm:w-10", tone)} aria-hidden><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></span>
-          {/* the number reads first visually, but dt stays before dd so the pair is announced correctly */}
-          <dt className="col-start-2 row-start-2 min-w-0 text-sm leading-snug text-ink-2">{label}{index === 2 && summary && <> · <bdi>{summary.currency}</bdi>
-              {otherCurrencies > 0 && <> · {t.review.plusCurrencies.replace("{n}", String(otherCurrencies))}</>}</>}</dt>
-            <dd className="col-start-2 row-start-1 min-w-0 break-words text-lg font-semibold leading-tight text-ink num sm:text-xl">{value === undefined ? "—" : <bdi>{value}</bdi>}</dd>
-        </div>)}
-      </dl>
-    </header>
-    <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(14rem,19%)]">
-      <Panel className="command-panel min-w-0 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
-          <div className="flex flex-wrap items-center gap-3">
-            {can("exception:decide") && <ReviewNextButton />}
-            <span className="inline-flex items-center gap-1.5 text-sm text-ink-2"><ArrowDownWideNarrow className="h-4 w-4" aria-hidden />{t.review.highestFirst}</span>
-          </div>
-          {data && <span className="text-sm text-ink-2">{t.common.total} <bdi className="ms-1 font-semibold text-ink num">{data.total}</bdi></span>}
+    <PageHeader title={t.review.queue} sub={t.review.subtitle}
+      actions={can("exception:decide") && <ReviewNextButton size="lg" />}
+      stats={<>
+        <StatTile icon={Layers} label={t.review.needsReview} value={n(summary?.needs_review)}
+          note={summary && <><bdi className="num">{summary.overdue}</bdi> {t.review.overdue.toLocaleLowerCase()} · <bdi className="num">{summary.due_soon}</bdi> {t.review.dueSoon.toLocaleLowerCase()}</>} />
+        <StatTile icon={AlertTriangle} tone="danger" active={!!summary?.by_level.critical} label={t.review.critical} value={n(summary?.by_level.critical)}
+          href="/exceptions?level=critical" note={summary && <><bdi className="num">{summary.by_level.high}</bdi> {t.review.high.toLocaleLowerCase()}</>} />
+        <StatTile icon={Wallet} className="col-span-2 md:col-span-1" label={t.review.valueUnderReview}
+          value={summary ? <bdi className="ltr">{money(summary.value_under_review, summary.currency)}</bdi> : <Skeleton className="h-7 w-28" />}
+          note={otherCurrencies.length > 0 && <>{t.review.alsoUnderReview}: {otherCurrencies.map((c, i) =>
+            <span key={c.currency}>{i > 0 && " · "}<bdi className="whitespace-nowrap num ltr">{money(c.value_under_review, c.currency)}</bdi></span>)}</>} />
+      </>} />
+
+    <div className="grid min-w-0 items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <Panel className="min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 pt-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">{t.review.needsReview}{data && <CountBadge>{data.total}</CountBadge>}</h2>
+          <span className="inline-flex items-center gap-1.5 text-sm text-ink-3"><ArrowDownWideNarrow className="h-4 w-4" aria-hidden />{t.review.highestFirst}</span>
         </div>
-        <div className="space-y-3 border-b border-line p-4">
-          <div className="flex flex-wrap items-center gap-2"><div className="min-w-0 flex-1"><SearchBox value={filters.q} onChange={onSearch} placeholder={t.common.search} /></div>
-            <Button className="md:hidden" aria-expanded={showFilters} aria-controls="queue-filters" onClick={() => setShowFilters(!showFilters)}>
-              <SlidersHorizontal className="h-4 w-4" aria-hidden />{t.review.filters}{activeFilterCount > 0 && <bdi>{activeFilterCount}</bdi>}
-            </Button>
-            {(activeFilterCount > 0 || filters.q) && <Button size="sm" variant="ghost" onClick={() => router.replace(pathname, { scroll: false })}>{t.review.clearFilters}</Button>}
-          </div>
-          <div id="queue-filters" className={cx("grid-cols-2 items-end gap-2 md:grid md:grid-cols-5", showFilters ? "grid" : "hidden")}>
-            <Field label={t.review.priority} htmlFor="priority-filter"><Select id="priority-filter" className="w-full" value={filters.level} onChange={(e) => update("level", e.target.value)}><option value="">{t.common.all}</option>{["critical", "high", "normal"].map((v) => <option key={v} value={v}>{t.review[v as "critical" | "high" | "normal"]}</option>)}</Select></Field>
-            <Field label={t.review.filterFinding} htmlFor="finding-filter"><Select id="finding-filter" className="w-full" value={filters.type} onChange={(e) => update("type", e.target.value)}><option value="">{t.common.all}</option>{Object.entries(t.finding).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></Field>
-            <Field label={t.review.filterSupplier} htmlFor="supplier-filter"><Select id="supplier-filter" className="w-full" value={filters.supplier_id} onChange={(e) => update("supplier_id", e.target.value)}><option value="">{t.common.all}</option>{suppliers?.items.map((s) => <option key={s.id} value={s.id}>{locale === "en" && s.name_en ? s.name_en : s.name}</option>)}</Select></Field>
-            <Field label={t.review.due} htmlFor="due-filter"><Select id="due-filter" className="w-full" value={filters.due} onChange={(e) => update("due", e.target.value)}><option value="">{t.common.all}</option><option value="overdue">{t.review.overdue}</option><option value="soon">{t.review.dueSoon}</option><option value="later">{t.review.later}</option></Select></Field>
-            <Field label={t.common.status} htmlFor="status-filter"><Select id="status-filter" className="w-full" value={filters.status} onChange={(e) => update("status", e.target.value)}><option value="">{t.review.needsReview}</option>{["open", "escalated", "pending_info", "approved", "rejected", "resolved", "draft"].map((v) => <option key={v} value={v}>{label(t.status, v)}</option>)}</Select></Field>
-          </div>
-        </div>
-        {error ? <div className="p-4"><ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} /></div> : data ? <ReviewQueue items={data.items} /> : <div className="p-4"><Skeleton className="h-64 w-full" /></div>}
+        <FilterBar className="border-b border-line px-5 pb-4" active={activeFilterCount}
+          onClear={activeFilterCount > 0 || filters.q ? () => router.replace(pathname, { scroll: false }) : undefined}
+          search={<SearchBox value={filters.q} onChange={onSearch} placeholder={t.common.search} />}>
+          <FilterSelect label={t.review.priority} value={filters.level} onChange={(v) => update("level", v)}>
+            <option value="">{t.common.all}</option>{(["critical", "high", "normal"] as const).map((v) => <option key={v} value={v}>{t.review[v]}</option>)}
+          </FilterSelect>
+          <FilterSelect label={t.review.filterFinding} value={filters.type} onChange={(v) => update("type", v)}>
+            <option value="">{t.common.all}</option>{Object.entries(t.finding).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+          </FilterSelect>
+          <FilterSelect label={t.review.filterSupplier} value={filters.supplier_id} onChange={(v) => update("supplier_id", v)}>
+            <option value="">{t.common.all}</option>{suppliers?.items.map((s) => <option key={s.id} value={s.id}>{locale === "en" && s.name_en ? s.name_en : s.name}</option>)}
+          </FilterSelect>
+          <FilterSelect label={t.review.due} value={filters.due} onChange={(v) => update("due", v)}>
+            <option value="">{t.common.all}</option><option value="overdue">{t.review.overdue}</option><option value="soon">{t.review.dueSoon}</option><option value="later">{t.review.later}</option>
+          </FilterSelect>
+          <FilterSelect label={t.common.status} value={filters.status} onChange={(v) => update("status", v)}>
+            <option value="">{t.review.needsReview}</option>{["open", "escalated", "pending_info", "approved", "rejected", "resolved", "draft"].map((v) => <option key={v} value={v}>{label(t.status, v)}</option>)}
+          </FilterSelect>
+        </FilterBar>
+        {error ? <div className="p-4"><ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} /></div>
+          : data ? <ReviewQueue items={data.items} selectedId={selected?.exception_id} onSelect={(item) => setSelectedId(item.exception_id)} />
+          : <div className="space-y-3 p-5">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>}
         {data && <Pager page={data.page} pages={data.pages} total={data.total} onPage={(page) => update("page", String(page))} />}
       </Panel>
-      <aside className="command-aside min-w-0 space-y-4">
-        <Panel className="command-panel overflow-hidden">
+
+      <aside className="grid min-w-0 items-start gap-4 lg:grid-cols-2 min-[1440px]:sticky min-[1440px]:top-20 min-[1440px]:grid-cols-1">
+        {selected && <div className="hidden lg:row-span-2 lg:block min-[1440px]:row-span-1"><WhyPanel item={selected} first={selected.priority.rank === 1} /></div>}
+        <Panel>
           <PanelHeader title={t.review.health} />
           {summaryError ? <div className="p-3"><ErrorState message={t.common.error} onRetry={() => retrySummary()} retryLabel={t.common.retry} /></div>
-            : <ul className="divide-y divide-line">{health.map(({ label, href, value, icon: Icon, tone }) => <li key={href}>
-              <Link href={href} className="flex items-center gap-2 px-3 py-3.5 hover:bg-sunken">
-                <span className={cx("grid h-8 w-8 shrink-0 place-items-center rounded-xl", tone)}><Icon className="h-4 w-4" aria-hidden /></span>
-                <span className="min-w-0 flex-1 text-sm leading-snug"><bdi className="me-1 font-semibold text-ink num">{value ?? "—"}</bdi>{label}</span><ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-3 rtl:rotate-180" aria-hidden />
-              </Link>
-            </li>)}</ul>}
+            : <QueueHealth summary={summary} />}
         </Panel>
-        <Panel className="command-panel overflow-hidden">
+        <Panel>
           <PanelHeader title={t.exceptions.approvals} />
           {approvalError ? <div className="p-3"><ErrorState message={t.common.error} onRetry={() => retryApprovals()} retryLabel={t.common.retry} /></div>
             : approvals?.pending_approvals.length ? <ul className="divide-y divide-line">{approvals.pending_approvals.map((a) => <li key={a.approval_id}>
-              <Link href={`/invoices/${a.invoice.id}`} className="block space-y-1 px-4 py-3 hover:bg-sunken">
-                <p className="break-words font-medium" dir="auto">{a.supplier_name}</p>
-                <p className="flex flex-wrap items-center gap-x-2 text-sm"><bdi className="text-accent">{a.invoice.invoice_number}</bdi><bdi className="font-semibold num">{money(a.invoice.total, a.invoice.currency)}</bdi></p>
+              <Link href={`/invoices/${a.invoice.id}`} className="block space-y-1 px-5 py-3 transition-colors hover:bg-sunken">
+                <p className="break-words font-semibold text-ink"><bdi>{a.supplier_name}</bdi></p>
+                <p className="flex flex-wrap items-center gap-x-2 text-sm"><bdi className="font-mono text-xs text-accent">{a.invoice.invoice_number}</bdi><bdi className="font-semibold num ltr">{money(a.invoice.total, a.invoice.currency)}</bdi></p>
                 <p className="text-xs text-ink-3">{t.invoice.step} {a.step} · {label(t.roles, a.required_role)}</p>
               </Link>
-            </li>)}</ul> : <p className="px-4 py-5 text-sm text-ink-3">{approvals ? t.common.none : t.common.loading}</p>}
+            </li>)}</ul> : <p className="px-5 py-5 text-sm text-ink-3">{approvals ? t.common.none : t.common.loading}</p>}
         </Panel>
       </aside>
     </div>
   </div>;
+}
+
+/** Why the selected case is in the queue: the priority reasons and findings the rules recorded, and the rules' next step. */
+function WhyPanel({ item, first }: { item: ReviewQueueItem; first: boolean }) {
+  const { t, locale } = useI18n();
+  const supplier = (locale === "en" && item.supplier_name_en) || item.supplier_name || t.common.unknown;
+  const href = `/exceptions/${item.exception_id}`;
+  const detail = item.finding_types[0] ? label(t.review.actionDetail, item.finding_types[0], "") : "";
+  return <DetailPanel title={first ? t.review.whyFirst : t.review.whySelected}
+    meta={<div className="flex flex-wrap items-center gap-1.5"><PriorityBadge level={item.priority.level} />{item.status !== "open" && <StatusPill status={item.status} />}</div>}
+    footer={<Button variant="secondary" className="w-full" asChild><TransitionLink href={href}>{ACTIONABLE.includes(item.status) ? t.review.openCase : t.review.viewDecision}<ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden /></TransitionLink></Button>}>
+    <div className="min-w-0">
+      <p className="break-words text-md font-bold leading-snug text-ink"><bdi>{supplier}</bdi></p>
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-3">
+        <span className="inline-flex items-center gap-1 font-mono text-xs"><FileText className="h-3 w-3" aria-hidden /><bdi>{item.invoice_number ?? "—"}</bdi></span>
+        {item.total && <><span aria-hidden>·</span><bdi className="num ltr">{money(item.total, item.currency)}</bdi></>}
+      </p>
+    </div>
+    <dl className="grid grid-cols-2 gap-3 rounded-xl bg-sunken px-3.5 py-3">
+      <div className="min-w-0"><dt className="text-xs text-ink-3">{t.review.atRisk}</dt><dd className="mt-0.5"><AtRisk item={item} align="start" /></dd></div>
+      <div className="min-w-0"><dt className="text-xs text-ink-3">{t.review.due}</dt><dd className="mt-0.5"><DueCell item={item} /></dd></div>
+    </dl>
+    {item.priority.reasons.length > 0 && <DetailSection title={t.review.rulesFound}>
+      <ul className="space-y-1.5 text-sm leading-snug text-ink-2">{item.priority.reasons.map((reason, i) =>
+        <li key={`${reason.code}-${i}`} className="flex gap-2"><span className={cx("mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full", i === 0 ? "bg-danger" : "bg-line-strong")} aria-hidden />
+          <ReasonText reason={reason} currency={item.currency} /></li>)}</ul>
+    </DetailSection>}
+    {item.finding_types.length > 0 && <DetailSection title={t.review.findingTypes}>
+      <div className="flex flex-wrap gap-1.5">{item.finding_types.map((type) => <FindingTag key={type} type={type} />)}</div>
+    </DetailSection>}
+    {item.proposed_action && <DetailSection title={t.review.suggestedStep}>
+      <div className="rounded-xl border border-line px-3.5 py-3 text-sm">
+        <p className="font-semibold text-ink"><ActionLabel action={item.proposed_action} /></p>
+        {detail && <p className="mt-1 leading-snug text-ink-2">{detail}</p>}
+      </div>
+    </DetailSection>}
+    {item.escalated_by && <p className="text-sm text-ink-3">{t.review.escalatedBy}: <bdi className="text-ink-2">{item.escalated_by}</bdi></p>}
+  </DetailPanel>;
+}
+
+const ACTIONABLE = ["open", "escalated", "pending_info", "draft"];
+
+/** Counts by priority and by payment date, each a link that filters the queue. */
+function QueueHealth({ summary }: { summary: ReviewSummary | undefined }) {
+  const { t } = useI18n();
+  const groups = [
+    { title: t.review.byPriority, rows: [
+      { label: t.review.critical, value: summary?.by_level.critical, href: "/exceptions?level=critical", dot: "bg-danger" },
+      { label: t.review.high, value: summary?.by_level.high, href: "/exceptions?level=high", dot: "bg-warn" },
+      { label: t.review.normal, value: summary?.by_level.normal, href: "/exceptions?level=normal", dot: "bg-info" },
+    ] },
+    { title: t.review.byDue, rows: [
+      { label: t.review.overdue, value: summary?.overdue, href: "/exceptions?due=overdue", icon: AlertTriangle, tone: "text-danger" },
+      { label: t.review.dueSoon, value: summary?.due_soon, href: "/exceptions?due=soon", icon: CalendarClock, tone: "text-warn" },
+      { label: t.review.readyForApproval, value: summary?.ready_for_approval, href: "/invoices?status=reconciled", icon: CheckCheck, tone: "text-ok" },
+    ] },
+  ];
+  return <div className="divide-y divide-line">{groups.map((g) => <div key={g.title} className="py-2">
+    <p className="px-5 pb-1 pt-1.5 text-xs font-semibold text-ink-3">{g.title}</p>
+    <ul>{g.rows.map((r) => {
+      const Icon = "icon" in r ? r.icon : null;
+      return <li key={r.href}><Link href={r.href} className="flex items-center gap-2.5 px-5 py-2 text-sm transition-colors hover:bg-sunken">
+        {Icon ? <Icon className={cx("h-3.5 w-3.5 shrink-0", r.value ? ("tone" in r ? r.tone : "") : "text-ink-3")} aria-hidden />
+          : <span className={cx("h-2 w-2 shrink-0 rounded-full", "dot" in r ? r.dot : "")} aria-hidden />}
+        <span className="min-w-0 flex-1 text-ink-2">{r.label}</span>
+        <bdi className="font-bold text-ink num">{r.value ?? "—"}</bdi>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-3 rtl:rotate-180" aria-hidden />
+      </Link></li>;
+    })}</ul>
+  </div>)}</div>;
 }

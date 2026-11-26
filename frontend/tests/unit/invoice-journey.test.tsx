@@ -22,7 +22,7 @@ vi.mock("@/components/session", () => ({
 vi.mock("@/lib/use-invoice", () => ({ useInvoice: () => ({ data: state.invoice, mutate: vi.fn() }) }));
 vi.mock("@/lib/api", async (original) => ({ ...(await original<typeof import("@/lib/api")>()),
   useApi: (path: string) => {
-    state.request = path;
+    if (path?.startsWith("/api/invoices")) state.request = path; // the inbox also loads suppliers for its filter
     return { data: { items: [], status_counts: {}, total: 0, page: 1, pages: 1 } };
   },
 }));

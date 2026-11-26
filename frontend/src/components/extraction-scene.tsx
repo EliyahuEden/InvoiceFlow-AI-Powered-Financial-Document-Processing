@@ -25,8 +25,8 @@ export function ExtractionScene({ fields, active, sourceName }: { fields: Extrac
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_70%_at_30%_40%,rgb(var(--atmosphere-a)/.55),transparent_70%),radial-gradient(50%_60%_at_80%_80%,rgb(var(--atmosphere-c)/.6),transparent_70%)]" />
       <div aria-hidden className="relative mx-auto h-[250px] w-[210px] [perspective:1000px]">
         <div className="relative h-full w-full [transform-style:preserve-3d] [transform:rotateX(10deg)_rotateY(22deg)_rotateZ(-6deg)] rtl:[transform:rotateX(10deg)_rotateY(-22deg)_rotateZ(6deg)]">
-          <div className={cx(sheet, "bg-gradient-to-br from-[#c7d2fe]/70 to-[#e0e7ff]/40 dark:from-[#4338ca]/35 dark:to-[#1e1b4b]/30 [transform:translateZ(-70px)_translate(34px,-26px)]")} />
-          <div className={cx(sheet, "bg-gradient-to-br from-[#ddd6fe]/75 to-[#eef2ff]/50 dark:from-[#5b21b6]/35 dark:to-[#1e1b4b]/35 [transform:translateZ(-35px)_translate(17px,-13px)]")} />
+          <div className={cx(sheet, "bg-gradient-to-br from-[#c7d2fe]/70 to-[#e0e7ff]/40 dark:from-[#4338ca]/35 dark:to-[#1e1b4b]/30 [transform:translateZ(-70px)_translate(34px,-26px)] rtl:[transform:translateZ(-70px)_translate(-34px,-26px)]")} />
+          <div className={cx(sheet, "bg-gradient-to-br from-[#ddd6fe]/75 to-[#eef2ff]/50 dark:from-[#5b21b6]/35 dark:to-[#1e1b4b]/35 [transform:translateZ(-35px)_translate(17px,-13px)] rtl:[transform:translateZ(-35px)_translate(-17px,-13px)]")} />
           <div className={cx(sheet, "overflow-hidden bg-gradient-to-br from-white/95 to-[#f5f3ff]/85 dark:from-[#25233f]/95 dark:to-[#1a1830]/90 p-5 backdrop-blur-md")}>
             <span className="block h-3 w-1/2 rounded-full bg-[#a5b4fc]/70" />
             <span className="mt-2 block h-2 w-1/3 rounded-full bg-[#c4b5fd]/60" />

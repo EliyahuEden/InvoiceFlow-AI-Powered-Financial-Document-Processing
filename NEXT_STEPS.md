@@ -27,7 +27,9 @@ coding agent (or person) can pick up from here.
   and an Aurora pass on the insights charts page.
 - **"Try the demo" sandboxes (2026-11-24):** the sign-in page offers a private copy of the demo company per visitor,
   deleted after 24 hours (`backend/app/services/sandbox.py`, `POST /api/auth/demo`, tests in `tests/test_sandbox.py`).
-  It copies the seeded `kinneret` workspace row for row with new ids and copied files (no AI calls), signs the visitor in
+  It copies the seeded `kinneret` workspace row for row with new ids and copied files (no AI calls), including the AI
+  call records and the business audit events (re-chained from genesis, so "Verify chain" holds; the template's sign-ins
+  and member events are left out), signs the visitor in
   as a finance reviewer, and the worker deletes expired copies through the normal workspace erase. Limits: 5 demos per
   visitor address per day; the per-visitor AI question limit still applies. On a public deployment, run
   `python -m app.cli lock-demo-template` after seeding so the published demo password stops working.
