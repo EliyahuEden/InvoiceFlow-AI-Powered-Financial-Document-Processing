@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     email_from: str = "InvoiceFlow <no-reply@invoiceflow.local>"
     app_base_url: str = "http://localhost:3000"  # the web app's public address, used in emailed links
     password_reset_ttl_minutes: int = 60
+    email_verify_ttl_hours: int = 48
+    rate_limit_verify_resend_per_hour: int = 5
     # --- /health/alerts thresholds (an uptime monitor polls it; 503 means a person should look)
     alert_queue_max_minutes: int = 15        # a runnable job waiting longer means the worker is down or stuck
     alert_failed_jobs_24h: int = 5

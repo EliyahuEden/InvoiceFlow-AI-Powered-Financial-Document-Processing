@@ -2,7 +2,7 @@
 
 **Accounts-payable automation for Hebrew and English supplier invoices.**
 
-[![CI](https://github.com/EliyahuEden/InvoiceFlow-AI-Powered-Financial-Document-Processing/actions/workflows/ci.yml/badge.svg)](https://github.com/EliyahuEden/InvoiceFlow-AI-Powered-Financial-Document-Processing/actions/workflows/ci.yml)
+[![CI](https://github.com/EliyahuEden/invoiceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/EliyahuEden/invoiceflow/actions/workflows/ci.yml)
 ![License: proprietary](https://img.shields.io/badge/license-proprietary-lightgrey)
 
 InvoiceFlow reads supplier invoices in any format (native PDFs, scans, phone photos; Hebrew, English or mixed),
@@ -83,7 +83,7 @@ data only through role-checked tools scoped to the organization, and the agent p
 Requires Docker with enough disk space for the images and the model cache.
 
 ```bash
-git clone https://github.com/EliyahuEden/InvoiceFlow-AI-Powered-Financial-Document-Processing.git invoiceflow
+git clone https://github.com/EliyahuEden/invoiceflow.git invoiceflow
 cd invoiceflow
 cp .env.example .env                                     # set JWT_SECRET; an LLM key is optional
 docker compose up -d --build                             # postgres, redis, s3, api, worker, web, mailpit

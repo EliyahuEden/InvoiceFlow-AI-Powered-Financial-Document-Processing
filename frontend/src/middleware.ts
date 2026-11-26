@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // UX-only guard: send visitors without a session cookie to /login. Real authorization
 // is enforced by the backend on every API request.
-const PUBLIC = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/accept-invite"]);
+const PUBLIC = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/accept-invite", "/verify-email"]);
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;

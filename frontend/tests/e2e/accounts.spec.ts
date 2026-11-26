@@ -39,6 +39,10 @@ async function signUpByApi(request: APIRequestContext, email: string): Promise<v
       accepted_legal_version: LEGAL_VERSION },
   });
   expect(r.status(), await r.text()).toBe(201);
+  // confirm the address with the emailed link, as the new administrator would
+  const token = new URLSearchParams((await emailedLink(request, email, "verify-email")).split("?")[1]).get("token");
+  const v = await request.post("/api/auth/verify-email", { headers: { "X-Requested-With": "invoiceflow" }, data: { token } });
+  expect(v.status(), await v.text()).toBe(200);
 }
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
@@ -67,7 +71,7 @@ test("an administrator confirms and deletes their workspace from Settings", asyn
 });
 
 /** The link in the newest email to `to`, waiting for it to arrive. */
-async function emailedLink(request: APIRequestContext, to: string, path: "reset-password" | "accept-invite"): Promise<string> {
+async function emailedLink(request: APIRequestContext, to: string, path: "reset-password" | "accept-invite" | "verify-email"): Promise<string> {
   const pattern = new RegExp(`https?://[^\\s"<>]+/${path}\\?token=[A-Za-z0-9_\\-]+`);
   for (let i = 0; i < 40; i++) {
     const search = await request.get(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
@@ -106,6 +110,14 @@ test("a new business signs up and lands in its own empty workspace", async ({ pa
   await expect(create).toBeDisabled(); // the terms must be accepted first
   await page.getByRole("checkbox").check();
   await create.click();
+  // the account waits for the address to be confirmed: nothing of the app shows until the emailed link is opened
+  await expect(page.getByRole("heading", { name: "Confirm your email" })).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+  await page.getByRole("button", { name: "I've confirmed it" }).click();
+  await expect(page.getByText("Not confirmed yet.")).toBeVisible();
+  await page.goto(await emailedLink(page.request, email, "verify-email"));
+  await expect(page.getByText("Your email is confirmed.")).toBeVisible();
+  await page.getByRole("button", { name: "Open InvoiceFlow" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText("Noa Tester")).toBeVisible();
   await expect(page.getByText("Administrator").first()).toBeVisible();

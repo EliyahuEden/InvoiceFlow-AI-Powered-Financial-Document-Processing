@@ -93,6 +93,20 @@ def password_reset(to: str, name: str, token: str, locale: str) -> Message:
         "If you did not ask for this, ignore this email; your password stays the same.\n"))
 
 
+def verify_email(to: str, name: str, token: str, locale: str) -> Message:
+    hours = get_settings().email_verify_ttl_hours
+    link = _link("verify-email", token)
+    if locale == "he":
+        return Message(to, "אישור כתובת הדוא\"ל ב-InvoiceFlow", (
+            f"שלום {name},\n\nתודה שנרשמת ל-InvoiceFlow. כדי להפעיל את החשבון יש לאשר את כתובת הדוא\"ל:\n{link}\n\n"
+            f"הקישור תקף ל-{hours} שעות ולשימוש אחד.\n"
+            "אם לא נרשמת, אפשר להתעלם מההודעה; החשבון לא יופעל.\n"))
+    return Message(to, "Confirm your email for InvoiceFlow", (
+        f"Hello {name},\n\nThanks for signing up for InvoiceFlow. Confirm your email address to activate your account:\n"
+        f"{link}\n\nThe link works once and expires in {hours} hours.\n"
+        "If you did not sign up, ignore this email; the account stays inactive.\n"))
+
+
 def invite(to: str, name: str, org_name: str, inviter: str, token: str, locale: str) -> Message:
     hours = get_settings().invite_ttl_hours
     link = _link("accept-invite", token)

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { TwoFactorPanel } from "@/components/two-factor-panel";
 import { Button } from "@/components/ui";
+import { VerifyEmailGate } from "@/components/verify-email";
 import { api, useApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -18,6 +19,8 @@ export type Me = {
   sandbox?: { expires_at: string | null } | null;
   mfa_enrollment_required?: boolean;
   two_factor?: boolean;
+  /** a self-service sign-up whose address is not confirmed yet: the app waits for the emailed link */
+  email_verification_required?: boolean;
 };
 
 const SessionContext = createContext<{ me: Me | undefined; can: (perm: string) => boolean }>({
@@ -26,10 +29,11 @@ const SessionContext = createContext<{ me: Me | undefined; can: (perm: string) =
 });
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { data } = useApi<Me>("/api/auth/me");
+  const { data, mutate } = useApi<Me>("/api/auth/me");
   const can = (perm: string) => !!data?.permissions.includes(perm);
   return <SessionContext.Provider value={{ me: data, can }}>
-    {data?.mfa_enrollment_required ? <EnrollmentGate /> : children}
+    {data?.email_verification_required ? <VerifyEmailGate email={data.user.email} recheck={() => mutate()} />
+      : data?.mfa_enrollment_required ? <EnrollmentGate /> : children}
   </SessionContext.Provider>;
 }
 

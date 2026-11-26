@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import null, select
 
 from app.api.deps import COOKIE_NAME, REFRESH_COOKIE, Principal, get_principal, requires_mfa_enrollment
 from app.core.client_ip import client_ip
@@ -75,14 +75,17 @@ def _ip(request: Request) -> str:
 
 
 def _me_payload(user: User, org: Organization, role: str, orgs: list[dict]) -> dict:
+    verification_required = user.email_verified_at is None
     enrollment_required = requires_mfa_enrollment(user, org)
+    locked = enrollment_required or verification_required  # the gates allow only the step that unlocks the account
     return {
         "user": {"id": str(user.id), "email": user.email, "full_name": user.full_name, "locale": user.locale},
         "organization": {"id": str(org.id), "name": org.name, "slug": org.slug,
                          "name_en": org.settings.get("display_name_en"),
                          "base_currency": org.settings.get("base_currency", "ILS")},
-        "role": role, "permissions": [] if enrollment_required else permissions_for(role), "organizations": orgs,
+        "role": role, "permissions": [] if locked else permissions_for(role), "organizations": orgs,
         "mfa_enrollment_required": enrollment_required, "two_factor": user.totp_enabled_at is not None,
+        "email_verification_required": verification_required,
         "ai_mode": mode_label(),
         # a private "Try the demo" workspace and when it is deleted (null for real businesses)
         "sandbox": ({"expires_at": org.settings["sandbox"].get("expires_at")} if org.settings.get("sandbox") else None),
@@ -218,7 +221,7 @@ def _slug(name: str) -> str:
 
 
 @router.post("/signup", status_code=201)
-def signup(body: SignupIn, request: Request, response: Response) -> dict:
+def signup(body: SignupIn, request: Request, response: Response, background: BackgroundTasks) -> dict:
     """Create a business: an isolated organization (row-level security keeps its data apart) and its first
     administrator, then sign in. The administrator adds the rest of the team from Settings."""
     import copy
@@ -244,6 +247,8 @@ def signup(body: SignupIn, request: Request, response: Response) -> dict:
         org = Organization(name=body.company_name.strip(), slug=_slug(body.company_name), settings=settings)
         user = User(email=email, full_name=body.full_name.strip(), password_hash=hash_password(body.password),
                     locale=body.locale)
+        if s_cfg.email_enabled:  # without a mail server a link could never arrive, so the address is taken as given
+            user.email_verified_at = null()  # a plain None would let the column default mark it verified
         s.add_all([org, user])
         s.flush()
         s.add(Membership(user_id=user.id, organization_id=org.id, role=Role.ADMIN))
@@ -256,7 +261,12 @@ def signup(body: SignupIn, request: Request, response: Response) -> dict:
         audit.record(s, org_id=org.id, action="legal.accepted", entity_type="user", entity_id=user.id,
                      actor_id=user.id, actor_label=user.email,
                      meta={"version": LEGAL_VERSION, "documents": ["terms", "privacy", "dpa"]})
+        verify_token = (auth_tokens.issue(s, user_id=user.id, purpose=auth_tokens.EMAIL_VERIFY, org_id=org.id,
+                                          ttl=timedelta(hours=s_cfg.email_verify_ttl_hours))
+                        if user.email_verified_at is None else None)
         s.commit()
+        if verify_token:
+            background.add_task(mail.send, mail.verify_email(user.email, user.full_name, verify_token, user.locale))
         _set_cookies(response, token, issued.refresh_token)
         return {"access_token": token, "token_type": "bearer", "expires_in": s_cfg.access_token_minutes * 60,
                 **_me_payload(user, org, Role.ADMIN.value, [{"id": str(org.id), "name": org.name, "role": "admin"}])}
@@ -339,6 +349,8 @@ def reset_password(body: ResetIn, request: Request) -> dict:
         if token is None or user is None or not user.is_active:
             raise HTTPException(400, "This link is invalid or has expired. Ask for a new one.")
         user.password_hash = hash_password(body.password)
+        if user.email_verified_at is None:
+            user.email_verified_at = datetime.now(UTC)
         auth_tokens.revoke_all(s, user.id)
         signed_out = auth_sessions.revoke_all(s, user.id, "password_reset")
         org_id = token.organization_id or s.scalar(select(Membership.organization_id)
@@ -352,6 +364,54 @@ def reset_password(body: ResetIn, request: Request) -> dict:
         return {"ok": True, "email": user.email}
     finally:
         s.close()
+
+
+class EmailTokenIn(BaseModel):
+    token: str = Field(..., min_length=10, max_length=200)
+
+
+@router.post("/verify-email")
+def verify_email(body: EmailTokenIn, request: Request) -> dict:
+    """Confirm an address from the emailed link. Works without being signed in (the link may open on another device)."""
+    _require_csrf(request)
+    check_rate_limit(f"verify-use:{_ip(request)}", get_settings().rate_limit_login_per_minute)
+    s = new_session()
+    try:
+        token = auth_tokens.consume(s, body.token, purposes=(auth_tokens.EMAIL_VERIFY,))
+        user = s.get(User, token.user_id) if token else None
+        if token is None or user is None or not user.is_active:
+            raise HTTPException(400, "This link is invalid or has expired. Sign in to get a new one.")
+        if user.email_verified_at is None:
+            user.email_verified_at = datetime.now(UTC)
+            org_id = token.organization_id or s.scalar(select(Membership.organization_id)
+                                                       .where(Membership.user_id == user.id).limit(1))
+            if org_id is not None:
+                set_session_org(s, org_id)
+                audit.record(s, org_id=org_id, action="auth.email_verified", entity_type="user", entity_id=user.id,
+                             actor_id=user.id, actor_label=user.email)
+        s.commit()
+        return {"ok": True, "email": user.email}
+    finally:
+        s.close()
+
+
+@router.post("/verify-email/resend", status_code=202)
+def resend_verification(request: Request, background: BackgroundTasks, p: Principal = Depends(get_principal)) -> dict:
+    """Send a fresh confirmation link to the signed-in account (any earlier link stops working)."""
+    _require_csrf(request)
+    cfg = get_settings()
+    if p.user.email_verified_at is not None:
+        return {"ok": True, "already_verified": True}
+    check_rate_limit(f"verify-resend:{p.user.id}", cfg.rate_limit_verify_resend_per_hour, window_seconds=3600)
+    s = new_session()
+    try:
+        raw = auth_tokens.issue(s, user_id=p.user.id, purpose=auth_tokens.EMAIL_VERIFY, org_id=p.org_id,
+                                ttl=timedelta(hours=cfg.email_verify_ttl_hours))
+        s.commit()
+    finally:
+        s.close()
+    background.add_task(mail.send, mail.verify_email(p.user.email, p.user.full_name, raw, p.user.locale))
+    return {"ok": True}
 
 
 @router.post("/refresh")

@@ -21,6 +21,8 @@ REST + JSON. Interactive OpenAPI docs are at `/api/docs`.
 | POST | `/api/auth/refresh` | refresh cookie + CSRF header | Rotate the refresh token, new access token; replaying an old one revokes the session |
 | POST | `/api/auth/logout-all` | auth | Revoke every session of the user |
 | GET | `/api/auth/me` | auth | User, organization, role, permissions, AI mode |
+| POST | `/api/auth/verify-email` | CSRF header | Confirm a new account's address with the emailed single-use token |
+| POST | `/api/auth/verify-email/resend` | auth + CSRF header | Send a fresh confirmation link (rate-limited per user) |
 | POST | `/api/auth/switch-organization` | member | Change the active tenant |
 | GET | `/api/dashboard` | invoice:read | KPIs, status mix, discrepancy types, activity |
 | GET | `/api/review/summary` | invoice:read | Risk-first counters, priority split, deadlines and top five; base-currency totals plus `totals_by_currency` |

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import AuthToken
 
-PASSWORD_RESET, INVITE = "password_reset", "invite"
+PASSWORD_RESET, INVITE, EMAIL_VERIFY = "password_reset", "invite", "email_verify"
 
 
 def _hash(raw: str) -> str:

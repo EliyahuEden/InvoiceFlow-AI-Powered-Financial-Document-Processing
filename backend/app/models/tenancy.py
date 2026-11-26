@@ -5,7 +5,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -70,6 +70,8 @@ class User(UUIDPk, Timestamps, Base):
     totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     totp_last_step: Mapped[int | None] = mapped_column(BigInteger)
     recovery_codes: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
+    # null only for a self-service sign-up whose address is not confirmed yet (services/auth_tokens.EMAIL_VERIFY)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     memberships: Mapped[list[Membership]] = relationship(back_populates="user")
 

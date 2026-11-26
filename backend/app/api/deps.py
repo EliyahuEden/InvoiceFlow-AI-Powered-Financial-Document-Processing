@@ -21,6 +21,8 @@ from app.services.rbac import Perm, has_perm
 COOKIE_NAME = "invoiceflow_session"
 REFRESH_COOKIE = "invoiceflow_refresh"
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+#: what an account whose email is not confirmed yet may still do
+VERIFICATION_ROUTES = {("GET", "/api/auth/me"), ("POST", "/api/auth/verify-email/resend"), ("POST", "/api/auth/logout")}
 ENROLLMENT_ROUTES = {
     ("GET", "/api/auth/me"), ("GET", "/api/auth/2fa"),
     ("POST", "/api/auth/2fa/setup"), ("POST", "/api/auth/2fa/enable"),
@@ -63,10 +65,11 @@ def get_principal(request: Request) -> Principal:
         claims = decode_access_token(token)
     except jwt.PyJWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired session") from exc
-    return principal_from_claims(claims, allow_enrollment=(request.method, request.scope.get("path")) in ENROLLMENT_ROUTES)
+    route = (request.method, request.scope.get("path"))
+    return principal_from_claims(claims, allow_enrollment=route in ENROLLMENT_ROUTES, allow_unverified=route in VERIFICATION_ROUTES)
 
 
-def principal_from_claims(claims: dict, *, allow_enrollment: bool = False) -> Principal:
+def principal_from_claims(claims: dict, *, allow_enrollment: bool = False, allow_unverified: bool = False) -> Principal:
     s = new_session()
     try:
         # The server-side session must still be active: logout, "sign out everywhere"
@@ -82,6 +85,8 @@ def principal_from_claims(claims: dict, *, allow_enrollment: bool = False) -> Pr
         org = s.get(Organization, m.organization_id)
         if org is None:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Membership no longer valid")
+        if not allow_unverified and user.email_verified_at is None:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Email verification is required")
         if not allow_enrollment and requires_mfa_enrollment(user, org):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Two-factor enrollment is required")
         # Role is read from the database on every request (not trusted from the token),
