@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeftRight, ArrowRight, CalendarClock, CheckCheck, FileText, Layers, TrendingUp } from "lucide-react";
-import { InvoiceStack } from "@/components/invoice-stack";
 import { ReviewQueue } from "@/components/review-queue";
 import { ExportMenu } from "@/components/export-menu";
 import { PaymentReminders } from "@/components/invoice-payment";
@@ -27,11 +26,11 @@ function RankedList({ rows, unit }: { rows: { key: string; label: React.ReactNod
   return <ol className="space-y-3 px-5 py-4">
     {rows.map((r) => <li key={r.key}>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0 truncate text-base font-semibold text-ink">{r.label}</span>
+        <span className="min-w-0 truncate text-base font-medium text-ink">{r.label}</span>
         <span className="shrink-0 text-sm text-ink-3"><bdi className="text-base font-extrabold text-ink num">{r.count}</bdi> {unit}</span>
       </div>
-      <div className="mt-1.5 h-1.5 rounded-full bg-sunken" aria-hidden>
-        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(4, (r.count / top) * 100)}%` }} />
+      <div className="mt-1.5 h-1 rounded-full bg-sunken" aria-hidden>
+        <div className="h-full rounded-full bg-accent/55" style={{ width: `${Math.max(4, (r.count / top) * 100)}%` }} />
       </div>
     </li>)}
   </ol>;
@@ -90,11 +89,15 @@ export default function OverviewPage() {
   const firstName = me?.user.full_name.split(" ")[0];
   const n = (v: number | undefined, cls = "h-8 w-12") => (v === undefined ? <Skeleton className={cls} /> : <bdi>{v}</bdi>);
   const dayFmt = new Intl.DateTimeFormat(locale === "he" ? "he-IL" : "en-GB", { day: "numeric", month: "short" });
-  // the last 30 days, a day with no invoices shown as 0 (the API lists only days that had invoices)
+  // a day with no invoices shown as 0 (the API lists only days that had invoices). The window is 30 days, or 14 when
+  // all activity falls in the last two weeks: then 30 slots would be mostly empty and the bars too thin to read
   const byDay = new Map((insights?.daily ?? []).map((d) => [d.date, d]));
-  const trend = Array.from({ length: 30 }, (_, i) => {
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 13);
+  const windowDays = (insights?.daily ?? []).every((d) => d.date >= twoWeeksAgo.toISOString().slice(0, 10)) ? 14 : 30;
+  const trend = Array.from({ length: windowDays }, (_, i) => {
     const day = new Date();
-    day.setDate(day.getDate() - (29 - i));
+    day.setDate(day.getDate() - (windowDays - 1 - i));
     const key = day.toISOString().slice(0, 10);
     const row = byDay.get(key);
     return { date: key, label: dayFmt.format(day), received: row?.received ?? 0, exceptions: row?.exceptions ?? 0 };
@@ -109,20 +112,14 @@ export default function OverviewPage() {
   ] : [];
 
   return <div className="min-w-0 space-y-5">
-    <header className="relative flex flex-wrap items-end justify-between gap-4 pt-2">
+    <header className="flex flex-wrap items-end justify-between gap-4 pt-2">
       <div className="min-w-0">
         <h1 className="text-4xl font-extrabold tracking-tight text-ink">
           <span className={dayPart ? undefined : "invisible"}>{t.review.greeting[dayPart ?? "morning"]}</span>{firstName ? <>, <bdi>{firstName}</bdi></> : null}
         </h1>
         <p className="mt-1 text-xl text-ink-3">{t.review.attentionToday}</p>
       </div>
-      <div className="flex items-end gap-10">
-        {can("invoice:read") && <ExportMenu report="insights" />}
-        <div aria-hidden className="relative -mb-4 me-10 hidden xl:block">
-          <div className="absolute -inset-10 rounded-full bg-[radial-gradient(closest-side,rgb(var(--atmosphere-a)/.9),transparent)]" />
-          <InvoiceStack label={t.review.invoiceEmblem} className="relative h-[168px] w-[148px]" />
-        </div>
-      </div>
+      {can("invoice:read") && <ExportMenu report="insights" />}
     </header>
 
     {/* hero: what needs review and how much is at risk | what is urgent | the real 30-day trend */}
@@ -151,7 +148,7 @@ export default function OverviewPage() {
       </div>
 
       <div className="min-w-0 border-line lg:col-span-2 xl:col-span-1 xl:border-s xl:ps-6">
-        <p className="flex items-center gap-2 text-md font-bold text-ink"><TrendingUp className="h-5 w-5 text-accent" aria-hidden />{t.review.trendTitle}</p>
+        <p className="flex items-center gap-2 text-md font-bold text-ink"><TrendingUp className="h-5 w-5 text-accent" aria-hidden />{t.review.trendTitleDays.replace("{n}", String(windowDays))}</p>
         <div className="mt-2">
           {!insights ? <Skeleton className="h-[200px] w-full" /> : !anyTrend
             ? <p className="grid h-[200px] place-items-center text-sm text-ink-3">{t.review.noTrend}</p>
@@ -159,10 +156,10 @@ export default function OverviewPage() {
               <p className="mb-1 flex flex-wrap items-baseline gap-x-3 text-sm text-ink-3">
                 <span><bdi className="text-xl font-extrabold text-ink num">{totals.received}</bdi> {t.review.receivedSeries}</span>
                 <span><bdi className="text-xl font-extrabold text-ink num">{totals.exceptions}</bdi> {t.review.exceptionsSeries}</span>
-                <span>{t.review.inPeriod}</span>
+                <span>{t.review.inPeriodDays.replace("{n}", String(windowDays))}</span>
                 {busiest && busiest.received > 0 && <span className="ms-auto">{t.review.busiestDay}: <bdi className="font-semibold text-ink-2">{busiest.label}</bdi></span>}
               </p>
-              <Bars data={trend} xKey="label" height={170} categoryGap="12%"
+              <Bars data={trend} xKey="label" height={170} categoryGap={windowDays === 14 ? "28%" : "12%"}
                 series={[{ key: "received", label: t.review.receivedSeries }, { key: "exceptions", label: t.review.exceptionsSeries }]} />
             </>}
         </div>
@@ -193,7 +190,7 @@ export default function OverviewPage() {
               {[{ currency: data.currency, value_under_review: data.value_under_review, amount_at_risk: data.amount_at_risk },
                 ...(data.totals_by_currency ?? []).filter((e) => e.currency !== data.currency)].map((e) => (
                 <li key={e.currency ?? "unknown"} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <span className="font-bold text-ink"><bdi>{e.currency ?? t.common.unknown}</bdi></span>
+                  <span className="font-bold text-ink"><bdi>{e.currency ?? t.review.currencyUnknown}</bdi></span>
                   <span className="text-end">
                     <span className="block"><bdi className="ltr font-extrabold text-danger num">{money(e.amount_at_risk, e.currency)}</bdi> <span className="text-xs text-ink-3">{t.review.atRiskLabel}</span></span>
                     <span className="block text-sm text-ink-3"><bdi className="ltr num">{money(e.value_under_review, e.currency)}</bdi> <span className="text-xs">{t.review.underReviewLabel}</span></span>

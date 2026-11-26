@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowDownWideNarrow, ArrowRight, CalendarClock, CheckCheck, ChevronRight, FileText, Layers, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowDownWideNarrow, ArrowRight, FileText, Layers, Wallet } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useState } from "react";
 import { AtRisk, DueCell, ReviewQueue } from "@/components/review-queue";
@@ -33,7 +33,7 @@ function QueuePage() {
   const filters = { level: params.get("level") ?? "", type: params.get("type") ?? "", supplier_id: params.get("supplier_id") ?? "", due: params.get("due") ?? "", status: params.get("status") ?? "", q: params.get("q") ?? "", page: Math.max(1, Number(params.get("page")) || 1), page_size: 20 };
   const activeFilterCount = [filters.level, filters.type, filters.supplier_id, filters.due, filters.status].filter(Boolean).length;
   const { data, error, mutate } = useApi<Page<ReviewQueueItem>>(`/api/review/queue${qs(filters)}`, { refreshInterval: 30_000 });
-  const { data: summary, error: summaryError, mutate: retrySummary } = useApi<ReviewSummary>("/api/review/summary", { refreshInterval: 30_000 });
+  const { data: summary } = useApi<ReviewSummary>("/api/review/summary", { refreshInterval: 30_000 });
   const { data: suppliers } = useApi<Page<{ id: string; name: string; name_en: string | null }>>("/api/suppliers?page_size=100");
   const { data: approvals, error: approvalError, mutate: retryApprovals } = useApi<{ pending_approvals: PendingApproval[] }>("/api/exceptions?page_size=1", { refreshInterval: 30_000 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -57,17 +57,20 @@ function QueuePage() {
       actions={can("exception:decide") && <ReviewNextButton size="lg" />}
       stats={<>
         <StatTile icon={Layers} label={t.review.needsReview} value={n(summary?.needs_review)}
-          note={summary && <><bdi className="num">{summary.overdue}</bdi> {t.review.overdue.toLocaleLowerCase()} · <bdi className="num">{summary.due_soon}</bdi> {t.review.dueSoon.toLocaleLowerCase()}</>} />
+          note={summary && (summary.overdue > 0 || summary.due_soon > 0) && <>{[
+            summary.overdue > 0 && <span key="o"><bdi className="num">{summary.overdue}</bdi> {t.review.overdue.toLocaleLowerCase()}</span>,
+            summary.due_soon > 0 && <span key="s"><bdi className="num">{summary.due_soon}</bdi> {t.review.dueSoon.toLocaleLowerCase()}</span>,
+          ].filter(Boolean).reduce<React.ReactNode[]>((acc, el, i) => (i ? [...acc, " · ", el] : [el]), [])}</>} />
         <StatTile icon={AlertTriangle} tone="danger" active={!!summary?.by_level.critical} label={t.review.critical} value={n(summary?.by_level.critical)}
-          href="/exceptions?level=critical" note={summary && <><bdi className="num">{summary.by_level.high}</bdi> {t.review.high.toLocaleLowerCase()}</>} />
+          href="/exceptions?level=critical" note={summary && summary.by_level.high > 0 && <><bdi className="num">{summary.by_level.high}</bdi> {t.review.high.toLocaleLowerCase()}</>} />
         <StatTile icon={Wallet} className="col-span-2 md:col-span-1" label={t.review.valueUnderReview}
           value={summary ? <bdi className="ltr">{money(summary.value_under_review, summary.currency)}</bdi> : <Skeleton className="h-7 w-28" />}
           note={otherCurrencies.length > 0 && <>{t.review.alsoUnderReview}: {otherCurrencies.map((c, i) =>
             <span key={c.currency}>{i > 0 && " · "}<bdi className="whitespace-nowrap num ltr">{money(c.value_under_review, c.currency)}</bdi></span>)}</>} />
       </>} />
 
-    <div className="grid min-w-0 items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <Panel className="min-w-0">
+    <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2 min-[1440px]:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <Panel className="min-w-0 lg:col-span-2 min-[1440px]:col-span-1">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 pt-4">
           <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">{t.review.needsReview}{data && <CountBadge>{data.total}</CountBadge>}</h2>
           <span className="inline-flex items-center gap-1.5 text-sm text-ink-3"><ArrowDownWideNarrow className="h-4 w-4" aria-hidden />{t.review.highestFirst}</span>
@@ -97,25 +100,24 @@ function QueuePage() {
         {data && <Pager page={data.page} pages={data.pages} total={data.total} onPage={(page) => update("page", String(page))} />}
       </Panel>
 
-      <aside className="grid min-w-0 items-start gap-4 lg:grid-cols-2 min-[1440px]:sticky min-[1440px]:top-20 min-[1440px]:grid-cols-1">
-        {selected && <div className="hidden lg:row-span-2 lg:block min-[1440px]:row-span-1"><WhyPanel item={selected} first={selected.priority.rank === 1} /></div>}
-        <Panel>
-          <PanelHeader title={t.review.health} />
-          {summaryError ? <div className="p-3"><ErrorState message={t.common.error} onRetry={() => retrySummary()} retryLabel={t.common.retry} /></div>
-            : <QueueHealth summary={summary} />}
-        </Panel>
-        <Panel>
-          <PanelHeader title={t.exceptions.approvals} />
-          {approvalError ? <div className="p-3"><ErrorState message={t.common.error} onRetry={() => retryApprovals()} retryLabel={t.common.retry} /></div>
-            : approvals?.pending_approvals.length ? <ul className="divide-y divide-line">{approvals.pending_approvals.map((a) => <li key={a.approval_id}>
-              <Link href={`/invoices/${a.invoice.id}`} className="block space-y-1 px-5 py-3 transition-colors hover:bg-sunken">
-                <p className="break-words font-semibold text-ink"><bdi>{a.supplier_name}</bdi></p>
-                <p className="flex flex-wrap items-center gap-x-2 text-sm"><bdi className="font-mono text-xs text-accent">{a.invoice.invoice_number}</bdi><bdi className="font-semibold num ltr">{money(a.invoice.total, a.invoice.currency)}</bdi></p>
-                <p className="text-xs text-ink-3">{t.invoice.step} {a.step} · {label(t.roles, a.required_role)}</p>
-              </Link>
-            </li>)}</ul> : <p className="px-5 py-5 text-sm text-ink-3">{approvals ? t.common.none : t.common.loading}</p>}
-        </Panel>
-      </aside>
+      {selected && <aside className="hidden min-w-0 lg:block min-[1440px]:sticky min-[1440px]:top-20 min-[1440px]:col-start-2 min-[1440px]:row-span-2 min-[1440px]:row-start-1">
+        <WhyPanel item={selected} first={selected.priority.rank === 1} />
+      </aside>}
+
+      <Panel className="min-w-0 min-[1440px]:col-start-1">
+        <PanelHeader title={<span className="inline-flex items-center gap-2">{t.exceptions.approvals}{approvals && <CountBadge>{approvals.pending_approvals.length}</CountBadge>}</span>} />
+        {approvalError ? <div className="p-3"><ErrorState message={t.common.error} onRetry={() => retryApprovals()} retryLabel={t.common.retry} /></div>
+          : approvals?.pending_approvals.length ? <ul className="divide-y divide-line">{approvals.pending_approvals.map((a) => <li key={a.approval_id}>
+            <Link href={`/invoices/${a.invoice.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-0.5 px-5 py-3 transition-colors hover:bg-sunken">
+              <span className="min-w-0 break-words font-semibold text-ink"><bdi>{a.supplier_name}</bdi></span>
+              <bdi className="whitespace-nowrap font-semibold text-ink num ltr">{money(a.invoice.total, a.invoice.currency)}</bdi>
+              <span className="col-span-2 flex flex-wrap items-center gap-x-2 text-xs text-ink-3">
+                <bdi className="whitespace-nowrap font-mono text-accent">{a.invoice.invoice_number}</bdi><span aria-hidden>·</span>
+                <span>{t.invoice.step} {a.step} · {label(t.roles, a.required_role)}</span>
+              </span>
+            </Link>
+          </li>)}</ul> : <p className="px-5 py-5 text-sm text-ink-3">{approvals ? t.common.none : t.common.loading}</p>}
+      </Panel>
     </div>
   </div>;
 }
@@ -159,33 +161,3 @@ function WhyPanel({ item, first }: { item: ReviewQueueItem; first: boolean }) {
 }
 
 const ACTIONABLE = ["open", "escalated", "pending_info", "draft"];
-
-/** Counts by priority and by payment date, each a link that filters the queue. */
-function QueueHealth({ summary }: { summary: ReviewSummary | undefined }) {
-  const { t } = useI18n();
-  const groups = [
-    { title: t.review.byPriority, rows: [
-      { label: t.review.critical, value: summary?.by_level.critical, href: "/exceptions?level=critical", dot: "bg-danger" },
-      { label: t.review.high, value: summary?.by_level.high, href: "/exceptions?level=high", dot: "bg-warn" },
-      { label: t.review.normal, value: summary?.by_level.normal, href: "/exceptions?level=normal", dot: "bg-info" },
-    ] },
-    { title: t.review.byDue, rows: [
-      { label: t.review.overdue, value: summary?.overdue, href: "/exceptions?due=overdue", icon: AlertTriangle, tone: "text-danger" },
-      { label: t.review.dueSoon, value: summary?.due_soon, href: "/exceptions?due=soon", icon: CalendarClock, tone: "text-warn" },
-      { label: t.review.readyForApproval, value: summary?.ready_for_approval, href: "/invoices?status=reconciled", icon: CheckCheck, tone: "text-ok" },
-    ] },
-  ];
-  return <div className="divide-y divide-line">{groups.map((g) => <div key={g.title} className="py-2">
-    <p className="px-5 pb-1 pt-1.5 text-xs font-semibold text-ink-3">{g.title}</p>
-    <ul>{g.rows.map((r) => {
-      const Icon = "icon" in r ? r.icon : null;
-      return <li key={r.href}><Link href={r.href} className="flex items-center gap-2.5 px-5 py-2 text-sm transition-colors hover:bg-sunken">
-        {Icon ? <Icon className={cx("h-3.5 w-3.5 shrink-0", r.value ? ("tone" in r ? r.tone : "") : "text-ink-3")} aria-hidden />
-          : <span className={cx("h-2 w-2 shrink-0 rounded-full", "dot" in r ? r.dot : "")} aria-hidden />}
-        <span className="min-w-0 flex-1 text-ink-2">{r.label}</span>
-        <bdi className="font-bold text-ink num">{r.value ?? "—"}</bdi>
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-3 rtl:rotate-180" aria-hidden />
-      </Link></li>;
-    })}</ul>
-  </div>)}</div>;
-}

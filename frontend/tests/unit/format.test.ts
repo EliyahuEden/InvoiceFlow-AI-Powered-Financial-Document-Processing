@@ -18,5 +18,7 @@ describe("money formatting (string decimals, no float math)", () => {
     expect(num("60.000")).toBe("60");
     expect(num("2.500")).toBe("2.5");
     expect(num("1500")).toBe("1,500");
+    expect(num("TV-24518")).toBe("TV-24518"); // identifiers never get thousands separators
+    expect(num("PO-2026-1001")).toBe("PO-2026-1001");
   });
 });

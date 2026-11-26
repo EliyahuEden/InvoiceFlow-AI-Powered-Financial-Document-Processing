@@ -27,21 +27,21 @@ export function SourceCompare({ invoice }: { invoice: InvoiceDetail }) {
   const received = po ? sum((l) => Number(l.received) * Number(l.unit_price)) : null;
   const cards = [
     { key: "invoice", icon: FileText, title: r.invoice, ref: invoice.invoice_number, sub: r.beforeVat,
-      amount: money(invoice.subtotal ?? invoice.total, invoice.currency), bad: false },
+      amount: money(invoice.subtotal ?? invoice.total, invoice.currency), bad: false, none: false },
     { key: "po", icon: ShoppingCart, title: r.purchaseOrder, ref: po?.po_number ?? invoice.po_reference, sub: r.orderedValue,
-      amount: ordered !== null ? money(ordered, po!.currency) : "—", bad: open.some((f) => ORDER_FINDINGS.has(f)) },
+      amount: ordered !== null ? money(ordered, po!.currency) : "—", bad: open.some((f) => ORDER_FINDINGS.has(f)), none: ordered === null },
     { key: "gr", icon: PackageCheck, title: r.receiptCard, ref: null, sub: r.receivedValue,
-      amount: received !== null ? money(received, po!.currency) : "—", bad: open.some((f) => RECEIPT_FINDINGS.has(f)) },
+      amount: received !== null ? money(received, po!.currency) : "—", bad: open.some((f) => RECEIPT_FINDINGS.has(f)), none: received === null },
   ];
   return (
     <section aria-label={r.sourceCompare}>
       <h2 className="mb-2.5 flex items-center gap-2 text-lg font-bold text-ink"><Link2 className="h-5 w-5 text-ink-3" aria-hidden />{r.sourceCompare}</h2>
       <ul className="grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2.5">
-        {cards.map(({ key, icon: Icon, title, ref, sub, amount, bad }) => (
+        {cards.map(({ key, icon: Icon, title, ref, sub, amount, bad, none }) => { const ok = key === "gr" && !none; return (
           <li key={key} className={cx("rounded-2xl border p-4 shadow-[0_1px_2px_rgb(34_38_92/.05)]",
-            bad ? "border-danger/30 bg-danger-soft/70" : key === "gr" ? "border-ok/25 bg-ok-soft/50" : "border-line bg-accent-soft/40")}>
+            bad ? "border-danger/30 bg-danger-soft/70" : ok ? "border-ok/25 bg-ok-soft/50" : "border-line bg-accent-soft/40")}>
             <p className="flex items-center justify-between gap-2 text-md font-bold text-ink">
-              {title}<Icon className={cx("h-5 w-5", bad ? "text-danger" : key === "gr" ? "text-ok" : "text-accent")} aria-hidden />
+              {title}<Icon className={cx("h-5 w-5", bad ? "text-danger" : ok ? "text-ok" : "text-accent")} aria-hidden />
             </p>
             <p className="mt-0.5 text-sm leading-snug text-ink-3">{sub}{ref && <><br /><bdi className="font-mono text-xs">{ref}</bdi></>}</p>
             <p className={cx("mt-3 whitespace-nowrap rounded-xl px-3 py-1.5 text-end text-md font-extrabold num", bad ? "bg-surface/80 text-danger" : "bg-surface/80 text-ink")}>
@@ -49,7 +49,7 @@ export function SourceCompare({ invoice }: { invoice: InvoiceDetail }) {
             </p>
             {bad && <p className="mt-2 text-xs font-semibold text-danger">{r.findingOnThis}</p>}
           </li>
-        ))}
+        ); })}
       </ul>
     </section>
   );
@@ -63,6 +63,7 @@ export function EvidenceTrace({ invoice, active, onShow }: { invoice: InvoiceDet
   const { t, locale } = useI18n();
   const r = t.review;
   const rows = FIELD_DEFS.filter((f) => TRACE_FIELDS.has(f.key) && invoice[f.key] != null && invoice[f.key] !== "");
+  const multiPage = (invoice.document?.page_count ?? 1) > 1;
   return (
     <Panel>
       <PanelHeader title={<span className="inline-flex items-center gap-2"><Crosshair className="h-5 w-5 text-accent" aria-hidden />{r.evidenceTrace}</span>} sub={r.evidenceTraceSub} />
@@ -79,11 +80,11 @@ export function EvidenceTrace({ invoice, active, onShow }: { invoice: InvoiceDet
                 className={cx("flex w-full items-center justify-between gap-3 px-5 py-3 text-start transition-colors",
                   located ? "hover:bg-accent/[.05]" : "cursor-default", active === id && "bg-accent-soft/60")}>
                 <span className="min-w-0">
-                  <span className="block text-sm text-ink-3">{f.label(t)}</span>
-                  <span className={cx("block text-sm", located ? "font-semibold text-accent" : "text-ink-3")}>
-                    {source?.page ? `${r.page} ${source.page}` : r.noSource}{located ? ` · ${r.showOnDocument}` : ""}
-                  </span>
+                  <span className="block text-sm text-ink-2">{f.label(t)}</span>
+                  {(!source?.page || multiPage) && <span className="block text-xs text-ink-3">{source?.page ? `${r.page} ${source.page}` : r.noSource}</span>}
                 </span>
+                {located && <span className="ms-auto inline-flex shrink-0 items-center text-accent" title={r.showOnDocument}>
+                  <Crosshair className="h-4 w-4" aria-hidden /><span className="sr-only">{r.showOnDocument}</span></span>}
                 <bdi className={cx("ltr rounded-lg px-2 py-1 font-bold num", active === id ? "bg-hl/40 text-ink" : "text-ink")}>{value}</bdi>
               </button>
             </li>

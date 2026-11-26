@@ -128,7 +128,7 @@ export default function ReconciliationPage() {
                   <li key={f.id} className="px-4 py-3">
                     <div className="flex items-center gap-2"><SeverityDot severity={f.severity} /><FindingTag type={f.type} severity={f.severity} /></div>
                     <p className="mt-1.5 text-sm text-ink" dir="auto">{findingMessage(t, f)}</p>
-                    {(f.expected || f.actual) && (
+                    {(f.expected || f.actual) && f.type !== "DUPLICATE_INVOICE" && f.type !== "POSSIBLE_DUPLICATE" && (
                       <dl className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-sunken px-3 py-2 text-xs">
                         <div><dt className="text-ink-3">{t.recon.expected}</dt><dd className="font-medium num ltr">{f.expected ?? "—"}</dd></div>
                         <div><dt className="text-ink-3">{t.recon.actual}</dt><dd className="font-medium num ltr">{f.actual ?? "—"}</dd></div>

@@ -89,7 +89,6 @@ export default function InvestigationsPage() {
                     <dl className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3 md:flex-col md:items-end md:text-end">
                       {r.evidence_count !== null && <div><dt className="sr-only">{t.agent.sources}</dt><dd>{t.agent.evidenceN.replace("{n}", String(r.evidence_count))}</dd></div>}
                       <div><dt className="sr-only">{t.agent.tools}</dt><dd className="inline-flex items-center gap-1"><Wrench className="h-3 w-3" aria-hidden />{t.agent.toolsN.replace("{n}", String(r.tool_calls))}</dd></div>
-                      <div><dt className="sr-only">{t.agent.model}</dt><dd className="font-mono" dir="ltr">{r.mode.replace("llm:", "")}</dd></div>
                     </dl>
                   </div>
                 </li>;

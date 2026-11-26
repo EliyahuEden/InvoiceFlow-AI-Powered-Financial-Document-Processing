@@ -2,6 +2,7 @@
 
 import { CircleCheck, CircleSlash, MapPin, PencilLine } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { money, num } from "@/lib/format";
 import type { InvoiceDetail, Source } from "@/lib/types";
 import { cx } from "./ui";
@@ -39,6 +40,13 @@ export const FIELD_DEFS: readonly FieldDef[] = [
   { key: "total", src: "total", label: (t) => t.invoice.total, kind: "money" },
 ];
 
+/** A field key (supplier_tax_id, tax_amount) in the reader's language, as the invoice page labels it. */
+export function fieldName(t: Dictionary, key: string): string {
+  if (key === "line_items") return t.invoice.lineItems;
+  const def = FIELD_DEFS.find((d) => d.src === key || d.key === key);
+  return def ? def.label(t) : key;
+}
+
 // The extraction service keys evidence by the printed field, while saved corrections use the record key.
 export function fieldEvidence(inv: InvoiceDetail, f: (typeof FIELD_DEFS)[number]) {
   const printed = inv.field_sources?.[f.src];
@@ -63,8 +71,16 @@ export function SourceTags({ source, corrected }: { source?: Source; corrected: 
   );
 }
 
+/** How many printed fields were found on the page, for one summary line instead of a badge on every field. */
+export function verifiedCount(inv: InvoiceDetail): { verified: number; total: number } {
+  const present = FIELD_DEFS.filter((f) => inv[f.key] !== null && inv[f.key] !== undefined && inv[f.key] !== "");
+  return { verified: present.filter((f) => fieldEvidence(inv, f).source?.verified).length, total: present.length };
+}
+
 export function FieldList({ inv, onHover }: { inv: InvoiceDetail; onHover: (id: string | null) => void }) {
   const { t, locale } = useI18n();
+  // a one-page invoice puts every field on page 1: the page badge only helps when there is more than one page
+  const multiPage = (inv.document?.page_count ?? 1) > 1;
   return (
     <dl className="divide-y divide-line px-4 sm:px-5">
       {FIELD_DEFS.map((f) => {
@@ -82,8 +98,8 @@ export function FieldList({ inv, onHover }: { inv: InvoiceDetail; onHover: (id: 
               {missing ? <span className="inline-flex items-center gap-1 text-sm"><CircleSlash className="h-3.5 w-3.5" />{t.common.notPrinted}</span> :
                 <span className={f.kind === "ltr" || f.kind === "money" ? "ltr" : ""} dir={f.kind ? undefined : "auto"}>{display}</span>}
             </dd>
-            {(source?.page || corrected || source?.verified) && <dd className="col-span-2 flex flex-wrap items-center justify-between gap-2">
-              <SourceTags source={source} corrected={corrected} />
+            {(corrected || (multiPage && source?.page)) && <dd className="col-span-2 flex flex-wrap items-center justify-between gap-2">
+              <SourceTags source={multiPage ? source : { ...source, page: undefined }} corrected={corrected} />
               {corrected && source?.text && <span className="min-w-0 break-words text-xs text-ink-2">{t.invoice.sourceLine} · <bdi>{source.text}</bdi></span>}
             </dd>}
           </div>

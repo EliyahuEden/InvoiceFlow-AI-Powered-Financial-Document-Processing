@@ -11,6 +11,7 @@ import { cx, EmptyState, ErrorState, Panel, PanelHeader, Skeleton, Table, Td, Th
 import { useApi } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { fieldName } from "@/components/invoice-fields";
 import { fixed, type EvaluationResults, type ExtractionResult, type RagResult, type ReconResult } from "@/lib/eval-types";
 
 const RETRIEVAL_METRICS = ["recall@1", "recall@3", "recall@5", "mrr", "ndcg@5", "all@5"] as const;
@@ -55,31 +56,32 @@ function Notes({ notes }: { notes?: string[] }) {
 
 function Extraction({ r }: { r: ExtractionResult }) {
   const { t } = useI18n();
+  const m = t.evaluation.m;
   const sys = r.systems.rule_based;
   const groups = Object.entries(sys.groups);
   const pick = (prefix: string) => groups.filter(([k]) => k.startsWith(prefix)).map(([k, v]) => ({ label: `${k.split(":")[1]} (n=${v.n})`, value: v.field_accuracy }));
   return (
     <Panel>
-      <PanelHeader title={t.evaluation.extraction} sub={`${r.dataset.evaluated}/${r.dataset.documents} documents · ${r.dataset.ocr} · system: rule-based baseline`}
-        actions={<Pill tone="neutral">LLM (every invoice): {r.systems.llm?.skipped ? "not run" : "run"}</Pill>} />
+      <PanelHeader title={t.evaluation.extraction} sub={m.extractionSub.replace("{n}", String(r.dataset.evaluated)).replace("{total}", String(r.dataset.documents)).replace("{ocr}", r.dataset.ocr)}
+        actions={<Pill tone="neutral">{m.modelEveryInvoice}: {r.systems.llm?.skipped ? m.notRunShort : m.ran}</Pill>} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
         <Stat label={t.evaluation.evaluatedDocs} value={String(r.dataset.evaluated)} hint={r.dataset.ocr} />
-        <Stat label="Line items F1" value={pct(sys.line_items.f1)} hint={`P ${pct(sys.line_items.precision)} · R ${pct(sys.line_items.recall)}`} />
-        <Stat label="Documents fully correct" value={pct(sys.documents_fully_correct)} />
-        <Stat label="Latency p50" value={`${sys.latency_ms_p50} ms`} hint="text/OCR + extraction" />
+        <Stat label={m.lineItemsF1} value={pct(sys.line_items.f1)} hint={`P ${pct(sys.line_items.precision)} · R ${pct(sys.line_items.recall)}`} />
+        <Stat label={m.docsFullyCorrect} value={pct(sys.documents_fully_correct)} />
+        <Stat label={m.latencyP50} value={`${sys.latency_ms_p50} ms`} hint={m.latencyHint} />
       </div>
       <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-2">
         <div><h3 className="mb-3 text-sm font-semibold">{t.evaluation.byLanguage}</h3><BarList items={pick("language")} format={(v) => pct(v)} max={1} color="var(--series-2)" /></div>
         <div><h3 className="mb-3 text-sm font-semibold">{t.evaluation.byLayout}</h3><BarList items={pick("layout")} format={(v) => pct(v)} max={1} color="var(--series-3)" /></div>
       </div>
       <Table>
-        <thead><tr><Th>{t.evaluation.field}</Th><Th className="text-end">{t.evaluation.accuracy}</Th><Th className="text-end">Precision</Th>
-          <Th className="text-end">Recall</Th><Th className="text-end">F1</Th><Th className="text-end">Absent → null</Th></tr></thead>
+        <thead><tr><Th>{t.evaluation.field}</Th><Th className="text-end">{t.evaluation.accuracy}</Th><Th className="text-end">{m.precision}</Th>
+          <Th className="text-end">{m.recall}</Th><Th className="text-end">F1</Th><Th className="text-end">{m.absentNull}</Th></tr></thead>
         <tbody>{Object.entries(sys.per_field).map(([f, m]) => {
           const miss = sys.missing_field_handling[f];
           return (
             <tr key={f}>
-              <Td className="font-mono text-xs">{f}</Td>
+              <Td className="text-sm">{fieldName(t, f)}</Td>
               <Td className="text-end num">{pct(m.accuracy)}</Td><Td className="text-end num">{pct(m.precision)}</Td>
               <Td className="text-end num">{pct(m.recall)}</Td><Td className="text-end num">{pct(m.f1)}</Td>
               <Td className="text-end num">{miss ? `${miss.correctly_null}/${miss.absent_in_document}` : "—"}</Td>
@@ -87,7 +89,7 @@ function Extraction({ r }: { r: ExtractionResult }) {
         })}</tbody>
       </Table>
       <details className="border-t border-line px-4 py-2 text-sm">
-        <summary className="cursor-pointer text-xs font-medium text-ink-2">Error examples ({sys.error_examples.length})</summary>
+        <summary className="cursor-pointer text-xs font-medium text-ink-2">{m.errorExamples} ({sys.error_examples.length})</summary>
         <Table className="mt-2"><tbody>{sys.error_examples.map((e, i) => (
           <tr key={i}><Td className="font-mono text-2xs">{e.file.replace("docs/", "")}</Td><Td className="font-mono text-xs">{e.field}</Td>
             <Td className="text-xs" dir="auto">{e.expected ?? "∅"}</Td><Td className="text-xs text-danger" dir="auto">{e.predicted ?? "∅"}</Td></tr>))}</tbody></Table>
@@ -99,6 +101,7 @@ function Extraction({ r }: { r: ExtractionResult }) {
 
 function Rag({ r }: { r: RagResult }) {
   const { t } = useI18n();
+  const m = t.evaluation.m;
   const strategies = Array.from(new Set(r.configs.map((c) => c.chunking)));
   const [strategy, setStrategy] = useState<string>(strategies.includes("clause") ? "clause" : strategies[0] ?? "");
   const rows = r.configs.filter((c) => c.chunking === strategy);
@@ -126,18 +129,18 @@ function Rag({ r }: { r: RagResult }) {
           <div key={k} className="rounded-md border border-line p-3">
             <p className="font-mono text-xs text-ink-2">{k} · clause chunks</p>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-              <dt className="text-ink-3">Answer correctness</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
-              <dt className="text-ink-3">Citation accuracy</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
-              <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention?.precision)} / {pct(a.abstention?.recall)}</span></dd>
-              <dt className="text-ink-3">Injection parroting</dt><dd className="text-end font-medium num">{a.injection_parroting}</dd>
-              <dt className="text-ink-3">Groundedness</dt><dd className="text-end text-xs">{a.groundedness}</dd>
+              <dt className="text-ink-3">{m.answerCorrectness}</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
+              <dt className="text-ink-3">{m.citationAccuracy}</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
+              <dt className="text-ink-3">{m.abstention}</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention?.precision)} / {pct(a.abstention?.recall)}</span></dd>
+              <dt className="text-ink-3">{m.injection}</dt><dd className="text-end font-medium num">{a.injection_parroting}</dd>
+              <dt className="text-ink-3">{m.groundedness}</dt><dd className="text-end text-xs">{a.groundedness}</dd>
             </dl>
           </div>
         ))}
       </div>
       {r.held_out && (
         <div className="border-t border-line p-4">
-          <p className="text-sm font-semibold text-ink">Held-out questions</p>
+          <p className="text-sm font-semibold text-ink">{m.heldOut}</p>
           <p className="mt-0.5 text-xs text-ink-3">
             {r.held_out.dataset.questions} questions ({r.held_out.dataset.answerable} answerable), written before any held-out scoring and never used for tuning ·
             abstention threshold {r.held_out.abstain_logit} calibrated on the set above
@@ -156,9 +159,9 @@ function Rag({ r }: { r: RagResult }) {
             {Object.entries(r.held_out.answers).map(([k, a]) => (
               <dl key={k} className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-md border border-line p-3 text-sm">
                 <dt className="col-span-2 font-mono text-xs text-ink-2">{k}</dt>
-                <dt className="text-ink-3">Answer correctness</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
-                <dt className="text-ink-3">Citation accuracy</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
-                <dt className="text-ink-3">Abstention P / R</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention?.precision)} / {pct(a.abstention?.recall)}</span></dd>
+                <dt className="text-ink-3">{m.answerCorrectness}</dt><dd className="text-end font-medium num">{pct(a.answer_correctness)}</dd>
+                <dt className="text-ink-3">{m.citationAccuracy}</dt><dd className="text-end font-medium num">{pct(a.citation_accuracy)}</dd>
+                <dt className="text-ink-3">{m.abstention}</dt><dd className="text-end font-medium num"><span dir="ltr">{pct(a.abstention?.precision)} / {pct(a.abstention?.recall)}</span></dd>
               </dl>
             ))}
           </div>
@@ -172,26 +175,27 @@ function Rag({ r }: { r: RagResult }) {
 
 function Recon({ r }: { r: ReconResult }) {
   const { t } = useI18n();
+  const m = t.evaluation.m;
   const c = r.controlled;
   const e = r.end_to_end;
   return (
     <Panel>
       <PanelHeader title={t.evaluation.reconciliation} sub={`${c.cases} controlled cases · engine ${r.engine_version}`} />
       <div className="grid grid-cols-2 divide-line border-b border-line md:grid-cols-4 md:divide-x rtl:md:divide-x-reverse">
-        <Stat label="Exact finding-set match" value={pct(c.exact_finding_set_match)} />
-        <Stat label="False alarms on clean invoices" value={pct(c.clean_case_false_alarm_rate)} hint={`${c.clean_cases} clean / near-miss cases`} />
-        <Stat label="End-to-end (PDF → findings)" value={e.exact_scenarios} hint={`P ${pct(e.precision)} · R ${pct(e.recall)}`} />
-        <Stat label="Finding types" value={String(c.per_type.length)} />
+        <Stat label={m.exactSet} value={pct(c.exact_finding_set_match)} />
+        <Stat label={m.falseAlarms} value={pct(c.clean_case_false_alarm_rate)} hint={m.cleanCases.replace("{n}", String(c.clean_cases))} />
+        <Stat label={m.endToEnd} value={e.exact_scenarios} hint={`P ${pct(e.precision)} · R ${pct(e.recall)}`} />
+        <Stat label={m.findingTypes} value={String(c.per_type.length)} />
       </div>
       <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-2">
         <Table>
-          <thead><tr><Th>Finding type</Th><Th className="text-end">TP</Th><Th className="text-end">FP</Th><Th className="text-end">FN</Th><Th className="text-end">Precision</Th><Th className="text-end">Recall</Th></tr></thead>
+          <thead><tr><Th>{m.findingType}</Th><Th className="text-end">TP</Th><Th className="text-end">FP</Th><Th className="text-end">FN</Th><Th className="text-end">{m.precision}</Th><Th className="text-end">{m.recall}</Th></tr></thead>
           <tbody>{c.per_type.map((x) => (
             <tr key={x.type}><Td className="font-mono text-xs">{x.type}</Td><Td className="text-end num">{x.tp}</Td><Td className="text-end num">{x.fp}</Td>
               <Td className="text-end num">{x.fn}</Td><Td className="text-end num">{pct(x.precision)}</Td><Td className="text-end num">{pct(x.recall)}</Td></tr>))}</tbody>
         </Table>
         <Table>
-          <thead><tr><Th>End-to-end document</Th><Th>Expected</Th><Th>Got</Th></tr></thead>
+          <thead><tr><Th>{m.document}</Th><Th>{m.expected}</Th><Th>{m.got}</Th></tr></thead>
           <tbody>{e.rows.map((x) => (
             <tr key={x.file} className={x.exact ? "" : "bg-danger-soft/40"}>
               <Td className="font-mono text-2xs">{x.file.replace("invoices/", "")}</Td>
@@ -288,7 +292,7 @@ export default function EvaluationPage() {
         {/* the headline figures, each with its exact metric, sample and basis; each opens its report */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {a.extraction && <Metric icon={FileCheck2} onClick={() => open("extraction")} active={active === "extraction"}
-            label={<>{t.evaluation.fieldAccuracy}{locale === "he" && <small className="ms-1 text-xs text-ink-2" lang="en">Field accuracy</small>}</>}
+            label={t.evaluation.fieldAccuracy}
             value={pct(a.extraction.systems.rule_based.overall_field_accuracy)}
             hint={<>{a.extraction.dataset.evaluated} {t.evaluation.documents} × {a.extraction.fields.length} {t.invoice.fields.toLocaleLowerCase()}</>} />}
           {rerank && <Metric icon={Search} onClick={() => open("rag")} active={active === "rag"} label="Recall@5" value={pct(rerank["recall@5"])}

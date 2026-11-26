@@ -23,6 +23,8 @@ export function unitPrice(value: string | null | undefined, currency?: string | 
 export function num(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—";
   const s = String(value);
+  // identifiers (TV-24518, PO-2026-1001) and other text pass through untouched: only numbers get separators
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return s;
   const [int = "0", frac] = s.split(".");
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return frac && !/^0+$/.test(frac) ? `${grouped}.${frac.replace(/0+$/, "")}` : grouped;

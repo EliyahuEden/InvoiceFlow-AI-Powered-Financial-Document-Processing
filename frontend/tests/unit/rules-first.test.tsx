@@ -40,8 +40,10 @@ describe("rules-first report", () => {
 
   it("lists why invoices were sent", () => {
     show(measured);
-    expect(screen.getByText("total")).toBeVisible();
-    expect(screen.getByText("invoice_date")).toBeVisible();
+    // field keys are shown in the reader's language, the same labels the invoice page uses
+    expect(screen.getByText("Total")).toBeVisible();
+    expect(screen.getByText("Invoice date")).toBeVisible();
+    expect(screen.queryByText("invoice_date")).toBeNull();
   });
 
   it("says the model run is pending instead of inventing numbers", () => {

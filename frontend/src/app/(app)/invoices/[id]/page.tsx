@@ -1,16 +1,16 @@
 "use client";
 
-import { Check, FileSearch, ShieldCheck, X } from "lucide-react";
+import { Check, CircleCheck, FileSearch, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DocumentViewer } from "@/components/document-viewer";
 import { ActionLabel, FindingTag, SecurityNotice, StatusPill, VerifiedTag, WarningList } from "@/components/domain";
-import { fieldHighlights, FieldList, SourceTags } from "@/components/invoice-fields";
+import { fieldHighlights, FieldList, SourceTags, verifiedCount } from "@/components/invoice-fields";
 import { InvoicePayment } from "@/components/invoice-payment";
 import { InvoiceLifecycle } from "@/components/invoice-lifecycle";
 import { useSession } from "@/components/session";
-import { Button, EmptyState, Panel, PanelHeader, Skeleton, Table, Td, Textarea, Th } from "@/components/ui";
+import { Button, cx, EmptyState, Panel, PanelHeader, Skeleton, Table, Td, Textarea, Th } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { dateTime, money, num, unitPrice } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -65,7 +65,10 @@ export default function InvoiceOverview() {
         )}
         <Panel className="command-panel">
           <PanelHeader title={t.invoice.fields}
-            sub={<span className="flex flex-wrap items-center gap-2">{t.invoice.hoverHint}</span>}
+            sub={<span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {(() => { const c = verifiedCount(inv); return c.total > 0 && <span className={cx("inline-flex items-center gap-1 font-medium", c.verified === c.total ? "text-ok" : "text-warn")}>
+                <CircleCheck className="h-3.5 w-3.5" aria-hidden />{t.invoice.verifiedSummary.replace("{n}", String(c.verified)).replace("{total}", String(c.total))}</span>; })()}
+              <span>{t.invoice.hoverHint}</span></span>}
             actions={<span className="text-xs text-ink-3">{t.invoice.method}: <span>{!inv.extraction_method ? "—" : inv.extraction_method.startsWith("rules+llm") ? `${t.inbox.methodRulesAi} (${inv.extraction_method.split(":")[1] ?? ""})` : inv.extraction_method === "rule_based" ? t.inbox.methodRules : inv.extraction_method}</span></span>} />
           <FieldList inv={inv} onHover={setHover} />
           {inv.missing_fields.length > 0 && (

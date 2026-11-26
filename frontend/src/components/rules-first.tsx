@@ -1,6 +1,7 @@
 "use client";
 
 import { BarList } from "@/components/bar-list";
+import { fieldName } from "@/components/invoice-fields";
 import { Panel, PanelHeader } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
 import type { ExtractionResult } from "@/lib/eval-types";
@@ -28,7 +29,7 @@ export function RulesFirstReport({ r }: { r: ExtractionResult | undefined }) {
   const rf = r.systems.rules_first;
   const measured = rf && !rf.skipped && typeof rf.overall_field_accuracy === "number";
   const num = new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-US");
-  const gaps = Object.entries(router.gap_counts as Record<string, number>).map(([label, value]) => ({ label, value }));
+  const gaps = Object.entries(router.gap_counts as Record<string, number>).map(([key, value]) => ({ label: fieldName(t, key), value }));
   // an offline rerun carries earlier model results forward with their own model label
   const llm = r.llm ?? rf?.carried_over?.llm;
   const model = llm ? [llm.model, llm.endpoint].filter(Boolean).join(" · ") : "";

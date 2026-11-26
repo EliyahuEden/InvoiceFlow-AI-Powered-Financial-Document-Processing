@@ -47,6 +47,7 @@ export function DecisionPanel({ proposedAction, detail, allowedActions, note, ov
           </Select>
         </Field>}
         {overriding && !note.trim() && <p className="text-xs text-warn">{t.exceptions.overrideNeedsNote}</p>}
+        {!overriding && !note.trim() && canDecide && <p className="text-xs text-ink-3">{t.exceptions.noteFirst}</p>}
         <div className="grid gap-2 border-t border-line pt-3 sm:grid-cols-2 xl:grid-cols-1">
           {canDecide && <>
             <Button variant="primary" className="h-auto min-h-10 justify-start whitespace-normal text-start" loading={busy === "approve"} disabled={!!busy || (overriding && !note.trim())} onClick={() => onDecide("approve")}>

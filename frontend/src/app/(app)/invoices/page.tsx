@@ -208,8 +208,8 @@ function InvoiceInbox() {
                       <p className={cx("line-clamp-2 break-words leading-snug", r.supplier_matched ? "text-ink" : "text-ink-3")}><bdi>{supplierOf(r) ?? "—"}</bdi></p>
                       {r.po_reference && <bdi className="block font-mono text-xs text-ink-3">{r.po_reference}</bdi>}
                     </div></Td>
-                    <Td className="whitespace-nowrap text-sm"><span className="block text-ink-2">{date(r.invoice_date, locale)}</span>
-                      <span className="block text-xs text-ink-3">{t.inbox.receivedAgo.replace("{when}", relative(r.created_at, locale))}</span></Td>
+                    <Td className="whitespace-nowrap text-sm" title={t.inbox.receivedAgo.replace("{when}", relative(r.created_at, locale))}>
+                      <span className="block text-ink-2">{date(r.invoice_date, locale)}</span></Td>
                     <Td className="text-end"><bdi className="whitespace-nowrap font-semibold text-ink num ltr">{money(r.total, r.currency)}</bdi></Td>
                     <Td>
                       <StatusPill status={r.status} />

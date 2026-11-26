@@ -118,6 +118,9 @@ test("mobile review exposes demo mode, priority evidence and the next action", a
   const first = rows.getByRole("listitem").first();
   await expect(first.getByRole("link", { name: "Investigate", exact: true })).toBeVisible();
   await expect(first.getByText("Money at risk", { exact: true })).toBeVisible();
-  await expect(first.getByText("Due date", { exact: true })).toBeVisible();
+  // the due date shows when at least one case has one; a column of "not stated" in every card is left out
+  const queue = await (await page.request.get("/api/review/queue")).json();
+  const anyDue = (queue.items as { due_date: string | null }[]).some((item) => item.due_date);
+  await expect(first.getByText("Due date", { exact: true })).toHaveCount(anyDue ? 1 : 0);
   expect(await rows.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
 });

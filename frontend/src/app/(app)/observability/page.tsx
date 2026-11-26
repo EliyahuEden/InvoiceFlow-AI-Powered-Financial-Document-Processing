@@ -27,6 +27,9 @@ type Summary = {
   extraction: { by_method: Record<string, number>; validation_warnings: Record<string, number>; missing_fields: Record<string, number> };
   jobs: Record<string, number>; pricing_configured: boolean;
 };
+/** "openai / openai/gpt-oss-120b" reads as a typo: name the provider once when the model id already starts with it. */
+const modelName = (provider: string, model: string) => model.startsWith(`${provider}/`) ? model : `${provider} / ${model}`;
+
 type Call = { id: string; created_at: string; kind: string; workflow: string | null; provider: string; model: string; prompt_version: string | null;
   latency_ms: number; input_tokens: number | null; output_tokens: number | null; cost_usd: number | null; status: string; retries: number;
   error: string | null; invoice_id: string | null };
@@ -77,7 +80,7 @@ export default function ObservabilityPage() {
             : <BarList items={Object.entries(s.agent.tool_usage).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: label(t.observability.tools, k), value: v, hint: `${k}: ${v}` }))} />}</div></Panel>
         <Panel><PanelHeader title={t.observability.warningsTitle} />
           <div className="p-5">{!s ? <Skeleton className="h-24 w-full" /> : Object.keys(s.extraction.validation_warnings).length === 0 ? <p className="text-sm text-ink-3">{t.observability.noWarnings}</p>
-            : <BarList color="var(--series-2)" items={Object.entries(s.extraction.validation_warnings).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: label(t.finding, k, words(k)), value: v, hint: `${k}: ${v}` }))} />}</div></Panel>
+            : <BarList color="var(--series-2)" items={Object.entries(s.extraction.validation_warnings).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: label(t.observability.warningCodes, k, label(t.finding, k, words(k))), value: v, hint: `${k}: ${v}` }))} />}</div></Panel>
         <Panel><PanelHeader title={t.observability.methodsTitle} />
           <div className="p-5">{!s ? <Skeleton className="h-24 w-full" /> : Object.keys(s.extraction.by_method).length === 0 ? <p className="text-sm text-ink-3">{t.common.none}</p>
             : <BarList color="var(--series-3)" items={Object.entries(s.extraction.by_method).map(([k, v]) => ({ label: methodName(k), value: v, hint: `${k}: ${v}` }))} />}
@@ -93,7 +96,7 @@ export default function ObservabilityPage() {
         <ul className="divide-y divide-line md:hidden">{s.by_model.map((r, i) => <li key={i} className="space-y-2 px-5 py-3.5">
           <div className="flex items-center justify-between gap-2"><Pill tone="neutral">{kindLabel(r.kind)}</Pill>
             <span className="text-sm text-ink-2">{t.observability.calls}: <bdi className="font-bold text-ink num">{r.calls}</bdi></span></div>
-          <bdi className="block break-all font-mono text-xs text-ink" dir="ltr">{r.provider} / {r.model}</bdi>
+          <bdi className="block break-all font-mono text-xs text-ink" dir="ltr">{modelName(r.provider, r.model)}</bdi>
           <dl className="grid grid-cols-3 gap-2 text-xs">
             <div><dt className="text-ink-3">p50</dt><dd className="font-semibold text-ink num"><bdi dir="ltr">{r.p50_ms ?? "—"} ms</bdi></dd></div>
             <div><dt className="text-ink-3">{t.observability.tokens}</dt><dd className="font-semibold text-ink num"><bdi dir="ltr">{r.input_tokens || r.output_tokens ? `${r.input_tokens.toLocaleString()} / ${r.output_tokens.toLocaleString()}` : "—"}</bdi></dd></div>
@@ -107,8 +110,8 @@ export default function ObservabilityPage() {
           <tbody>{s.by_model.map((r, i) => (
             <tr key={i}>
               <Td><Pill tone="neutral">{kindLabel(r.kind)}</Pill></Td>
-              <Td><bdi className="whitespace-nowrap font-mono text-xs" dir="ltr">{r.provider} / {r.model}</bdi></Td>
-              <Td><bdi className="font-mono text-xs text-ink-3" dir="ltr">{r.prompt_version}</bdi></Td>
+              <Td><bdi className="whitespace-nowrap font-mono text-xs" dir="ltr">{modelName(r.provider, r.model)}</bdi></Td>
+              <Td><bdi className="whitespace-nowrap font-mono text-xs text-ink-3" dir="ltr">{r.prompt_version}</bdi></Td>
               <Td className="text-end num">{r.calls}</Td>
               <Td className="whitespace-nowrap text-end num"><bdi dir="ltr">{r.p50_ms ?? "—"} ms</bdi></Td>
               <Td className="whitespace-nowrap text-end num"><bdi dir="ltr">{r.p95_ms ?? "—"} ms</bdi></Td>

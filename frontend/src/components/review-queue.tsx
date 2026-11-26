@@ -29,9 +29,16 @@ function SessionState({ done, current }: { done: boolean; current: boolean }) {
     {current && <span className="text-xs font-medium text-accent">{t.review.current}</span>}</>;
 }
 
+const hasAmount = (v: string | null | undefined) => !!v && /[1-9]/.test(v);
+
 /** The amount at risk in its own currency; a foreign amount adds its shekel estimate, a missing currency says so. */
 export function AtRisk({ item, align = "end" }: { item: ReviewQueueItem; align?: "start" | "end" }) {
   const { t, locale } = useI18n();
+  // a blocking finding (no order, duplicate, unknown supplier) has no measurable amount: "₪0.00" would read as harmless
+  if (!hasAmount(item.amount_at_risk)) return <div className={cx("min-w-0", align === "end" ? "text-end" : "text-start")}>
+    <span className="block font-bold text-ink-3" aria-hidden>—</span>
+    <span className="block whitespace-nowrap text-xs text-ink-3">{t.review.notQuantified}</span>
+  </div>;
   const title = item.amount_at_risk_base ? t.review.fxNote.replace("{date}", item.fx_as_of ? date(item.fx_as_of, locale) : "—") : undefined;
   return <div className={cx("min-w-0", align === "end" ? "text-end" : "text-start")}>
     <bdi className="block whitespace-nowrap font-bold text-ink num ltr" title={title}>
@@ -83,7 +90,7 @@ export function ReviewQueue({ items, compact = false, selectedId, onSelect }: {
           <p className="flex min-w-0 items-center gap-2"><PriorityBadge level={item.priority.level} />
             <span dir="auto" className="truncate text-base font-medium text-ink">{supplier}</span></p>
           <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-ink-3"><bdi data-vt-source className={cx("inline-block whitespace-nowrap font-mono text-xs", done && "line-through")}>{item.invoice_number ?? "—"}</bdi>
-            <span aria-hidden>·</span><bdi className="whitespace-nowrap">{item.due_date ? date(item.due_date, locale) : t.review.undated}</bdi><SessionState done={done} current={active} /></p>
+            {item.due_date && <><span aria-hidden>·</span><bdi className="whitespace-nowrap">{date(item.due_date, locale)}</bdi></>}<SessionState done={done} current={active} /></p>
         </div>
         <p className="col-start-2 truncate text-sm text-ink-2 sm:col-start-auto">{item.priority.reasons[0] ? <ReasonText reason={item.priority.reasons[0]} currency={item.currency} /> : null}</p>
         <div className="col-start-2 justify-self-start sm:col-start-auto sm:justify-self-end"><CompactAmount item={item} /></div>
@@ -92,6 +99,7 @@ export function ReviewQueue({ items, compact = false, selectedId, onSelect }: {
     </li>)}
   </ol>;
 
+  const anyDue = rows.some((r) => r.item.due_date);
   return <>
     {/* phones and tablets: one card per case, every reason and the next action in reach */}
     <ol data-testid="mobile-review-queue" className="divide-y divide-line lg:hidden">
@@ -106,10 +114,13 @@ export function ReviewQueue({ items, compact = false, selectedId, onSelect }: {
         </div>
         <ul className="space-y-1 text-sm leading-snug text-ink-2">{item.priority.reasons.map((reason, index) =>
           <li key={`${reason.code}-${index}`}><ReasonText reason={reason} currency={item.currency} /></li>)}</ul>
-        <dl className="grid grid-cols-2 gap-3 rounded-xl bg-sunken px-3 py-2.5 text-sm">
+        {/* two facts share a tinted box; with no due dates the amount alone sits on one line */}
+        {anyDue ? <dl className="grid grid-cols-2 gap-3 rounded-xl bg-sunken px-3 py-2.5 text-sm">
           <div><dt className="text-xs text-ink-3">{t.review.atRisk}</dt><dd className="mt-0.5"><AtRisk item={item} align="start" /></dd></div>
           <div><dt className="text-xs text-ink-3">{t.review.due}</dt><dd className="mt-0.5"><DueCell item={item} /></dd></div>
-        </dl>
+        </dl> : <dl className="flex items-start justify-between gap-3 border-t border-line pt-3 text-sm">
+          <dt className="text-ink-3">{t.review.atRisk}</dt><dd><AtRisk item={item} /></dd>
+        </dl>}
         <div className="flex flex-wrap items-center justify-between gap-2">{item.status !== "open" ? <StatusPill status={item.status} /> : <span />}
           <Button variant="secondary" size="sm" asChild><Link href={href}>{action}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden /></Link></Button>
         </div>
@@ -118,10 +129,11 @@ export function ReviewQueue({ items, compact = false, selectedId, onSelect }: {
     </ol>
 
     {/* desktop: a selectable table. Selecting a row shows why it is in the queue; the action opens the case */}
+    {/* no case carries a due date: a column of "not stated" in every row says nothing, so it steps aside */}
     <div className="hidden lg:block"><Table className="queue-table">
       <thead><tr>
         <Th className="w-[1%] ps-5">{t.review.rank}</Th><Th>{t.common.supplier} / {t.recon.invoice}</Th>
-        <Th>{t.review.reason}</Th><Th className="text-end">{t.review.atRisk}</Th><Th>{t.review.due}</Th>
+        <Th>{t.review.reason}</Th><Th className="text-end">{t.review.atRisk}</Th>{anyDue && <Th>{t.review.due}</Th>}
         <Th className="w-[1%] pe-5"><span className="sr-only">{t.review.nextAction}</span></Th>
       </tr></thead>
       <tbody>{rows.map(({ item, href, done, current: active, supplier, action }) => {
@@ -147,7 +159,7 @@ export function ReviewQueue({ items, compact = false, selectedId, onSelect }: {
             {more.length > 0 && <p className="mt-0.5 text-xs font-semibold text-ink-3">{t.review.moreReasons.replace("{n}", String(more.length))}</p>}
           </div></Td>
           <Td><AtRisk item={item} /></Td>
-          <Td><DueCell item={item} /></Td>
+          {anyDue && <Td><DueCell item={item} /></Td>}
           <Td className="pe-5"><Button variant="secondary" size="sm" asChild><Link href={href}>{action}</Link></Button></Td>
         </tr>;
       })}</tbody>
@@ -158,6 +170,7 @@ export function ReviewQueue({ items, compact = false, selectedId, onSelect }: {
 /** The compact list keeps the foreign amount and its shekel estimate on one line. */
 function CompactAmount({ item }: { item: ReviewQueueItem }) {
   const { t, locale } = useI18n();
+  if (!hasAmount(item.amount_at_risk)) return <span className="whitespace-nowrap text-sm text-ink-3">{t.review.notQuantified}</span>;
   const amount = item.amount_at_risk_base
     ? `${money(item.amount_at_risk, item.currency)} (≈ ${money(item.amount_at_risk_base, "ILS")})`
     : money(item.amount_at_risk, item.currency);

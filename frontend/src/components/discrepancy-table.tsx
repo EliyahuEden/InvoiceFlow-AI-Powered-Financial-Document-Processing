@@ -42,7 +42,9 @@ export function DiscrepancyTable({ invoice, onSelectLine }: { invoice: InvoiceDe
           ...(includeInvoiceQuantity ? [{ label: t.review.invoice, value: line.quantity }] : []),
           ...(showCumulative ? [{ label: quantityFinding ? t.review.billedQuantity : t.review.invoice, value: finding.actual }] : []),
           ...(finding.type === "QUANTITY_EXCEEDS_RECEIVED" && poLine ? [{ label: t.pos.ordered, value: poLine.quantity }] : []),
-          { label: expectedLabels[finding.type] ?? t.recon.expected, value: finding.expected },
+          // a duplicate's "expected" is the rule itself, in English ("unique (supplier, invoice number)"); the message below says it in the reader's language
+          ...(finding.type === "DUPLICATE_INVOICE" || finding.type === "POSSIBLE_DUPLICATE" ? []
+            : [{ label: expectedLabels[finding.type] ?? t.recon.expected, value: finding.expected }]),
         ];
         return <li key={finding.id} className="space-y-3 px-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><FindingTag type={finding.type} severity={finding.severity} /></div>

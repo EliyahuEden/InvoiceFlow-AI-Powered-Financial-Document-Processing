@@ -144,7 +144,7 @@ function EventBody({ a }: { a: AuditEntry }) {
       {row(t.audit.when, <time dateTime={a.created_at}>{local}</time>)}
       {row(t.audit.whenUtc, <bdi className="font-mono text-xs" dir="ltr">{a.created_at.replace("T", " ").slice(0, 19)}</bdi>)}
       {row(t.audit.record, href ? <Link href={href} className="text-accent hover:underline">{label(t.auditEntities, a.entity_type)}</Link> : label(t.auditEntities, a.entity_type))}
-      {row(t.audit.action, <bdi className="font-mono text-xs" dir="ltr">{a.action}</bdi>)}
+      {row(t.audit.action, <span className="text-end"><span className="block">{auditLabel(t, a.action)}</span><bdi className="block font-mono text-2xs text-ink-3" dir="ltr">{a.action}</bdi></span>)}
     </dl>
     <DetailSection title={t.audit.changes}><AuditDiff before={a.before} after={a.after} /></DetailSection>
     {details.length > 0 && <DetailSection title={t.audit.details}>

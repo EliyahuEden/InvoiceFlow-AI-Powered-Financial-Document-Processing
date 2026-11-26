@@ -50,7 +50,10 @@ function NewSupplier({ onDone }: { onDone: () => void }) {
 
 /** Two letters from the supplier's own name, as an identifying mark (no logos: none are recorded). */
 function Initials({ name, className }: { name: string; className?: string }) {
-  const letters = name.replace(/["'״׳]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("");
+  const words = name.replace(/["'״׳]/g, "").split(/\s+/).filter(Boolean);
+  // a camel-case brand reads by its capitals (BlueWave → BW), everything else by its first two words
+  const caps = words[0]?.match(/[A-Z]/g);
+  const letters = caps && caps.length >= 2 ? caps.slice(0, 2).join("") : words.slice(0, 2).map((w) => w[0]).join("");
   return <span aria-hidden className={cx("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-sm font-bold text-accent-ink", className)}>{letters}</span>;
 }
 
@@ -65,6 +68,8 @@ export default function SuppliersPage() {
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data, isLoading, error, mutate } = useApi<Page<Supplier>>(`/api/suppliers${qs({ q, status, page, page_size: 25 })}`);
+  // every supplier active: a column repeating "Active" adds nothing; blocked or inactive ones bring it back
+  const anyInactive = !!data?.items.some((s) => s.status !== "active");
   const onQ = useCallback((v: string) => { setQ(v); setPage(1); }, []);
   const selected = data?.items.find((s) => s.id === selectedId) ?? data?.items[0] ?? null;
   const names = (s: Supplier) => {
@@ -109,13 +114,13 @@ export default function SuppliersPage() {
                       <span>{t.suppliers.invoices}: <bdi className="font-semibold text-ink-2 num">{s.invoice_count}</bdi></span>
                     </span>
                   </span>
-                  <StatusPill status={s.status} />
+                  {s.status !== "active" && <StatusPill status={s.status} />}
                 </Link></li>; })}
           </ul>
 
           <div className="hidden md:block"><Table className="queue-table">
             <thead><tr><Th>{t.common.supplier}</Th><Th>{t.suppliers.taxId}</Th><Th>{t.suppliers.terms}</Th><Th className="text-end">{t.suppliers.openPos}</Th>
-              <Th className="text-end">{t.suppliers.invoices}</Th><Th>{t.common.status}</Th></tr></thead>
+              <Th className="text-end">{t.suppliers.invoices}</Th>{anyInactive && <Th>{t.common.status}</Th>}</tr></thead>
             <tbody>
               {isLoading && !data ? <RowsSkeleton cols={6} /> : data?.items.map((s) => {
                 const n = names(s);
@@ -134,7 +139,7 @@ export default function SuppliersPage() {
                   <Td className="whitespace-nowrap text-sm text-ink-2"><bdi>{s.payment_terms ?? "—"}</bdi></Td>
                   <Td className="text-end num">{s.open_po_count}</Td>
                   <Td className="text-end num">{s.invoice_count}</Td>
-                  <Td><StatusPill status={s.status} /></Td>
+                  {anyInactive && <Td>{s.status !== "active" && <StatusPill status={s.status} />}</Td>}
                 </tr>;
               })}
             </tbody>
