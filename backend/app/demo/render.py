@@ -123,7 +123,7 @@ TEMPLATES = {
     ),
     # --- held-out set v2: written before the layout-tolerant extractor changes and scored once
     # afterwards. The v1 templates above were inspected while making those changes, so their
-    # score is reported as development data from then on (docs/EVALUATION_PLAN.md).
+    # score is reported as development data from then on (docs/evaluation.md).
     "he_service": dict(
         rtl=True, title="חשבון עסקה / חשבונית מס", number="מס' חשבונית: {n}", date="נוצר בתאריך {d}", datefmt="%d-%m-%Y",
         po="מספר רכש: {po}", terms="תנאים: {t}", taxid="ח\"פ {id}", billto="מזמין: {org}",

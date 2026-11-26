@@ -4,7 +4,7 @@ An ordered intent table (Hebrew and English patterns) plus entity extraction (in
 names, finding types, statuses, dates such as "this month" / "בחודש שעבר" / "October") picks one read-only tool
 and renders its result as a short bilingual answer with citations. Anything it does not understand goes to the
 policy search, and an unanswerable question gets an honest refusal in the reader's language.
-The question catalogue it is tested against is in docs/COPILOT.md.
+The question catalogue it is tested against is in docs/copilot.md.
 """
 from __future__ import annotations
 

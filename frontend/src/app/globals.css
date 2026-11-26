@@ -5,7 +5,7 @@
 /* Aurora Finance OS. Light is the flagship: a pale periwinkle / ice-blue / lavender-white atmosphere behind a frosted
    shell, opaque white content surfaces, deep charcoal type, one near-black primary button per view, indigo-violet for
    selection, focus and AI marks, red/amber/green only for business states. Glass only on the shell and hero; evidence,
-   tables and forms stay crisp and opaque. The dark theme is graphite with the same indigo. Plan: docs/AURORA_PLAN.md. */
+   tables and forms stay crisp and opaque. The dark theme is graphite with the same indigo. */
 /* Assistant (Hebrew + Latin) for everything; Geist Mono only for codes, SKUs and IDs. Loaded in app/layout.tsx. */
 :root { --font-sans: "Assistant"; --font-mono: "Geist Mono", "Assistant"; }
 

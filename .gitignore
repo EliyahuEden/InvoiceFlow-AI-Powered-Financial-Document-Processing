@@ -19,3 +19,12 @@ frontend/playwright-report/
 
 # real invoices used for local testing only (personal/business data): never commit
 example invocies/
+
+# Local tooling and working notes (kept on disk, not part of the product)
+_archive/
+.claude/
+.impeccable/
+PRODUCT.md
+DESIGN.md
+NEXT_STEPS.md
+InvoiceFlow-Redesign-Kit/

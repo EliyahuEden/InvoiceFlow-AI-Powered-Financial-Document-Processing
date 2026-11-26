@@ -1,0 +1,14 @@
+Copyright (c) 2026 InvoiceFlow. All rights reserved.
+
+This repository and its contents (source code, documentation, designs and data) are proprietary.
+They are made available for viewing only. No license is granted to copy, modify, distribute,
+sublicense or use any part of them, in whole or in part, for any purpose, without prior written
+permission from InvoiceFlow.
+
+The software is provided "as is", without warranty of any kind, express or implied, including but
+not limited to the warranties of merchantability, fitness for a particular purpose and
+non-infringement. In no event shall the authors or copyright holders be liable for any claim,
+damages or other liability arising from, out of or in connection with the software or its use.
+
+Third-party components keep their own licenses, as listed in backend/requirements.txt and
+frontend/package.json.

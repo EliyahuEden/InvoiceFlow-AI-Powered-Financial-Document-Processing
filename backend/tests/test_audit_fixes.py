@@ -1,4 +1,4 @@
-"""Regression tests for the P0 findings of docs/audits/FULL_SYSTEM_AUDIT.md (FIN-01..04, SEC-02)."""
+"""Regression tests for the financial-integrity and security fixes FIN-01..04 and SEC-02."""
 from __future__ import annotations
 
 from dataclasses import replace

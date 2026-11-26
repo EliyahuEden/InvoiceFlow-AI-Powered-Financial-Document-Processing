@@ -12,7 +12,7 @@ export const LEGAL_VERSION = "2026-11-24";
 export const LEGAL_UPDATED = { he: "24 בנובמבר 2026", en: "24 November 2026" };
 
 export const OPERATOR = {
-  /** who runs the service: a portfolio project with no registered business yet */
+  /** who runs the service (no registered business yet, so the name says so) */
   name: { he: "InvoiceFlow (פרויקט עצמאי)", en: "InvoiceFlow (independent project)" },
   /** company number (ח.פ.) or dealer number (ע.מ.); empty until a business is registered, and then hidden */
   registrationNumber: "",

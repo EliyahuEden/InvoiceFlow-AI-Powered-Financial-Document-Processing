@@ -1,4 +1,4 @@
-"""The Copilot question catalogue (docs/COPILOT.md): everyday accounts-payable questions, each asked in Hebrew
+"""The Copilot question catalogue (docs/copilot.md): everyday accounts-payable questions, each asked in Hebrew
 and English, must reach the right read-only tool in offline mode instead of falling through to a refusal."""
 from __future__ import annotations
 

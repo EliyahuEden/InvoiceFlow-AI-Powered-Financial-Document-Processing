@@ -1,6 +1,6 @@
 """Schema guards: every foreign key is indexed (joins and cascading deletes must not scan whole tables), and the
 invoice list reads its first page straight from an index. Measured on 100,000 invoices in one business:
-35 ms -> 0.04 ms for the first page (docs/QUALITY.md)."""
+35 ms -> 0.04 ms for the first page (docs/quality.md)."""
 from __future__ import annotations
 
 from sqlalchemy import create_engine, text

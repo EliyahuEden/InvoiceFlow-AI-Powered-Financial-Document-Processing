@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# InvoiceFlow web app
 
-## Getting Started
-
-First, run the development server:
+Next.js 15 (App Router), React 19, TypeScript and Tailwind. Hebrew right-to-left by default, with English, in light
+and dark themes.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+BACKEND_URL=http://localhost:8010 npm run dev   # http://localhost:3000, API requests are proxied to the backend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Command | What it does |
+|---|---|
+| `npm run typecheck` | TypeScript, no emit |
+| `npm run lint` | ESLint |
+| `npm test` | Unit tests (Vitest, Testing Library) |
+| `npm run e2e` | Browser tests (Playwright); run them against the disposable stack in `docker-compose.e2e.yml` |
+| `node scripts/axe-page.mjs <route>` | WCAG 2.2 AA scan of one page in both languages, both themes, desktop and phone |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Layout
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app/(app)/      authenticated pages: queue, inbox, upload, investigations, suppliers, orders, knowledge, ...
+src/app/login/      sign-in and the other account pages
+src/app/legal/      privacy policy, terms, data-processing agreement, accessibility statement
+src/components/     shared UI; page-kit.tsx holds the page header, filters, segments and detail panel
+src/lib/            API client, formatting, i18n dictionaries (dictionaries.ts)
+tests/unit/         Vitest
+tests/e2e/          Playwright: workflows, accounts, accessibility and responsive checks
+```

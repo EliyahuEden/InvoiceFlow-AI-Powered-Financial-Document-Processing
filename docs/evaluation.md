@@ -147,7 +147,7 @@ The bigger model helps whenever no reranker is used, and is a wash once the cros
 - Reranking gives the best R@5 and nDCG at about 1 s of CPU latency per query.
 - Clause chunking beats fixed windows at matched granularity.
 
-Details: [RAG_DESIGN.md](RAG_DESIGN.md).
+Details: [rag.md](rag.md).
 
 ### multilingual-e5-large as the default embedder
 

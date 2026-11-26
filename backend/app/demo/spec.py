@@ -286,7 +286,7 @@ INVOICES = [
                 payment_terms="Net 45", description="PNG photo-style capture of an English invoice (OCR)."),
 ]
 
-# Second tenant: used to demonstrate and test tenant isolation.
+# Second tenant: keeps tenant isolation visible and testable.
 OTHER_ORG_SUPPLIERS = [
     SupplierSpec("tavor_y", "תבור ציוד משרדי בע\"מ", "Tavor Office Supplies Ltd", "514000124", "he"),
 ]
