@@ -123,7 +123,7 @@ export default function OverviewPage() {
     </header>
 
     {/* hero: what needs review and how much is at risk | what is urgent | the real 30-day trend */}
-    <section className="command-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(15rem,0.9fr)_minmax(13rem,0.8fr)_minmax(0,1.5fr)]" aria-label={t.review.dashboardTitle}>
+    <section data-tour="needs-review" className="command-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(15rem,0.9fr)_minmax(13rem,0.8fr)_minmax(0,1.5fr)]" aria-label={t.review.dashboardTitle}>
       <div className="flex min-w-0 flex-col justify-between gap-4">
         <div>
           <p className="flex items-center gap-2 text-md font-bold text-ink"><FileText className="h-5 w-5 text-ink-3" aria-hidden />{t.review.needsReview}</p>
@@ -132,7 +132,7 @@ export default function OverviewPage() {
             <bdi className="ltr">{money(data.amount_at_risk, data.currency)}</bdi><span className="text-md font-bold">{t.review.atRisk}</span>
           </p>}
         </div>
-        {can("exception:decide") && <ReviewNextButton size="lg" />}
+        {can("exception:decide") && <div data-tour="review-next"><ReviewNextButton size="lg" /></div>}
       </div>
 
       <div className="min-w-0 border-line lg:border-s lg:ps-6">

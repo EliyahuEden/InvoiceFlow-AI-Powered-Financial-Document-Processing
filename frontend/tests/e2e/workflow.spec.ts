@@ -84,8 +84,8 @@ test("upload a Hebrew invoice → discrepancy → cited AI explanation → decis
 test("evaluation dashboard shows measured benchmark results", async ({ page }) => {
   await login(page, "viewer@kinneret.example");
   await page.goto("/evaluation");
-  await expect(page.getByText("Field accuracy")).toBeVisible();
+  await expect(page.getByText(/^(Field accuracy|דיוק השדות)$/).first()).toBeVisible();
   await expect(page.getByText(/hybrid_rerank/).first()).toBeVisible();
   await page.getByRole("button", { name: /^(Reconciliation|התאמה)$/ }).click(); // one report per tab
-  await expect(page.getByText("Exact finding-set match")).toBeVisible();
+  await expect(page.getByText(/^(Exact finding-set match|התאמה מלאה של הממצאים)$/)).toBeVisible();
 });

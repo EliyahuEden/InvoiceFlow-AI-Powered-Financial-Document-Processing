@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { confirmDraftNavigation } from "@/lib/use-unsaved-work";
 
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { ArrowLeft, Languages, LayoutGrid, LogOut, MessageSquareText, Moon, Search, Sun, X } from "lucide-react";
+import { ArrowLeft, CircleHelp, Languages, LayoutGrid, LogOut, MessageSquareText, Moon, Search, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +25,7 @@ import { label } from "@/lib/i18n/label";
 
 // The command palette (cmdk) and the shortcuts dialog load only when opened; the shell owns the hotkeys.
 const CommandPalette = dynamic(() => import("./command-palette").then((m) => m.CommandPalette), { ssr: false });
+const GuidedTour = dynamic(() => import("./guided-tour").then((m) => m.GuidedTour), { ssr: false });
 const ShortcutsDialog = dynamic(() => import("./shortcuts").then((m) => m.ShortcutsDialog), { ssr: false });
 
 /** Labelled sidebar for wide screens: the business, every permitted destination by group, and the signed-in user. */
@@ -66,7 +67,7 @@ function Sidebar() {
                 const Icon = item.icon;
                 return (
                   <li key={item.href}>
-                    <Link href={item.href} aria-current={active ? "page" : undefined}
+                    <Link href={item.href} aria-current={active ? "page" : undefined} data-tour={`nav-${item.href}`}
                       className={cx("command-nav-link group flex h-11 items-center gap-3 rounded-xl px-3 text-md",
                         active ? "bg-rail-active font-bold text-accent-ink shadow-[inset_0_1px_0_rgb(255_255_255/.6)]" : "font-semibold text-rail-ink-2 hover:bg-rail-active/55 hover:text-rail-ink")}>
                       <Icon className={cx("h-[18px] w-[18px] shrink-0", active ? "text-accent" : "text-rail-ink-2 group-hover:text-rail-ink")} aria-hidden />
@@ -99,7 +100,7 @@ function Sidebar() {
 }
 
 /** Labelled, grouped navigation: the full map of the product (desktop on demand, mobile menu). */
-function NavDrawer({ onClose }: { onClose: () => void }) {
+function NavDrawer({ onClose, onTour }: { onClose: () => void; onTour: () => void }) {
   const nav = useNav();
   const path = usePathname();
   const { t } = useI18n();
@@ -148,8 +149,12 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
-        {/* on phones the top bar has no room for sign-out, so it lives here */}
+        {/* on phones the top bar has no room for the tour and sign-out, so they live here */}
         <div className="border-t border-line p-2 sm:hidden">
+          <button type="button" onClick={() => { onClose(); onTour(); }}
+            className="command-nav-link flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-base text-ink-2 hover:bg-rail-active/60 hover:text-ink">
+            <CircleHelp className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />{t.tour.replay}
+          </button>
           <button type="button" onClick={async () => { await api.post("/api/auth/logout"); window.location.href = "/login"; }}
             className="command-nav-link flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-base text-ink-2 hover:bg-rail-active/60 hover:text-ink">
             <LogOut className="h-4 w-4 shrink-0 text-ink-3 rtl:-scale-x-100" aria-hidden />{t.common.logout}
@@ -173,7 +178,7 @@ function AiModeBadge() {
         offline ? "border-warn/25 bg-warn-soft text-warn" : "border-line bg-surface/80 text-ink-2")}>
       <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", offline ? "bg-warn" : "bg-ok shadow-[0_0_0_3px_rgb(var(--ok)/.18)]")} aria-hidden />
       {offline ? <><span className="sm:hidden">{t.ai.offlineShort}</span><span className="hidden sm:inline">{t.ai.offlineMode}</span></>
-        : <span className="truncate">{`${t.ai.liveMode}: ${PROVIDER_NAME[me.ai_provider ?? ""] ?? "AI"}`}</span>}
+        : <span className="truncate"><span className="hidden sm:inline">{t.ai.liveMode}: </span>{PROVIDER_NAME[me.ai_provider ?? ""] ?? "AI"}</span>}
     </span>
   );
 }
@@ -185,7 +190,7 @@ function useCurrentLabel(): string | null {
   return items.sort((a, b) => b.href.length - a.href.length)[0]?.label ?? null;
 }
 
-function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch: () => void; onCopilot: () => void }) {
+function TopBar({ onMenu, onSearch, onCopilot, onTour }: { onMenu: () => void; onSearch: () => void; onCopilot: () => void; onTour: () => void }) {
   const { me, can } = useSession();
   const { t, locale, setLocale } = useI18n();
   const current = useCurrentLabel();
@@ -225,10 +230,13 @@ function TopBar({ onMenu, onSearch, onCopilot }: { onMenu: () => void; onSearch:
         <span className="flex gap-1" dir="ltr"><Kbd>{mod}</Kbd><Kbd>K</Kbd></span>
       </button>
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onSearch} aria-label={t.palette.trigger}><Search className="h-4 w-4" /></Button>
-      <Button variant="ai" size="sm" onClick={onCopilot} aria-label={t.copilot.open} className="gap-1.5">
+      <Button variant="ai" size="sm" onClick={onCopilot} aria-label={t.copilot.open} className="gap-1.5" data-tour="copilot">
         <MessageSquareText className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">{t.copilot.open}</span>
       </Button>
       <AiModeBadge />
+      <Button variant="ghost" size="sm" onClick={onTour} data-tour="tour" className="hidden gap-1.5 sm:inline-flex">
+        <CircleHelp className="h-4 w-4" aria-hidden /><span className="hidden xl:inline">{t.tour.replay}</span><span className="sr-only xl:hidden">{t.tour.replay}</span>
+      </Button>
       {/* the dashboard and the workspace carry their own primary review action; elsewhere it stays secondary so the page keeps one dark primary */}
       {me && can("exception:decide") && path !== "/" && !path.startsWith("/exceptions") &&
         <ReviewNextButton size="sm" variant="secondary" className="hidden xl:inline-flex" />}
@@ -282,6 +290,21 @@ function KeyedShell({ children, open, setOpen }: { children: React.ReactNode; op
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
   const [copilot, setCopilot] = useState(false);
+  const [tour, setTour] = useState(false);
+  const { me } = useSession();
+  const router = useRouter();
+  const path = usePathname();
+  const [tourPending, setTourPending] = useState(false);
+  // a first visit to the overview starts the tour once; afterwards it runs only from the Tour button
+  useEffect(() => {
+    if (!me || path !== "/") return;
+    let cancelled = false;
+    void import("./guided-tour").then(({ tourDone }) => {
+      if (!cancelled && (tourPending || !tourDone(me.user.id))) { setTourPending(false); window.setTimeout(() => !cancelled && setTour(true), 700); }
+    });
+    return () => { cancelled = true; };
+  }, [me, path, tourPending]);
+  const startTour = () => { if (path === "/") setTour(true); else { setTourPending(true); router.push("/"); } };
   useGlobalKeys(nav, () => setPalette(true), () => setHelp(true), () => setCopilot(true));
   // fetch the on-demand dialogs once the page is idle, so the first Ctrl+K opens without a delay
   useEffect(() => {
@@ -298,12 +321,13 @@ function KeyedShell({ children, open, setOpen }: { children: React.ReactNode; op
       <aside className="sticky top-0 hidden h-screen w-[256px] shrink-0 lg:block">
         <Sidebar />
       </aside>
-      {open && <NavDrawer onClose={() => setOpen(false)} />}
+      {open && <NavDrawer onClose={() => setOpen(false)} onTour={startTour} />}
       {palette && <CommandPalette open onOpenChange={setPalette} onAskCopilot={() => setCopilot(true)} />}
       <CopilotPanel open={copilot} onOpenChange={setCopilot} />
       {help && <ShortcutsDialog open onOpenChange={setHelp} />}
+      {tour && me && <GuidedTour userId={me.user.id} onClose={() => setTour(false)} />}
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenu={() => setOpen(true)} onSearch={() => setPalette(true)} onCopilot={() => setCopilot(true)} />
+        <TopBar onMenu={() => setOpen(true)} onSearch={() => setPalette(true)} onCopilot={() => setCopilot(true)} onTour={startTour} />
         {children}
       </div>
     </div>
