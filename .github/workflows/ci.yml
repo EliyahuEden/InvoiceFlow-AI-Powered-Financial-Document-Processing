@@ -30,7 +30,7 @@ jobs:
       TEST_PG_HOSTPORT: localhost:5432
       TEST_REDIS_URL: redis://localhost:6379/15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -55,7 +55,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -78,7 +78,7 @@ jobs:
       RATE_LIMIT_SIGNUP_PER_HOUR: "1000"   # the account tests sign up several businesses
       E2E_MAILPIT_URL: http://localhost:8025   # the account tests read reset and invitation emails here
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start the stack
         run: docker compose up -d --build --wait --wait-timeout 600
       - name: Seed the demo organization
