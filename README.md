@@ -16,6 +16,21 @@ with sample invoices, deleted after 24 hours.
 
 ![Overview: what needs review, the money at risk and the last 30 days](docs/screenshots/01-overview.png)
 
+## Why InvoiceFlow
+
+Accounts-payable teams still re-key supplier invoices, chase purchase orders and goods receipts by hand, and approve
+payments on trust. Generic OCR tools stop at extraction and handle Hebrew badly. InvoiceFlow covers the whole path
+from the PDF to an approved payment, in Hebrew and English, with an evidence trail for every decision.
+
+**AI where it helps, rules where it matters.** Models read difficult documents, write explanations and answer
+questions about your agreements. Deterministic code decides what matches, what is flagged and what can be paid.
+Every extracted value is verified against the page, every AI statement cites its source, and no model can approve
+or pay an invoice. The reasoning is in [Design decisions](docs/design-decisions.md).
+
+**Built with** Next.js 15, React 19, TypeScript and Tailwind; FastAPI, SQLAlchemy and Alembic; PostgreSQL 16 with
+pgvector and row-level security; Redis; S3-compatible storage; Tesseract OCR; LangGraph; local ONNX embedding and
+reranking models; OpenAI-compatible and Anthropic model providers; Docker Compose and Caddy.
+
 ## What it does
 
 **Capture.** Upload invoices one by one or in bulk. InvoiceFlow reads the text layer first and falls back to Hebrew and
@@ -76,7 +91,7 @@ flowchart LR
 An upload and its processing job are committed together. Workers claim jobs with leases and a bounded retry budget,
 extract and verify the fields, run reconciliation and open exceptions. The investigation agent and the Copilot reach
 data only through role-checked tools scoped to the organization, and the agent pauses for a human decision. See
-[Architecture](docs/architecture.md).
+[Architecture](docs/architecture.md) and [Design decisions](docs/design-decisions.md).
 
 ## Installation
 

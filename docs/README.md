@@ -3,6 +3,7 @@
 | Document | What it covers |
 |---|---|
 | [Architecture](architecture.md) | Services, data flow, job queue, storage and the reasoning behind each choice |
+| [Design decisions](design-decisions.md) | Why rules decide and models explain, tenant isolation, the audit chain, and what changes at 100× volume |
 | [Document pipeline](document-pipeline.md) | Text extraction, Hebrew OCR and bidi reconstruction, field extraction and verification |
 | [Database](database.md) | Schema, tenant isolation with row-level security, indexes and migrations |
 | [API](api.md) | Endpoints, authentication, errors and pagination |
