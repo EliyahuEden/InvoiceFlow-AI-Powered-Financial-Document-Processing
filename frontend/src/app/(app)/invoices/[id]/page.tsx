@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleCheck, FileSearch, ShieldCheck, X } from "lucide-react";
+import { Check, CircleCheck, FileSearch, ShieldCheck, X, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -54,6 +54,14 @@ export default function InvoiceOverview() {
       ) : <Panel><EmptyState icon={<FileSearch className="h-7 w-7" />} title={t.review.noDocument} /></Panel>}
       <div className="min-w-0 space-y-4">
         <SecurityNotice items={security} />
+        {inv.auto_approval && <div role="status" className="flex items-start gap-3 rounded-[20px] border border-ok/30 bg-ok-soft px-5 py-4">
+          <Zap className="mt-0.5 h-5 w-5 shrink-0 text-ok" aria-hidden />
+          <span className="min-w-0 text-sm text-ink-2">
+            <span className="block text-base font-semibold text-ink">{t.autoApproval.bannerTitle}</span>
+            {t.autoApproval.bannerBody.replace("{version}", String(inv.auto_approval.policy_version ?? "")).replace("{total}", inv.auto_approval.total_base ?? "")
+              .replace("{max}", inv.auto_approval.max_amount ?? "").replaceAll("{currency}", inv.auto_approval.base_currency ?? "")}
+          </span>
+        </div>}
         {inv.exception && (
           <Link href={`/exceptions/${inv.exception.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-warn/30 bg-warn-soft px-5 py-4 transition-colors hover:border-warn">
             <span className="min-w-0">

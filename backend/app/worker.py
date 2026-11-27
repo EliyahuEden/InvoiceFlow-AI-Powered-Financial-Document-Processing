@@ -38,6 +38,7 @@ def _handlers() -> dict:
     from app.services.agent.runner import handle_agent_investigate, handle_agent_resume
     from app.services.processing import handle_invoice_process
     from app.services.rag.service import handle_knowledge_ingest
+    from app.services.webhooks import handle_webhook_deliver
     from app.services.workspace_archive import handle_workspace_cleanup
 
     return {
@@ -46,6 +47,7 @@ def _handlers() -> dict:
         "agent.investigate": handle_agent_investigate,
         "agent.resume": handle_agent_resume,
         "workspace.cleanup": handle_workspace_cleanup,
+        "webhook.deliver": handle_webhook_deliver,
     }
 
 
@@ -118,6 +120,16 @@ def drain(max_jobs: int = 1000) -> int:
     return n
 
 
+def _poll_inbox() -> None:
+    """Read the inbound-email mailbox. A mailbox that is down or a bad login must not stop the job queue."""
+    from app.services.inbound_email import poll_mailbox
+
+    try:
+        poll_mailbox()
+    except Exception as exc:  # noqa: BLE001
+        log.error("inbound_mailbox_poll_failed", error=f"{type(exc).__name__}: {exc}"[:300])
+
+
 def main() -> None:
     configure_logging()
     s = get_settings()
@@ -131,8 +143,12 @@ def main() -> None:
     signal.signal(signal.SIGINT, _stop)
     log.info("worker_started", worker_id=worker_id)
     next_expiry = 0.0
+    next_inbox_poll = 0.0
     while not stop["flag"]:
         try:
+            if s.inbound_imap_enabled and time.monotonic() >= next_inbox_poll:  # invoices forwarded by email
+                next_inbox_poll = time.monotonic() + s.inbound_imap_poll_seconds
+                _poll_inbox()
             if time.monotonic() >= next_expiry:  # delete "Try the demo" workspaces past their day
                 next_expiry = time.monotonic() + s.sandbox_expiry_check_seconds
                 from app.services.sandbox import expire_due

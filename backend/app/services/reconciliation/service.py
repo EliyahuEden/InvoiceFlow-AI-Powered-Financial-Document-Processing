@@ -21,7 +21,7 @@ from app.models import (
     ReconciliationRun,
     Supplier,
 )
-from app.services import audit, events
+from app.services import audit, auto_approval, events, webhooks
 from app.services.reconciliation import engine as E
 
 ACTION_FOR_FINDING = {
@@ -191,6 +191,9 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
                          entity_id=open_exc.id, actor_type="system", actor_label="reconciliation-engine",
                          after={"title": open_exc.title, "types": types, "proposed_action": action},
                          meta={"invoice_id": str(inv.id), "run_id": str(run.id)})
+            webhooks.emit(session, org.id, "exception.opened", {
+                "exception_id": str(open_exc.id), "title": open_exc.title, "priority": open_exc.priority,
+                "discrepancy_types": types, "proposed_action": action, "invoice": webhooks.invoice_data(session, inv)})
         else:
             open_exc.discrepancy_types = types
             if previous is not None and (previous.mode != mode or previous.result.get("findings") != run.result.get("findings")):
@@ -219,6 +222,9 @@ def reconcile_invoice(session: Session, inv: Invoice, *, triggered_by: str = "sy
                  before={"status": before_status}, after={"status": inv.status, "outcome": result.outcome,
                                                           "findings": [f.type for f in result.findings]},
                  meta={"run_id": str(run.id), "engine_version": result.engine_version, "mode": mode})
+    # Decision hook: an invoice that is clean under the organization's auto-approval policy skips human review. It
+    # stays "reconciled" with its payment-approval steps in place; people still approve the payment.
+    auto_approval.apply(session, org, inv, run_id=run.id, mode=mode, finding_types=[f.type for f in result.findings])
     events.after_commit(session, org.id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
     return run
 

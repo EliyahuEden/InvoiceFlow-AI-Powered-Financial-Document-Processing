@@ -27,7 +27,7 @@ from app.services.storage import get_storage
 log = get_logger("sandbox")
 
 #: per-visitor or ephemeral data that a copy must not carry: work queues, sessions and the template's team
-SKIP_TABLES = {"jobs", "auth_sessions", "auth_tokens", "memberships"}
+SKIP_TABLES = {"jobs", "auth_sessions", "auth_tokens", "memberships", "api_keys", "webhook_endpoints", "webhook_deliveries"}
 #: the audit history is copied on its own: business events only, re-chained from genesis for the new workspace
 AUDIT_TABLE = "audit_logs"
 #: which events a copy carries. The template's sign-ins, member changes and exports are its staff's own activity

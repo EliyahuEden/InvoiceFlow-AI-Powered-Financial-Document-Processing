@@ -36,7 +36,7 @@ reranking models; OpenAI-compatible and Anthropic model providers; Docker Compos
 **Capture.** Upload invoices one by one or in bulk. InvoiceFlow reads the text layer first and falls back to Hebrew and
 English OCR, reconstructs right-to-left text correctly, and extracts supplier, dates, totals, VAT, PO reference, the
 Israeli tax-invoice allocation number and every line. Each value is traced to where it appears on the page; a value
-that cannot be found in the document is discarded, never guessed.
+that cannot be found in the document is discarded, never guessed. Or forward them: each business has its own email address (Settings → Email inbox) and every PDF or image attached to a message sent there is read like an upload.
 
 **Match.** Two- and three-way matching against purchase orders and goods receipts in exact decimal arithmetic, with
 configurable tolerances. 22 finding types cover prices, quantities ordered and received, duplicates, missing orders or

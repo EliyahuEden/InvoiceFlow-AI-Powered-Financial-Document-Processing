@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeftRight, ArrowRight, CalendarClock, CheckCheck, FileText, Layers, TrendingUp } from "lucide-react";
+import { AutomationKpiCard } from "@/components/automation-kpi";
 import { ReviewQueue } from "@/components/review-queue";
 import { ExportMenu } from "@/components/export-menu";
 import { PaymentReminders } from "@/components/invoice-payment";
@@ -14,6 +15,7 @@ import { useApi } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { label } from "@/lib/i18n/label";
+import type { AutomationKpi, PolicyView } from "@/lib/auto-approval";
 import type { ReviewSummary } from "@/lib/types";
 
 const Bars = dynamic(() => import("@/components/charts").then((m) => m.Bars), {
@@ -37,7 +39,7 @@ function RankedList({ rows, unit }: { rows: { key: string; label: React.ReactNod
 }
 
 type Insights = {
-  kpis: { open_exceptions: number };
+  kpis: { open_exceptions: number; automation?: AutomationKpi };
   daily: { date: string; received: number; exceptions: number }[];
   discrepancy_types: { type: string; count: number }[];
   exceptions_by_supplier: { supplier: string; count: number }[];
@@ -83,6 +85,7 @@ export default function OverviewPage() {
   const { can, me } = useSession();
   const { data, error, mutate } = useApi<ReviewSummary>("/api/review/summary", { refreshInterval: 30_000 });
   const { data: insights } = useApi<Insights>("/api/dashboard");
+  const { data: policy } = useApi<PolicyView>("/api/org/auto-approval");
   const dayPart = useDayPart();
   if (error) return <ErrorState message={t.common.error} onRetry={() => mutate()} retryLabel={t.common.retry} />;
 
@@ -166,13 +169,14 @@ export default function OverviewPage() {
       </div>
     </section>
 
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <Kpi href="/exceptions?due=overdue" label={t.review.overdue} value={n(data?.overdue)} tone="danger" active={(data?.overdue ?? 0) > 0} icon={CalendarClock}
         sub={data && <>{data.due_soon} {t.review.dueSoon}</>} />
       <Kpi href="/exceptions" label={t.review.openExceptions} value={n(insights?.kpis.open_exceptions)} tone="accent" active={(insights?.kpis.open_exceptions ?? 0) > 0} icon={ArrowLeftRight}
         sub={data && <>{data.awaiting_info} {t.review.awaitingInfo} · {data.escalated} {t.review.escalated}</>} />
       <Kpi href="/invoices?status=reconciled" label={t.review.readyForApproval} value={n(data?.ready_for_approval)} tone="ok" active={(data?.ready_for_approval ?? 0) > 0} icon={CheckCheck}
         sub={data && <>{data.processing} {t.review.processing}</>} />
+      <AutomationKpiCard kpi={insights?.kpis.automation} enabled={policy?.policy.enabled} />
     </div>
 
     <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">

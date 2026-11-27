@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.money import D
 from app.models import AgentRun, Approval, Document, ExceptionCase, ExceptionComment, Invoice, InvoiceLine, Organization, User
-from app.services import audit, events, jobs
+from app.services import audit, events, jobs, webhooks
 from app.services.rbac import Perm, has_perm
 from app.services.reconciliation.service import ensure_approval_steps, reconcile_invoice
 
@@ -242,5 +242,11 @@ def decide_approval(session: Session, inv: Invoice, user: User, role: str, decis
     audit.record(session, org_id=inv.organization_id, action=f"approval.{decision}", entity_type="invoice",
                  entity_id=inv.id, actor_id=user.id, actor_label=user.email, before={"status": before},
                  after={"status": inv.status, "step": pending.step}, meta={"comment": comment})
+    if decision == "approve":
+        data = webhooks.invoice_data(session, inv)
+        webhooks.emit(session, inv.organization_id, "payment.approved",
+                      {**data, "approval": {"step": pending.step, "final": inv.status == "approved"}})
+        if inv.status == "approved":
+            webhooks.emit(session, inv.organization_id, "invoice.approved", data)
     events.after_commit(session, inv.organization_id, "invoice.updated", {"invoice_id": str(inv.id), "status": inv.status})
     return pending

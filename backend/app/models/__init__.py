@@ -1,5 +1,8 @@
+from app.models.automation import AutoApprovalPolicy
 from app.models.base import Base
 from app.models.documents import Document, DocumentPage, Invoice, InvoiceLine
+from app.models.integrations import ApiKey, WebhookDelivery, WebhookEndpoint
+from app.models.inbound import InboundEmail
 from app.models.knowledge import KnowledgeChunk, KnowledgeDocument
 from app.models.procurement import GoodsReceipt, GRLine, POLine, PurchaseOrder, Supplier
 from app.models.tenancy import DEFAULT_ORG_SETTINGS, SETTING_BOUNDS, AuthSession, AuthToken, Membership, Organization, Role, User
@@ -20,14 +23,18 @@ RLS_TABLES = [
     "suppliers", "purchase_orders", "po_lines", "goods_receipts", "gr_lines",
     "documents", "document_pages", "invoices", "invoice_lines",
     "reconciliation_runs", "discrepancies", "exceptions", "exception_comments", "approvals",
-    "knowledge_documents", "knowledge_chunks", "agent_runs", "ai_calls", "audit_logs",
+    "knowledge_documents", "knowledge_chunks", "agent_runs", "ai_calls", "audit_logs", "inbound_emails",
+    "auto_approval_policies",
+    "api_keys", "webhook_endpoints", "webhook_deliveries",
 ]
 
 __all__ = [
+    "AutoApprovalPolicy",
     "Base", "Organization", "User", "Membership", "Role", "DEFAULT_ORG_SETTINGS", "AuthSession", "AuthToken",
     "Supplier", "PurchaseOrder", "POLine", "GoodsReceipt", "GRLine",
-    "Document", "DocumentPage", "Invoice", "InvoiceLine",
+    "Document", "DocumentPage", "Invoice", "InvoiceLine", "InboundEmail",
     "KnowledgeDocument", "KnowledgeChunk",
     "ReconciliationRun", "Discrepancy", "ExceptionCase", "ExceptionComment", "Approval",
     "AgentRun", "AICall", "Job", "AuditLog", "RLS_TABLES",
+    "ApiKey", "WebhookEndpoint", "WebhookDelivery",
 ]

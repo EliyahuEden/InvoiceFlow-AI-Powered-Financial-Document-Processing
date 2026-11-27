@@ -1,8 +1,11 @@
 "use client";
 
-import { Check, Database, Lock, Minus, Scale, ShieldCheck, Users } from "lucide-react";
+import { Check, Database, Lock, Mail, Minus, Plug, Scale, ShieldCheck, Users, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AutoApprovalPanel } from "@/components/auto-approval-panel";
+import { EmailInboxPanel } from "@/components/email-inbox";
+import { ApiKeysPanel, WebhooksPanel } from "@/components/integrations-panel";
 import { useSession } from "@/components/session";
 import { SessionsPanel } from "@/components/sessions-panel";
 import { PasswordPanel, TeamPanel } from "@/components/team-panel";
@@ -19,7 +22,7 @@ type Org = { id: string; name: string; slug: string; settings: { tolerances: Rec
   priority?: { critical_amount?: string }; security?: { session_idle_hours?: number; session_max_days?: number; require_2fa?: boolean } };
   ai_mode: string; roles: Record<string, string[]> };
 type Form = { tol: Record<string, string>; appr: Org["settings"]["approval"]; auto: boolean; critical: string; idleHours: string; maxDays: string; require2fa: boolean };
-type Section = "matching" | "approval" | "security" | "team" | "data";
+type Section = "matching" | "approval" | "autoApproval" | "security" | "team" | "inbox" | "integrations" | "data";
 
 // how the matching tolerances are grouped on screen, and the unit each one is measured in
 const TOLERANCE_GROUPS: { title: "groupPrice" | "groupQuantity" | "groupTotals" | "groupText" | "groupDuplicates"; keys: [string, "unitPerUnit" | "unitPct" | "unitUnits" | "unitDays" | "unitScore" | null][] }[] = [
@@ -73,7 +76,7 @@ export default function SettingsPage() {
   const dirty = !!form && !!initial && JSON.stringify(form) !== JSON.stringify(initial);
   // a direct link (#security) opens its section; leaving with unsaved policy changes asks first
   useEffect(() => {
-    const fromHash = () => { const m = window.location.hash.match(/^#(matching|approval|security|team|data)$/); if (m) setSection(m[1] as Section); };
+    const fromHash = () => { const m = window.location.hash.match(/^#(matching|approval|autoApproval|security|team|inbox|integrations|data)$/); if (m) setSection(m[1] as Section); };
     fromHash();
     window.addEventListener("hashchange", fromHash);
     return () => window.removeEventListener("hashchange", fromHash);
@@ -106,9 +109,12 @@ export default function SettingsPage() {
   const sections: { key: Section; label: string; icon: React.ElementType }[] = [
     { key: "matching", label: t.settings.navMatching, icon: Scale },
     { key: "approval", label: t.settings.approval, icon: ShieldCheck },
+    { key: "autoApproval", label: t.autoApproval.nav, icon: Zap },
     { key: "security", label: t.settings.navSecurity, icon: Lock },
     { key: "team", label: t.settings.navTeam, icon: Users },
-    ...(admin ? [{ key: "data" as Section, label: t.settings.workspaceData, icon: Database }] : []),
+    ...(admin ? [{ key: "inbox" as Section, label: t.emailInbox.nav, icon: Mail },
+      { key: "integrations" as Section, label: t.settings.navIntegrations, icon: Plug },
+      { key: "data" as Section, label: t.settings.workspaceData, icon: Database }] : []),
   ];
   const tolField = (k: string, unit: string | null) => <Field key={k} label={label(t.settings, k)} hint={label(t.tolHelp, k, "")} htmlFor={`tol-${k}`}>
     <UnitInput id={`tol-${k}`} unit={unit} inputMode="decimal" value={form.tol[k] ?? ""} disabled={!admin} onChange={(e) => set({ tol: { ...form.tol, [k]: e.target.value } })} />
@@ -168,6 +174,8 @@ export default function SettingsPage() {
             </div>
           </Panel>}
 
+          {section === "autoApproval" && <AutoApprovalPanel admin={admin} currency={currency} />}
+
           {section === "security" && <>
             <Panel>
               <PanelHeader title={t.settings.navSecurity} sub={t.settings.securityHelp} />
@@ -205,6 +213,12 @@ export default function SettingsPage() {
                   </tr>))}</tbody>
               </Table>
             </Panel>
+          </>}
+
+          {section === "inbox" && admin && <EmailInboxPanel />}
+          {section === "integrations" && admin && <>
+            <ApiKeysPanel />
+            <WebhooksPanel />
           </>}
 
           {section === "data" && admin && <Panel>

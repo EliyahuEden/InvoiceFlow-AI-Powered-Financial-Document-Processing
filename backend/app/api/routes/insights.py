@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import Principal, get_db, money, page_params, paginated, require
 from app.core.config import get_settings
 from app.models import AgentRun, AICall, AuditLog, Discrepancy, ExceptionCase, Invoice, Job, Supplier
-from app.services import supplier_banking
+from app.services import auto_approval, supplier_banking
 from app.services.rbac import Perm
 
 router = APIRouter(prefix="/api", tags=["insights"])
@@ -79,6 +79,7 @@ def dashboard(p: Principal = Depends(require(Perm.INVOICE_READ)), db: Session = 
             "auto_match_rate": round(len(first_pass) / len(processed), 3) if processed else None,
             "awaiting_approval": by_status.get("reconciled", 0), "approved": by_status.get("approved", 0),
             "median_processing_seconds": round(statistics.median(durations), 1) if durations else None,
+            "automation": auto_approval.kpis(db, org),
         },
         "status_counts": dict(by_status),
         "discrepancy_types": [{"type": t, "count": c} for t, c in type_counts.most_common()],

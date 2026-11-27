@@ -23,6 +23,17 @@ from app.services import audit, events
 from app.services.public_errors import public_error
 
 
+#: seconds to wait before the next attempt, by job type and the number of attempts made so far (the last value repeats)
+RETRY_DELAYS: dict[str, tuple[int, ...]] = {"webhook.deliver": (30, 120, 600, 3600, 14400, 43200)}
+
+
+def retry_delay(job_type: str, attempts: int) -> int:
+    table = RETRY_DELAYS.get(job_type)
+    if table:
+        return table[min(max(attempts, 1), len(table)) - 1]
+    return min(300, 2 ** attempts * 5)
+
+
 class LeaseLost(RuntimeError):
     """The attempt no longer owns the job and must roll back its work."""
 
@@ -146,7 +157,7 @@ def mark_failed(session: Session, job_id: uuid.UUID, error: str, *, permanent: b
         job.attempts = job.max_attempts
     if job.attempts < job.max_attempts:
         job.status = "queued"
-        job.run_after = datetime.now(UTC) + timedelta(seconds=min(300, 2 ** job.attempts * 5))
+        job.run_after = datetime.now(UTC) + timedelta(seconds=retry_delay(job.type, job.attempts))
         job.progress_message = f"Retrying (attempt {job.attempts + 1}/{job.max_attempts})"
     else:
         job.status = "failed"

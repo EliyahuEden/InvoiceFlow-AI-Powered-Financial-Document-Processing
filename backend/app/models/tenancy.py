@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 
+import secrets
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
@@ -49,11 +50,19 @@ SETTING_BOUNDS = {
 }
 
 
+def new_inbox_token() -> str:
+    """The secret part of an organization's forwarding address: 80 random bits, lowercase hex (safe in a local part)."""
+    return secrets.token_hex(10)
+
+
 class Organization(UUIDPk, Timestamps, Base):
     __tablename__ = "organizations"
     name: Mapped[str] = mapped_column(String(200))
     slug: Mapped[str] = mapped_column(String(80), unique=True)
     settings: Mapped[dict] = mapped_column(JSONB, default=lambda: dict(DEFAULT_ORG_SETTINGS))
+    # Not under RLS on purpose: an inbound message is mapped to its organization by this token before any tenant is
+    # known (services/inbound_email.py). Unique, so one address belongs to exactly one organization.
+    inbox_token: Mapped[str] = mapped_column(String(40), unique=True, default=new_inbox_token)
 
     memberships: Mapped[list[Membership]] = relationship(back_populates="organization")
 

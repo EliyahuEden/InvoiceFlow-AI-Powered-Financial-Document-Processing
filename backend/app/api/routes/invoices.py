@@ -17,6 +17,7 @@ from app.models import (
     Discrepancy,
     Document,
     ExceptionCase,
+    InboundEmail,
     Invoice,
     Job,
     PurchaseOrder,
@@ -35,8 +36,11 @@ from app.services.reconciliation.service import reconcile_invoice
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
 
-def invoice_row(i: Invoice, supplier: Supplier | None, doc: Document | None, open_exc: int = 0) -> dict:
+def invoice_row(i: Invoice, supplier: Supplier | None, doc: Document | None, open_exc: int = 0,
+                mail: InboundEmail | None = None) -> dict:
     return {
+        # where the file came from; for an emailed invoice, who sent it and with what subject
+        "source": i.source, "email_sender": mail.sender if mail else None, "email_subject": mail.subject if mail else None,
         "id": str(i.id), "status": i.status, "invoice_number": i.invoice_number,
         "archived_at": i.archived_at.isoformat() if i.archived_at else None,
         "supplier_id": str(i.supplier_id) if i.supplier_id else None,
@@ -48,6 +52,7 @@ def invoice_row(i: Invoice, supplier: Supplier | None, doc: Document | None, ope
         "extraction_method": i.extraction_method, "created_at": i.created_at.isoformat(),
         "filename": doc.filename if doc else None, "text_method": doc.text_method if doc else None,
         "open_exceptions": open_exc, "warnings": len(i.validation_warnings or []),
+        "auto_approved": i.auto_approved_at is not None,
         "security_flag": any(w.get("code") == "SUSPICIOUS_INSTRUCTIONS" for w in (i.validation_warnings or [])),
     }
 
@@ -93,7 +98,11 @@ def list_invoices(q: str | None = None, status: str | None = None, supplier_id: 
     status_counts = dict(db.execute(select(Invoice.status, func.count()).where(Invoice.organization_id == p.org_id,
                                     Invoice.archived_at.is_not(None) if archived else Invoice.archived_at.is_(None))
                                     .group_by(Invoice.status)).all())
-    out = paginated([invoice_row(i, s, d, exc_counts.get(i.id, 0)) for i, s, d in rows], total, page, size)
+    mail_ids = {i.inbound_email_id for i, _, _ in rows if i.inbound_email_id}
+    mails = {m.id: m for m in db.scalars(select(InboundEmail).where(InboundEmail.organization_id == p.org_id,
+                                                                   InboundEmail.id.in_(mail_ids)))} if mail_ids else {}
+    out = paginated([invoice_row(i, s, d, exc_counts.get(i.id, 0), mails.get(i.inbound_email_id)) for i, s, d in rows],
+                    total, page, size)
     out["status_counts"] = status_counts
     return out
 
@@ -104,7 +113,9 @@ async def upload_invoice(file: UploadFile = File(...), p: Principal = Depends(re
     check_rate_limit(f"upload:{p.user.id}", get_settings().rate_limit_upload_per_minute)
     data = await file.read(get_settings().max_upload_bytes + 1)
     try:
-        inv, job = create_invoice_upload(db, org_id=p.org_id, user=p.user, data=data, filename=file.filename or "upload")
+        key = (p.api_key.id, p.api_key.name) if p.api_key else None
+        inv, job = create_invoice_upload(db, org_id=p.org_id, user=None if key else p.user, data=data,
+                                         filename=file.filename or "upload", api_key=key)
     except UploadRejected as exc:
         raise HTTPException(422, str(exc)) from exc
     except DuplicateUpload as dup:
@@ -150,7 +161,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
                                    .where(GRLine.po_line_id.in_([ln.id for ln in po.lines]))
                                    .group_by(GRLine.po_line_id)).all())
     return {
-        **invoice_row(inv, supplier, doc),
+        **invoice_row(inv, supplier, doc, mail=db.get(InboundEmail, inv.inbound_email_id) if inv.inbound_email_id else None),
         **invoice_lifecycle.state(inv),
         "credit_notes": [{"id": str(note.id), "number": note.invoice_number, "total": money(note.total)}
                          for note in db.scalars(select(Invoice).where(Invoice.organization_id == p.org_id,
@@ -158,6 +169,7 @@ def get_invoice(invoice_id: uuid.UUID, p: Principal = Depends(require(Perm.INVOI
         "supplier_name_raw": inv.supplier_name_raw, "supplier_tax_id_raw": inv.supplier_tax_id_raw,
         "due_date": inv.due_date.isoformat() if inv.due_date else None, "payment_terms": inv.payment_terms,
         "payment": payments.payment_state(inv),
+        "auto_approval": {"at": inv.auto_approved_at.isoformat(), **(inv.auto_approval or {})} if inv.auto_approved_at else None,
         "allocation_number": inv.allocation_number,
         "subtotal": money(inv.subtotal), "discount_total": money(inv.discount_total), "tax_total": money(inv.tax_total),
         "tax_rate": dec(inv.tax_rate), "field_sources": inv.field_sources, "missing_fields": inv.missing_fields,

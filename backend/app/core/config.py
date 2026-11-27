@@ -86,6 +86,25 @@ class Settings(BaseSettings):
     password_reset_ttl_minutes: int = 60
     email_verify_ttl_hours: int = 48
     rate_limit_verify_resend_per_hour: int = 5
+    # --- inbound email ingestion (invoices forwarded to a per-organization address) ---
+    # The forwarding address of each organization; "{token}" is replaced by the organization's secret token, e.g.
+    # "invoices+{token}@inbox.example.com". Empty = inbound email is off. Mail may arrive by polling an IMAP mailbox
+    # (INBOUND_IMAP_HOST) and/or by a signed POST to /api/inbound/email (INBOUND_WEBHOOK_SECRET).
+    inbound_address_template: str = ""
+    inbound_webhook_secret: SecretStr | None = None
+    inbound_webhook_tolerance_seconds: int = Field(300, ge=1)  # how old a signed request may be (replay window)
+    inbound_max_message_bytes: int = 35 * 1024 * 1024  # a whole message; base64 makes a 20 MB attachment ~27 MB
+    inbound_max_attachments: int = Field(10, ge=1)  # files taken from one message; the rest are reported as skipped
+    inbound_min_inline_image_bytes: int = 16 * 1024  # smaller inline images (signature logos, tracking pixels) are ignored
+    rate_limit_inbound_per_hour: int = 120  # accepted messages per organization per hour; 0 = unlimited
+    inbound_imap_host: str | None = None
+    inbound_imap_port: int | None = None  # default 993 (ssl) or 143 (starttls / none)
+    inbound_imap_username: str | None = None
+    inbound_imap_password: SecretStr | None = None
+    inbound_imap_security: Literal["ssl", "starttls", "none"] = "ssl"
+    inbound_imap_folder: str = "INBOX"
+    inbound_imap_poll_seconds: int = Field(60, ge=5)
+    inbound_imap_batch: int = Field(25, ge=1)  # messages read per poll; the rest wait for the next one
     # --- /health/alerts thresholds (an uptime monitor polls it; 503 means a person should look)
     alert_queue_max_minutes: int = 15        # a runnable job waiting longer means the worker is down or stuck
     alert_failed_jobs_24h: int = 5
@@ -169,10 +188,15 @@ class Settings(BaseSettings):
     worker_poll_seconds: float = 1.0
     job_lock_timeout_seconds: int = Field(300, ge=1)
 
+    # --- webhooks ---
+    webhook_timeout_seconds: float = Field(10.0, gt=0, le=60)
+    webhook_max_attempts: int = Field(6, ge=1, le=12)
+
     # --- misc ---
     eval_results_dir: Path = REPO_ROOT / "eval" / "results"
     rate_limit_login_per_minute: int = 10
     rate_limit_upload_per_minute: int = 30
+    rate_limit_api_key_per_minute: int = 600   # requests per API key per minute
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
     @field_validator("*", mode="before")
@@ -224,6 +248,35 @@ class Settings(BaseSettings):
         if self.environment == "production" and self.storage_backend == "s3" and self.s3_sse == "none":
             raise ValueError("S3_SSE must be AES256 or aws:kms in production (documents must be encrypted at rest)")
         return self
+
+    @model_validator(mode="after")
+    def _inbound_is_consistent(self) -> Settings:
+        if self.inbound_address_template and self.inbound_address_template.count("{token}") != 1:
+            raise ValueError("INBOUND_ADDRESS_TEMPLATE must contain {token} exactly once, e.g. invoices+{token}@inbox.example.com")
+        if self.inbound_address_template and not re.fullmatch(r"[^@\s{}]*\{token\}[^@\s{}]*@[^@\s{}]+\.[^@\s{}]+",
+                                                              self.inbound_address_template):
+            raise ValueError("INBOUND_ADDRESS_TEMPLATE must be an email address with {token} in the part before the @")
+        secret = self.inbound_webhook_secret.get_secret_value() if self.inbound_webhook_secret else ""
+        if secret and len(secret) < 32:
+            raise ValueError("INBOUND_WEBHOOK_SECRET must be at least 32 characters")
+        if self.environment == "production" and self.inbound_imap_enabled and self.inbound_imap_security == "none":
+            raise ValueError("INBOUND_IMAP_SECURITY must be ssl or starttls in production (the mailbox password and "
+                             "the invoices would cross the network unencrypted)")
+        return self
+
+    @property
+    def inbound_enabled(self) -> bool:
+        """Inbound email works only with a forwarding-address template and at least one way in."""
+        return bool(self.inbound_address_template) and (self.inbound_imap_enabled or self.inbound_webhook_enabled)
+
+    @property
+    def inbound_imap_enabled(self) -> bool:
+        return bool(self.inbound_imap_host and self.inbound_imap_username and self.inbound_imap_password
+                    and self.inbound_imap_password.get_secret_value())
+
+    @property
+    def inbound_webhook_enabled(self) -> bool:
+        return bool(self.inbound_webhook_secret and self.inbound_webhook_secret.get_secret_value())
 
     @property
     def pricing(self) -> dict[str, dict[str, float]]:

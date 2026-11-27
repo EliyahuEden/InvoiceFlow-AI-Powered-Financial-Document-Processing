@@ -3,6 +3,9 @@
 PostgreSQL 16 with `pgvector`. The schema is managed by Alembic (`backend/alembic/versions`):
 - `0001`: tables
 - `0002`: security (RLS policies, grants, the append-only audit log, the HNSW index)
+- `0015`: auto-approval (`auto_approval_policies` under RLS; `invoices.auto_approved_at` and `invoices.auto_approval`)
+- `0016`: API keys and outbound webhooks (`api_keys`, `webhook_endpoints`, `webhook_deliveries` under RLS)
+- `0017`: inbound email (`inbound_emails` under RLS; `organizations.inbox_token`; `invoices.source` and `invoices.inbound_email_id`)
 
 ## Conventions
 - UUID primary keys and `timestamptz` audit columns.
@@ -39,15 +42,18 @@ erDiagram
 ## Tables
 | Group | Tables | Notes |
 |---|---|---|
-| Tenancy | `organizations` (settings JSON: tolerances, approval threshold, locale), `users`, `memberships(role)` | Not under RLS (needed for login). Roles are re-read from the DB on every request. |
+| Tenancy | `organizations` (settings JSON: tolerances, approval threshold, locale; unique `inbox_token`, the secret of the email forwarding address), `users`, `memberships(role)` | Not under RLS (needed for login, and to map an inbound email's recipient to its business before any tenant is bound). Roles are re-read from the DB on every request. |
 | Sessions | `auth_sessions` (user, active organization, SHA-256 of the current refresh secret, idle and absolute expiry, revocation) | Not under RLS (a user can belong to several tenants). Checked on every request through the access token's `sid`. Migration 0003. |
 | Master data | `suppliers` (aliases, unique `(org, tax_id)`), `purchase_orders`, `po_lines`, `goods_receipts`, `gr_lines` | |
 | Documents | `documents` (sha256, storage key, text method, language), `document_pages` (text, words+bbox, OCR confidence) | Unique `(org, sha256, purpose)` blocks duplicate files. |
-| Invoices | `invoices` (status machine, raw printed supplier name and tax ID, typed fields, provenance, warnings), `invoice_lines` | |
+| Invoices | `invoices` (status machine, raw printed supplier name and tax ID, typed fields, provenance, warnings; `source` = `upload` or `email`, `inbound_email_id`), `invoice_lines` | |
+| Inbound email | `inbound_emails` (message ID, sender, subject, recipient address, per-attachment outcome; unique `(org, message_id)` is the dedupe) | Under RLS. Migration 0017. Holds no attachment content: the files are ordinary `documents`. |
 | Reconciliation | `reconciliation_runs` (full deterministic trace, tolerances in effect, engine version), `discrepancies` (expected / actual / difference / evidence; superseded on re-run) | Runs are immutable history. |
 | Workflow | `exceptions` (proposed action, AI summary JSON, decision), `exception_comments`, `approvals` (step, required role, decider) | |
+| Automation | `auto_approval_policies` (one row per organization: enabled, `max_amount`, supplier scope and list, `version`, who changed it) | Under RLS (migration 0015). `invoices.auto_approved_at` / `auto_approval` hold the mark and the policy snapshot of an auto-approved invoice. |
 | AI | `knowledge_documents`, `knowledge_chunks` (`vector(384)` + HNSW cosine index, normalized `search_text`), `agent_runs` (tool trace, result), `ai_calls` (telemetry) | |
 | Ops | `jobs` (status, attempts, `run_after`, lock, progress, idempotency key) | Not under RLS: the worker claims across tenants, then binds the job's tenant. |
+| Integrations | `api_keys` (name, scope, display prefix, SHA-256 `key_hash`, last use, revocation), `webhook_endpoints` (URL, events, encrypted signing secret, active flag), `webhook_deliveries` (event payload, status, attempts, per-attempt log) | Under RLS. `api_keys` also has a `SELECT`-only policy matching the hash in `app.api_key_hash`, the one lookup made before the tenant is known. Migration 0015. |
 | Audit | `audit_logs` (actor, action, entity, before/after, meta, `prev_hash`, `hash`) | **INSERT/SELECT only** for the app role. |
 
 ## Invoice status machine

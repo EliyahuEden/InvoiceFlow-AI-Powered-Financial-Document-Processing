@@ -2,6 +2,8 @@
 
 `upload → validate → store → page text (native | OCR) → extract → verify → normalize → reconcile`
 
+Files reach the pipeline three ways, all through `create_invoice_upload`: a manual upload (or the bulk import and demo samples), and **email**: a PDF or image attached to a message sent to the business's forwarding address (`app/services/inbound_email.py`, polled from an IMAP mailbox by the worker or posted to the signed webhook). An emailed invoice is validated exactly like an upload; it only records where it came from (`invoices.source = 'email'`, the sender, subject and message ID).
+
 ## 1. Validation (untrusted input)
 `app/services/documents/validation.py`. The type is decided by **magic bytes**; the extension and MIME type are not trusted. The pipeline rejects:
 - empty files, or files over the size limit (20 MB);

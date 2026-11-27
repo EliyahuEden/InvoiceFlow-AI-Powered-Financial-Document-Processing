@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useState } from "react";
 import { StatusPill } from "@/components/domain";
+import { EmailSourceBadge } from "@/components/email-inbox";
 import { ExportMenu } from "@/components/export-menu";
 import { Pager, RowsSkeleton, SearchBox, type Page } from "@/components/list";
 import { CountBadge, DetailPanel, DetailSection, FilterBar, FilterSelect, PageHeader, useWideLayout } from "@/components/page-kit";
@@ -21,6 +22,7 @@ export type InvoiceRow = {
   supplier_matched: boolean; invoice_date: string | null; currency: string | null; total: string | null;
   po_reference: string | null; language: string | null; extraction_method: string | null; created_at: string;
   filename: string | null; text_method: string | null; open_exceptions: number; warnings: number; security_flag: boolean;
+  source?: string; email_sender?: string | null; email_subject?: string | null; // "email" when it arrived at the forwarding address
 };
 
 const STATUSES = ["processing", "failed", "needs_review", "exception", "reconciled", "on_hold", "approved", "rejected", "voided", "credit_note"];
@@ -174,6 +176,7 @@ function InvoiceInbox() {
                       </span>
                       <span className="mt-0.5 block truncate text-sm text-ink-2"><bdi>{supplierOf(r) ?? "—"}</bdi></span>
                       <span className="mt-2 flex flex-wrap items-center gap-2"><StatusPill status={r.status} />
+                        <EmailSourceBadge source={r.source} sender={r.email_sender} subject={r.email_subject} />
                         <span className="text-xs text-ink-3">{date(r.invoice_date, locale)}</span></span>
                     </span>
                   </Link>
@@ -200,6 +203,7 @@ function InvoiceInbox() {
                             {r.text_method === "ocr" && <FileScan className="h-3 w-3" aria-hidden />}
                             {r.text_method === "ocr" ? t.invoice.ocr : r.text_method === "native" ? t.invoice.nativeText : r.text_method}
                             {r.language && <><span aria-hidden>·</span><bdi className="uppercase">{r.language}</bdi></>}
+                            <EmailSourceBadge source={r.source} sender={r.email_sender} subject={r.email_subject} className="ms-1" />
                           </span>
                         </div>
                       </div>
@@ -278,6 +282,8 @@ function InvoicePreview({ id, row }: { id: string; row: InvoiceRow }) {
       <DetailSection title={t.inbox.source}>
         <dl className="divide-y divide-line">
           {doc && field(t.inbox.file, <bdi className="text-xs">{doc.filename}</bdi>)}
+          {row.source === "email" && field(t.emailInbox.sentBy, <bdi dir="ltr" className="text-xs">{row.email_sender || "—"}</bdi>)}
+          {row.source === "email" && row.email_subject && field(t.emailInbox.subjectLabel, <bdi className="text-xs">{row.email_subject}</bdi>)}
           {field(t.inbox.processingCol, [doc?.text_method === "ocr" ? t.invoice.ocr : doc?.text_method === "native" ? t.invoice.nativeText : doc?.text_method, inv.language?.toUpperCase()].filter(Boolean).join(" · ") || null)}
           {field(t.inbox.extraction, methodLabel(t, inv.extraction_method))}
           {doc?.page_count ? field(t.inbox.pages, <bdi className="num">{doc.page_count}</bdi>) : null}

@@ -15,7 +15,10 @@ from sqlalchemy.orm import Session
 from app.core.db import lock_workspace, new_session
 from app.core.security import decode_access_token
 from app.models import Membership, Organization, Role, User
-from app.services import auth_sessions
+from app.core.config import get_settings
+from app.services import api_keys, auth_sessions
+from app.services.api_keys import KeyIdentity
+from app.services.ratelimit import check_rate_limit
 from app.services.rbac import Perm, has_perm
 
 COOKIE_NAME = "invoiceflow_session"
@@ -40,6 +43,11 @@ class Principal:
     org: Organization
     role: Role
     session_id: uuid.UUID | None = None
+    #: set when the caller is an organization API key: then ``user`` is a stand-in that is never stored
+    api_key: KeyIdentity | None = None
+
+    def allows(self, perm: Perm) -> bool:
+        return perm in self.api_key.perms if self.api_key else has_perm(self.role, perm)
 
     @property
     def org_id(self) -> uuid.UUID:
@@ -57,6 +65,8 @@ def get_principal(request: Request) -> Principal:
     token, from_cookie = _token(request)
     if not token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+    if not from_cookie and api_keys.looks_like_key(token):
+        return _key_principal(request, token)
     # CSRF defence for cookie sessions: unsafe methods need a custom header, which a
     # cross-site form cannot send (and SameSite=Lax cookies are already not sent).
     if from_cookie and request.method in UNSAFE and request.headers.get("x-requested-with") != "invoiceflow":
@@ -67,6 +77,28 @@ def get_principal(request: Request) -> Principal:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired session") from exc
     route = (request.method, request.scope.get("path"))
     return principal_from_claims(claims, allow_enrollment=route in ENROLLMENT_ROUTES, allow_unverified=route in VERIFICATION_ROUTES)
+
+
+def _key_principal(request: Request, secret: str) -> Principal:
+    identity = api_keys.authenticate(secret)
+    if identity is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or revoked API key")
+    route = getattr(request.scope.get("route"), "path", None)
+    if not api_keys.route_allowed(identity.scope, request.method, route):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This endpoint is not available to API keys with the "
+                            f"{identity.scope} scope")
+    check_rate_limit(f"api-key:{identity.id}", get_settings().rate_limit_api_key_per_minute)
+    s = new_session()
+    try:
+        org = s.get(Organization, identity.org_id)
+    finally:
+        s.close()
+    if org is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or revoked API key")
+    # least privilege for any code that still looks at the role; the key's own permissions decide in require()
+    stand_in = User(id=identity.id, email=f"api-key:{identity.name}", full_name=identity.name, password_hash="", locale="en",
+                    is_active=True)
+    return Principal(user=stand_in, org=org, role=Role.READ_ONLY, api_key=identity)
 
 
 def principal_from_claims(claims: dict, *, allow_enrollment: bool = False, allow_unverified: bool = False) -> Principal:
@@ -114,7 +146,7 @@ def get_db(principal: Principal = Depends(get_principal)) -> Iterator[Session]:
 
 def require(perm: Perm):  # noqa: ANN201
     def checker(principal: Principal = Depends(get_principal)) -> Principal:
-        if not has_perm(principal.role, perm):
+        if not principal.allows(perm):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Missing permission: {perm.value}")
         return principal
 

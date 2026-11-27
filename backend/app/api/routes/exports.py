@@ -65,8 +65,9 @@ def export_insights(fmt: str, lang: str = "en", p: Principal = Depends(require(P
     report = dashboard(p, db)
     kpis = report["kpis"]
     rows: list[list[ex.Cell]] = [["summary", metric, None, None, value] for metric, value in kpis.items()
-                               if metric not in {"amount_at_risk", "amount_at_risk_currency", "amount_at_risk_by_currency", "total_value_ils"}]
+                               if metric not in {"amount_at_risk", "amount_at_risk_currency", "amount_at_risk_by_currency", "total_value_ils", "automation"}]
     rows.append(["summary", "total_value_ils", None, "ILS", Decimal(kpis["total_value_ils"])])
+    rows.extend(["summary", f"automation_{name}", None, None, value] for name, value in kpis["automation"].items())
     rows.extend(["summary", "amount_at_risk", None, currency, Decimal(value)]
                 for currency, value in kpis["amount_at_risk_by_currency"].items())
     rows.extend(["invoice_status", key, None, None, count] for key, count in sorted(report["status_counts"].items()))

@@ -62,19 +62,28 @@ def store_upload(session: Session, *, org_id: uuid.UUID, user: User | None, data
     return session.get(Document, document_id), vf
 
 
-def create_invoice_upload(session: Session, *, org_id: uuid.UUID, user: User | None, data: bytes,
-                          filename: str) -> tuple[Invoice, Job]:
+def create_invoice_upload(session: Session, *, org_id: uuid.UUID, user: User | None, data: bytes, filename: str,
+                          api_key: tuple[uuid.UUID, str] | None = None,
+                          source: str = "upload", inbound_email_id: uuid.UUID | None = None,
+                          actor_label: str | None = None, audit_meta: dict | None = None) -> tuple[Invoice, Job]:
+    """The one path every invoice file takes in: manual upload, API upload, demo samples, bulk import and inbound email.
+
+    ``api_key`` is (id, name) when an organization API key made the upload: there is no uploading person then.
+    ``source`` and ``inbound_email_id`` record where the file came from; ``actor_label`` names the sender when no user
+    uploaded it (an emailed invoice); ``audit_meta`` is added to the ``invoice.uploaded`` audit entry."""
     doc, _ = store_upload(session, org_id=org_id, user=user, data=data, filename=filename)
-    inv = Invoice(organization_id=org_id, document_id=doc.id, status="processing")
+    inv = Invoice(organization_id=org_id, document_id=doc.id, status="processing", source=source,
+                  inbound_email_id=inbound_email_id)
     session.add(inv)
     session.flush()
     job = jobs.enqueue(session, org_id=org_id, job_type="invoice.process", payload={"invoice_id": str(inv.id)},
                        idempotency_key=f"invoice.process:{inv.id}", entity_id=inv.id)
     audit.record(session, org_id=org_id, action="invoice.uploaded", entity_type="invoice", entity_id=inv.id,
-                 actor_type="user" if user else "system", actor_id=user.id if user else None,
-                 actor_label=user.email if user else "seed",
+                 actor_type="api_key" if api_key else "user" if user else "system",
+                 actor_id=api_key[0] if api_key else user.id if user else None,
+                 actor_label=f"api-key:{api_key[1]}" if api_key else user.email if user else (actor_label or "seed"),
                  after={"filename": doc.filename, "sha256": doc.sha256, "size_bytes": doc.size_bytes},
-                 meta={"document_id": str(doc.id), "job_id": str(job.id)})
+                 meta={"document_id": str(doc.id), "job_id": str(job.id), "source": source, **(audit_meta or {})})
     return inv, job
 
 

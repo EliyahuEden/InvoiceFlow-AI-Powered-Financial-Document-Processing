@@ -57,6 +57,8 @@ class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     __tablename__ = "invoices"
     # the invoice list's own order, newest first within a business (migration 0009)
     __table_args__ = (Index("ix_invoices_org_created", "organization_id", text("created_at DESC NULLS LAST")),
+                      Index("ix_invoices_org_auto_approved", "organization_id", "auto_approved_at",
+                            postgresql_where=text("auto_approved_at IS NOT NULL")),
                       CheckConstraint("(payment_paid_on IS NULL) = (payment_reference IS NULL)",
                                       name="ck_invoices_payment_record"))
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id"), index=True)
@@ -95,6 +97,14 @@ class Invoice(UUIDPk, Timestamps, TenantScoped, Base):
     extraction_raw: Mapped[dict | None] = mapped_column(JSONB)
     language: Mapped[str | None] = mapped_column(String(10))
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+    # Set while the invoice stands auto-approved under the organization's policy (services/auto_approval.py):
+    # when, and the policy version and values the decision used. It never replaces payment approval.
+    auto_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    auto_approval: Mapped[dict | None] = mapped_column(JSONB)
+    # where the file came from: upload (a person, or the demo/import tools) | email (the organization's forwarding address)
+    source: Mapped[str] = mapped_column(String(10), default="upload", server_default="upload")
+    inbound_email_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("inbound_emails.id", name="fk_invoices_inbound_email", ondelete="SET NULL"), index=True)
 
     document: Mapped[Document | None] = relationship()
     lines: Mapped[list[InvoiceLine]] = relationship(

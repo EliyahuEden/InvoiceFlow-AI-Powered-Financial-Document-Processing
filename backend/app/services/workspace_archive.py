@@ -30,7 +30,9 @@ def build(org: Organization) -> Path:
                 for member in db.execute(members).mappings():
                     stream.write(_json(dict(member)))
             for table in sorted(Base.metadata.tables.values(), key=lambda item: item.name):
-                if "organization_id" not in table.c or table.name in ("auth_tokens", "auth_sessions", "memberships"):
+                if "organization_id" not in table.c or table.name in (
+                        "auth_tokens", "auth_sessions", "memberships",
+                        "api_keys", "webhook_endpoints", "webhook_deliveries"):  # credentials and signing secrets stay behind
                     continue
                 columns = [column for column in table.c if column.name != "embedding"]
                 query = select(*columns).where(table.c.organization_id == org.id).order_by(table.c.id)

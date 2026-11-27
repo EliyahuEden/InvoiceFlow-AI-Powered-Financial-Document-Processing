@@ -45,6 +45,7 @@ export type InvoiceDetail = {
   created_at: string; filename: string | null; text_method: string | null; security_flag: boolean;
   supplier_name_raw: string | null; supplier_tax_id_raw: string | null; due_date: string | null; payment_terms: string | null;
   allocation_number: string | null;
+  source?: string; email_sender?: string | null; email_subject?: string | null;
   payment?: { status: "unscheduled" | "scheduled" | "paid"; scheduled_for: string | null; paid_on: string | null; reference: string | null };
   archived_at?: string | null;
   credit_for_invoice_id?: string | null;
@@ -53,6 +54,9 @@ export type InvoiceDetail = {
   field_sources: Record<string, Source>; missing_fields: string[];
   validation_warnings: { code: string; message: string; severity?: string; field?: string; snippets?: string[] }[];
   revision?: string;
+  /** Set while the invoice stands auto-approved under the organization's policy: the policy version and values used. */
+  auto_approval?: { at: string; policy_id?: string; policy_version?: number; max_amount?: string; total_base?: string;
+    base_currency?: string; supplier_scope?: string; findings?: number; mode?: string } | null;
   lines: InvoiceLine[];
   document: { id: string; filename: string; mime_type: string; page_count: number | null; text_method: string | null;
     language: string | null; status: string; error: string | null; size_bytes: number; sha256: string } | null;
