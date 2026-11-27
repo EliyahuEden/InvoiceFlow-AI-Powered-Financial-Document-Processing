@@ -29,7 +29,7 @@ segno==1.6.6
 langgraph==1.2.24
 langgraph-checkpoint-postgres==3.2.1
 anthropic>=0.42
-openai==1.58.1
+openai==3.59.0
 fastembed==0.9.1
 numpy==2.2.1
 # --- observability ---
